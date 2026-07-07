@@ -2207,28 +2207,28 @@ function PreRegistroPresidente() {
 
         .prereg-dark-page {
           font-family: 'Outfit', 'Inter', -apple-system, sans-serif !important;
-          background: radial-gradient(circle at 50% 0%, #0d1425 0%, #030712 100%) !important;
+          background: #f1f5f9 !important;
 
           /* DESIGN SYSTEM COLOR TOKENS */
-          --color-bg: #030712;
-          --color-surface: #090d16;
-          --color-card: #0f1524;
-          --color-card-hover: #161e30;
-          --color-card-selected: #111c38;
+          --color-bg: #f1f5f9;
+          --color-surface: #ffffff;
+          --color-card: #ffffff;
+          --color-card-hover: #f8fafc;
+          --color-card-selected: #eff6ff;
 
-          --color-border: rgba(255, 255, 255, 0.04);
-          --color-border-hover: rgba(56, 189, 248, 0.2);
-          --color-border-active: rgba(56, 189, 248, 0.6);
+          --color-border: #cbd5e1;
+          --color-border-hover: #94a3b8;
+          --color-border-active: #0b4ea6;
 
-          --color-text: #f9fafb;
-          --color-text-secondary: #9ca3af;
-          --color-text-muted: #6b7280;
+          --color-text: #111827;
+          --color-text-secondary: #374151;
+          --color-text-muted: #4b5563;
 
-          --color-primary: #38bdf8;
-          --color-primary-hover: #0ea5e9;
-          --color-primary-active: #0284c7;
-          --color-success: #10b981;
-          --color-danger: #ef4444;
+          --color-primary: #0b4ea6;
+          --color-primary-hover: #083b7e;
+          --color-primary-active: #063f82;
+          --color-success: #03543f;
+          --color-danger: #9b1c1c;
 
           /* DEPRECATED COMPATIBILITY WRAPPERS */
           --text-main: var(--color-text);
@@ -2372,7 +2372,7 @@ function PreRegistroPresidente() {
         .prereg-dark-page .card {
           background: var(--color-surface) !important;
           border: 1px solid var(--color-border) !important;
-          box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.03) !important;
+          box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
           border-radius: 28px !important;
         }
 
@@ -2381,12 +2381,13 @@ function PreRegistroPresidente() {
           border: 1px solid var(--color-border) !important;
           backdrop-filter: blur(24px) !important;
           -webkit-backdrop-filter: blur(24px) !important;
+          box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
         }
 
-        /* Stepper header styling */
+        /* Stepper header styling (Blue Header!) */
         .prereg-dark-page .card > div:first-child {
-          background: rgba(255, 255, 255, 0.005) !important;
-          border-bottom: 1px solid var(--color-border) !important;
+          background: var(--color-primary) !important;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.15) !important;
         }
 
         /* Summary/bank cards dark system overrides */
@@ -2417,7 +2418,7 @@ function PreRegistroPresidente() {
 
         .prereg-dark-page .total-row { 
           color: var(--color-text); 
-          border-color: rgba(255, 255, 255, 0.08) !important; 
+          border-color: #e2e8f0 !important; 
           font-size: 16px;
           font-weight: 800;
         }
@@ -2425,9 +2426,9 @@ function PreRegistroPresidente() {
         .prereg-dark-page .bank-info-label { color: var(--color-text-muted); font-weight: 600; }
         .prereg-dark-page .bank-info-value { color: var(--color-text); font-weight: 700; }
         .prereg-dark-page .referencia-badge { 
-          background: rgba(56, 189, 248, 0.08) !important; 
+          background: #eff6ff !important; 
           color: var(--color-primary); 
-          border: 1px solid rgba(56, 189, 248, 0.15) !important; 
+          border: 1px solid #bfdbfe !important; 
           border-radius: 12px;
           padding: 6px 14px;
           font-weight: 800;
@@ -2449,7 +2450,7 @@ function PreRegistroPresidente() {
           border: 1px solid var(--color-border) !important;
           border-radius: 24px !important;
           padding: 30px !important;
-          box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45) !important;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05) !important;
         }
 
         @media (max-width: 768px) {
@@ -2469,8 +2470,8 @@ function PreRegistroPresidente() {
         }
 
         .prereg-dark-page .input-number {
-          background: #030712 !important;
-          border: 1.5px solid rgba(255, 255, 255, 0.25) !important;
+          background: #ffffff !important;
+          border: 1px solid #78889b !important;
           color: var(--color-text) !important;
           border-radius: 12px;
           padding: 12px 16px;
@@ -2479,15 +2480,15 @@ function PreRegistroPresidente() {
         }
 
         .prereg-dark-page .input-number:focus {
-          background: #000000 !important;
+          background: #ffffff !important;
           border-color: var(--color-primary) !important;
-          box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2) !important;
+          box-shadow: 0 0 0 3px rgba(11, 78, 166, 0.15) !important;
           outline: none;
         }
 
         .prereg-dark-page .insurance-input {
-          background: #030712 !important;
-          border: 1.5px solid rgba(255, 255, 255, 0.25) !important;
+          background: #ffffff !important;
+          border: 1px solid #78889b !important;
           color: var(--color-text) !important;
           border-radius: 10px;
           width: 76px;
@@ -2501,19 +2502,19 @@ function PreRegistroPresidente() {
         }
 
         .prereg-dark-page .insurance-input:focus {
-          background: #000000 !important;
+          background: #ffffff !important;
           border-color: var(--color-primary) !important;
-          box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2) !important;
+          box-shadow: 0 0 0 3px rgba(11, 78, 166, 0.15) !important;
         }
 
         .prereg-dark-page .insurance-input.error-state {
           border-color: var(--color-danger) !important;
-          background: rgba(239, 68, 68, 0.08) !important;
-          color: #fca5a5 !important;
+          background: #fdf2f2 !important;
+          color: #9b1c1c !important;
         }
 
         .prereg-dark-page .btn-nav-gray {
-          background: rgba(255, 255, 255, 0.03) !important;
+          background: #f8fafc !important;
           border: 1px solid var(--color-border) !important;
           color: var(--color-text-secondary) !important;
           border-radius: 14px; 
@@ -2524,36 +2525,35 @@ function PreRegistroPresidente() {
         }
 
         .prereg-dark-page .btn-nav-gray:hover {
-          background: rgba(255, 255, 255, 0.06) !important;
+          background: #f1f5f9 !important;
           color: var(--color-text) !important;
         }
 
         .prereg-dark-page .btn-nav-blue {
-          background: linear-gradient(135deg, var(--color-primary), var(--color-primary-active)) !important;
+          background: var(--color-primary) !important;
           color: white !important; 
           border: none !important;
           border-radius: 14px; 
           padding: 12px 30px; 
           font-weight: 800;
           cursor: pointer;
-          box-shadow: 0 4px 14px rgba(56, 189, 248, 0.15) !important;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
           transition: all 0.2s !important;
         }
 
         .prereg-dark-page .btn-nav-blue:hover {
-          transform: translateY(-1.5px) !important;
-          box-shadow: 0 8px 24px rgba(56, 189, 248, 0.3) !important;
+          background: var(--color-primary-hover) !important;
+          transform: translateY(-1px) !important;
         }
 
         .prereg-dark-page .btn-nav-blue:disabled { 
-          opacity: 0.3 !important; 
+          opacity: 0.5 !important; 
           cursor: not-allowed !important;
           transform: none !important;
-          box-shadow: none !important;
         }
 
         .prereg-dark-page .btn-premium {
-          background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-hover) 100%) !important;
+          background: var(--color-primary) !important;
           border: none !important;
           color: white !important;
           font-weight: 800;
@@ -2563,14 +2563,13 @@ function PreRegistroPresidente() {
           border-radius: 14px;
           padding: 14px 44px;
           cursor: pointer;
-          box-shadow: 0 8px 24px rgba(56, 189, 248, 0.2) !important;
-          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+          transition: all 0.25s ease !important;
         }
 
         .prereg-dark-page .btn-premium:hover {
+          background: var(--color-primary-hover) !important;
           transform: translateY(-2px) !important;
-          box-shadow: 0 12px 32px rgba(56, 189, 248, 0.35) !important;
-          filter: brightness(1.08) !important;
+          filter: brightness(1.1) !important;
         }
 
         .prereg-dark-page .footer-nav {
@@ -2586,21 +2585,19 @@ function PreRegistroPresidente() {
           border: 1px solid var(--color-border) !important;
           border-radius: 16px; 
           padding: 16px;
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
-          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+          transition: all 0.25s ease !important;
         }
 
         .insurance-card:hover {
           background: var(--color-card-hover) !important;
           border-color: var(--color-border-hover) !important;
           transform: translateY(-2px) !important;
-          box-shadow: 0 12px 24px rgba(0, 0, 0, 0.25) !important;
         }
 
         .insurance-card.active-insurance {
           border-color: var(--color-border-active) !important;
           background: var(--color-card-selected) !important;
-          box-shadow: 0 0 20px rgba(56, 189, 248, 0.12) !important;
         }
 
         .insurance-radio {
@@ -2608,7 +2605,7 @@ function PreRegistroPresidente() {
           -webkit-appearance: none;
           width: 22px;
           height: 22px;
-          border: 2px solid rgba(255, 255, 255, 0.15) !important;
+          border: 2px solid #cbd5e1 !important;
           border-radius: 50%;
           outline: none;
           display: flex;
@@ -2617,12 +2614,10 @@ function PreRegistroPresidente() {
           cursor: pointer;
           transition: all 0.25s ease !important;
           position: relative;
-          background: rgba(0, 0, 0, 0.2) !important;
         }
 
         .insurance-radio:checked {
           border-color: var(--color-primary) !important;
-          box-shadow: 0 0 8px rgba(56, 189, 248, 0.2) !important;
         }
 
         .insurance-radio:checked::after {
@@ -2649,27 +2644,23 @@ function PreRegistroPresidente() {
           text-align: center;
           position: relative; 
           overflow: hidden;
-          transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
-          backdrop-filter: blur(10px) !important;
+          transition: all 0.4s ease !important;
         }
 
         .doc-glass-card:hover {
-          transform: translateY(-6px) !important;
+          transform: translateY(-5px) !important;
           background: var(--color-card-hover) !important;
           border-color: var(--color-border-active) !important; 
           border-style: solid !important;
-          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4) !important;
         }
 
         .doc-glass-card.uploaded {
-          background: rgba(16, 185, 129, 0.02) !important;
-          border: 1.5px solid rgba(16, 185, 129, 0.15) !important;
-          box-shadow: 0 10px 20px rgba(16, 185, 129, 0.05) !important;
+          background: #f0fdf4 !important;
+          border: 1.5px solid #bbf7d0 !important;
         }
 
         .doc-glass-card.uploaded:hover { 
-          border-color: rgba(16, 185, 129, 0.3) !important; 
-          box-shadow: 0 20px 40px rgba(16, 185, 129, 0.1) !important; 
+          border-color: #86efac !important; 
         }
 
         .doc-glass-icon {
@@ -2681,15 +2672,13 @@ function PreRegistroPresidente() {
           justify-content: center;
           font-size: 26px; 
           margin-bottom: 12px;
-          background: rgba(255, 255, 255, 0.02) !important;
+          background: #f8fafc !important;
           border: 1px solid var(--color-border) !important;
           color: var(--color-text-secondary) !important;
-          transition: all 0.3s ease !important;
         }
 
         .doc-glass-card:hover .doc-glass-icon { 
-          transform: scale(1.08) rotate(2deg) !important; 
-          background: rgba(255, 255, 255, 0.05) !important;
+          transform: scale(1.05) !important; 
         }
 
         .doc-status-pill {
@@ -2732,8 +2721,8 @@ function PreRegistroPresidente() {
           font-size: 12px; 
           font-weight: 800; 
           cursor: pointer;
-          background: rgba(56, 189, 248, 0.05) !important; 
-          border: 1px solid rgba(56, 189, 248, 0.15) !important;
+          background: #eff6ff !important; 
+          border: 1px solid #bfdbfe !important;
           color: var(--color-primary) !important; 
           transition: all 0.2s ease !important;
           display: flex; 
@@ -2743,17 +2732,16 @@ function PreRegistroPresidente() {
         }
 
         .doc-download-btn:hover {
-          background: rgba(56, 189, 248, 0.1) !important; 
-          border-color: rgba(56, 189, 248, 0.3) !important;
+          background: #dbeafe !important; 
+          border-color: #93c5fd !important;
           transform: translateY(-1.5px) !important; 
-          box-shadow: 0 4px 12px rgba(56, 189, 248, 0.15) !important;
         }
 
         .ocr-panel {
           width: 100%; 
           margin-top: 14px;
-          background: rgba(0, 0, 0, 0.2) !important; 
-          border: 1px solid rgba(56, 189, 248, 0.1) !important;
+          background: #f8fafc !important; 
+          border: 1px solid #e2e8f0 !important;
           border-radius: 16px; 
           padding: 16px;
         }
@@ -2773,8 +2761,8 @@ function PreRegistroPresidente() {
           width: 100%; 
           box-sizing: border-box;
           padding: 14px 18px;
-          background: var(--color-card) !important;
-          border: 1px solid var(--color-border) !important;
+          background: #ffffff !important;
+          border: 1px solid #78889b !important;
           border-radius: 14px; 
           font-size: 14.5px; 
           font-weight: 600;
@@ -2784,25 +2772,31 @@ function PreRegistroPresidente() {
         }
 
         .premium-input:focus {
-          background: rgba(0, 0, 0, 0.25) !important;
+          background: #ffffff !important;
           border-color: var(--color-primary) !important;
-          box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.15) !important;
+          box-shadow: 0 0 0 3px rgba(11, 78, 166, 0.15) !important;
         }
 
-        .premium-input::placeholder { color: var(--color-text-muted) !important; }
-        .premium-input option { background: #0b0f19; color: white; }
+        .premium-input::placeholder { color: #9ca3af !important; }
+        .premium-input option { background: #ffffff; color: #111827; }
+
+        .premium-input:disabled {
+          background: #f1f5f9 !important;
+          color: #6b7280 !important;
+          border-color: #cbd5e1 !important;
+          cursor: not-allowed !important;
+        }
 
         .progress-pill {
           height: 8px; 
           border-radius: 4px;
-          transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+          transition: all 0.4s ease !important;
         }
 
         .afaem-logo {
           height: 75px;
           width: auto;
           object-fit: contain;
-          filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.2));
         }
 
         .fmf-logos {
@@ -2849,7 +2843,7 @@ function PreRegistroPresidente() {
         <img
           src={AfaemLogo}
           alt="AFAEM"
-          style={{ height: '70px', width: 'auto', objectFit: 'contain', filter: `drop-shadow(0 0 10px ${COLORS.overlayWhite25})` }}
+          style={{ height: '70px', width: 'auto', objectFit: 'contain' }}
         />
         <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
           <img src={FmfLogo} alt="FMF" style={{ height: '45px', width: 'auto', objectFit: 'contain', opacity: 0.9 }} />
@@ -2875,12 +2869,10 @@ function PreRegistroPresidente() {
         {/* ===== GLASS STEPPER HEADER (PASO 1, 2 Y 3) ===== */}
         {(pasoActual === 1 || pasoActual === 3 || pasoActual === 5) && (
           <div style={{
-            padding: '12px 24px 10px',
-            borderBottom: `1px solid ${COLORS.overlayWhite08}`,
-            background: COLORS.overlayWhite03,
-            backdropFilter: 'blur(10px)',
+            padding: '16px 24px 14px',
+            borderBottom: `1px solid rgba(255, 255, 255, 0.15)`,
           }}>
-            <p style={{ textAlign: 'center', fontSize: '11px', fontWeight: '700', color: COLORS.overlayWhite90, letterSpacing: '2px', textTransform: 'uppercase', margin: '0 0 12px' }}>
+            <p style={{ textAlign: 'center', fontSize: '11px', fontWeight: '700', color: '#ffffff', letterSpacing: '2px', textTransform: 'uppercase', margin: '0 0 12px', opacity: 0.8 }}>
               PROCESO DE ACTIVACIÓN
             </p>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -2888,25 +2880,23 @@ function PreRegistroPresidente() {
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
                 <div style={{
                   width: '18px', height: '18px', borderRadius: '999px',
-                  background: pasoActual === 1 ? `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.secondaryHover})` : COLORS.successBgTranslucent10,
-                  border: pasoActual === 1 ? `1px solid ${COLORS.brandBlueLight50}` : `1px solid ${COLORS.successBgTranslucent30}`,
-                  boxShadow: pasoActual === 1 ? `0 8px 20px ${COLORS.primaryBgTranslucent40},inset 0 1px 0 ${COLORS.overlayWhite15}` : 'none',
-                  transition: 'all 0.4s cubic-bezier(0.4,0,0.2,1)',
+                  background: pasoActual === 1 ? '#ffffff' : '#10b981',
+                  border: pasoActual === 1 ? `3px solid rgba(255, 255, 255, 0.3)` : 'none',
+                  transition: 'all 0.4s ease',
                 }} />
-                <span style={{ fontSize: '10px', fontWeight: '800', letterSpacing: '1px', textTransform: 'uppercase', color: pasoActual === 1 ? COLORS.brandBlueLight : COLORS.successLightTranslucent80 }}>
+                <span style={{ fontSize: '10px', fontWeight: '800', letterSpacing: '1px', textTransform: 'uppercase', color: pasoActual === 1 ? '#ffffff' : (pasoActual > 1 ? '#a7f3d0' : 'rgba(255, 255, 255, 0.5)') }}>
                   PASO 1: CUOTAS
                 </span>
               </div>
 
               {/* Connector 1 */}
               <div style={{ position: 'relative', width: '80px', height: '2px', margin: '0 10px', marginBottom: '20px' }}>
-                <div style={{ position: 'absolute', inset: 0, background: COLORS.overlayWhite08, borderRadius: '2px' }} />
+                <div style={{ position: 'absolute', inset: 0, background: 'rgba(255, 255, 255, 0.2)', borderRadius: '2px' }} />
                 <div style={{
                   position: 'absolute', top: 0, left: 0, height: '100%',
                   width: pasoActual > 1 ? '100%' : '0%',
-                  background: `linear-gradient(90deg, ${COLORS.success}, ${COLORS.successLight})`,
-                  borderRadius: '2px', transition: 'width 0.6s cubic-bezier(0.4,0,0.2,1)',
-                  boxShadow: `0 0 8px ${COLORS.successBgTranslucent40}`,
+                  background: '#10b981',
+                  borderRadius: '2px', transition: 'width 0.6s ease',
                 }} />
               </div>
 
@@ -2914,25 +2904,23 @@ function PreRegistroPresidente() {
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
                 <div style={{
                   width: '18px', height: '18px', borderRadius: '999px',
-                  background: pasoActual === 3 ? `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.secondaryHover})` : (pasoActual > 3 ? COLORS.successBgTranslucent10 : COLORS.overlayWhite04),
-                  border: pasoActual === 3 ? `1px solid ${COLORS.brandBlueLight50}` : (pasoActual > 3 ? `1px solid ${COLORS.successBgTranslucent30}` : `1px solid ${COLORS.overlayWhite10}`),
-                  boxShadow: pasoActual === 3 ? `0 8px 20px ${COLORS.primaryBgTranslucent40},inset 0 1px 0 ${COLORS.overlayWhite15}` : 'none',
-                  transition: 'all 0.4s cubic-bezier(0.4,0,0.2,1)',
+                  background: pasoActual === 3 ? '#ffffff' : (pasoActual > 3 ? '#10b981' : 'rgba(255, 255, 255, 0.2)'),
+                  border: pasoActual === 3 ? `3px solid rgba(255, 255, 255, 0.3)` : (pasoActual > 3 ? 'none' : '1px solid rgba(255, 255, 255, 0.3)'),
+                  transition: 'all 0.4s ease',
                 }} />
-                <span style={{ fontSize: '10px', fontWeight: '800', letterSpacing: '1px', textTransform: 'uppercase', color: pasoActual === 3 ? COLORS.brandBlueLight : (pasoActual > 3 ? COLORS.successLightTranslucent80 : COLORS.overlayWhite25) }}>
+                <span style={{ fontSize: '10px', fontWeight: '800', letterSpacing: '1px', textTransform: 'uppercase', color: pasoActual === 3 ? '#ffffff' : (pasoActual > 3 ? '#a7f3d0' : 'rgba(255, 255, 255, 0.5)') }}>
                   PASO 2: DOCUMENTOS
                 </span>
               </div>
 
               {/* Connector 2 */}
               <div style={{ position: 'relative', width: '80px', height: '2px', margin: '0 10px', marginBottom: '20px' }}>
-                <div style={{ position: 'absolute', inset: 0, background: COLORS.overlayWhite08, borderRadius: '2px' }} />
+                <div style={{ position: 'absolute', inset: 0, background: 'rgba(255, 255, 255, 0.2)', borderRadius: '2px' }} />
                 <div style={{
                   position: 'absolute', top: 0, left: 0, height: '100%',
                   width: pasoActual > 3 ? '100%' : '0%',
-                  background: `linear-gradient(90deg, ${COLORS.success}, ${COLORS.successLight})`,
-                  borderRadius: '2px', transition: 'width 0.6s cubic-bezier(0.4,0,0.2,1)',
-                  boxShadow: `0 0 8px ${COLORS.successBgTranslucent40}`,
+                  background: '#10b981',
+                  borderRadius: '2px', transition: 'width 0.6s ease',
                 }} />
               </div>
 
@@ -2940,12 +2928,11 @@ function PreRegistroPresidente() {
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
                 <div style={{
                   width: '18px', height: '18px', borderRadius: '999px',
-                  background: pasoActual === 5 ? `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.secondaryHover})` : COLORS.overlayWhite04,
-                  border: pasoActual === 5 ? `1px solid ${COLORS.brandBlueLight50}` : `1px solid ${COLORS.overlayWhite10}`,
-                  boxShadow: pasoActual === 5 ? `0 8px 20px ${COLORS.primaryBgTranslucent40},inset 0 1px 0 ${COLORS.overlayWhite15}` : 'none',
-                  transition: 'all 0.4s cubic-bezier(0.4,0,0.2,1)',
+                  background: pasoActual === 5 ? '#ffffff' : 'rgba(255, 255, 255, 0.2)',
+                  border: pasoActual === 5 ? `3px solid rgba(255, 255, 255, 0.3)` : '1px solid rgba(255, 255, 255, 0.3)',
+                  transition: 'all 0.4s ease',
                 }} />
-                <span style={{ fontSize: '10px', fontWeight: '800', letterSpacing: '1px', textTransform: 'uppercase', color: pasoActual === 5 ? COLORS.brandBlueLight : COLORS.overlayWhite25 }}>
+                <span style={{ fontSize: '10px', fontWeight: '800', letterSpacing: '1px', textTransform: 'uppercase', color: pasoActual === 5 ? '#ffffff' : 'rgba(255, 255, 255, 0.5)' }}>
                   PASO 3: VALIDACIÓN
                 </span>
               </div>
@@ -2959,11 +2946,11 @@ function PreRegistroPresidente() {
             {error && (
               <div style={{
                 marginBottom: '20px',
-                background: COLORS.dangerBgTranslucent10,
-                border: `1px solid ${COLORS.dangerBgTranslucent30}`,
+                background: '#fef2f2',
+                border: `1px solid #fecaca`,
                 borderRadius: '12px',
                 padding: '12px 16px',
-                color: 'var(--text-main)',
+                color: '#9b1c1c',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '10px'
@@ -2976,13 +2963,13 @@ function PreRegistroPresidente() {
             {estadoPago === 4 && (
               <div style={{
                 marginBottom: '20px',
-                background: COLORS.dangerBgTranslucent10,
-                border: `1px solid ${COLORS.dangerBgTranslucent30}`,
+                background: '#fef2f2',
+                border: `1px solid #fecaca`,
                 borderRadius: '12px',
                 padding: '12px 16px',
-                color: 'var(--text-main)'
+                color: '#9b1c1c'
               }}>
-                <h4 style={{ margin: '0 0 4px', color: 'var(--danger)', fontSize: '14px', fontWeight: '800' }}>
+                <h4 style={{ margin: '0 0 4px', color: '#9b1c1c', fontSize: '14px', fontWeight: '800' }}>
                   Tu orden fue rechazada
                 </h4>
                 <p style={{ margin: 0, fontSize: '13px', lineHeight: '1.5' }}>
@@ -2996,7 +2983,7 @@ function PreRegistroPresidente() {
               <div className="insurance-layout-left">
                 {ordenPendienteId ? (
                   <div style={{
-                    background: `linear-gradient(135deg, ${COLORS.successBgTranslucent05} 0%, ${COLORS.greenMediumTranslucent} 100%)`,
+                    background: '#f0fdf4',
                     padding: '20px',
                     borderRadius: '16px',
                     border: `1px solid ${COLORS.successBgTranslucent30}`,
@@ -3664,19 +3651,17 @@ function PreRegistroPresidente() {
               </p>
             </div>
 
-            {/* DATOS DE REGISTRO — PREMIUM GLASS */}
+            {/* DATOS DE REGISTRO — MATCH INVITACION CARDS */}
             <div style={{
-              background: `linear-gradient(135deg, ${COLORS.primaryBgTranslucent} 0%, ${COLORS.overlaySlateSuperLight} 100%)`,
-              border: `1px solid ${COLORS.brandBlueLight16}`,
-              borderRadius: '24px',
+              backgroundColor: 'white',
+              border: `1px solid var(--color-border)`,
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+              borderRadius: '16px',
               padding: '28px',
               marginBottom: '35px',
-              backdropFilter: 'blur(8px)',
               position: 'relative',
               overflow: 'hidden',
             }}>
-              {/* Top accent */}
-              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: `linear-gradient(90deg, transparent, ${COLORS.brandBlueLight50}, transparent)` }} />
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
                 <div style={{ width: '5px', height: '24px', background: `linear-gradient(180deg, ${COLORS.brandBlueLight}, ${COLORS.primary})`, borderRadius: '4px' }} />
@@ -3963,60 +3948,7 @@ function PreRegistroPresidente() {
                               style={doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
                             >⬇ Descargar</button>
                           )}
-                          {!isApproved && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked) {
-                                  return Swal.fire('Acción requerida', 'Debes completar todos los datos de identidad y documentos anteriores antes de subir el formato de afiliación.', 'warning');
-                                }
-                                if (doc.documento !== 'formatoAfiliacion') {
-                                  const inputId = `file-${doc.documento}`;
-                                  Swal.fire(buildCaptureSourceDialog(getCameraCaptureKind(doc.documento), COLORS)).then((result) => {
-                                    if (result.isConfirmed) {
-                                      setCameraTargetKey(inputId);
-                                      setIsCameraOpen(true);
-                                    } else if (result.dismiss === Swal.DismissReason.cancel) {
-                                      document.getElementById(inputId)?.click();
-                                    }
-                                  });
-                                  return;
-                                }
-                                if (doc.documento === 'fotografia') {
-                                  Swal.fire({
-                                    title: 'Selecciona una opción',
-                                    text: '¿Cómo deseas cargar la fotografía?',
-                                    icon: 'question',
-                                    showCancelButton: true,
-                                    confirmButtonText: '📷 Tomar con cámara',
-                                    cancelButtonText: '📁 Subir archivo',
-                                    confirmButtonColor: COLORS.primary,
-                                    cancelButtonColor: COLORS.slate500
-                                  }).then((result) => {
-                                    if (result.isConfirmed) {
-                                      setCameraTargetKey('file-fotografia');
-                                      setIsCameraOpen(true);
-                                    } else if (result.dismiss === Swal.DismissReason.cancel) {
-                                      document.getElementById(`file-${doc.documento}`).click();
-                                    }
-                                  });
-                                } else {
-                                  document.getElementById(`file-${doc.documento}`).click();
-                                }
-                              }}
-                              className="doc-action-btn"
-                              style={{
-                                border: isUploaded ? `1px solid ${COLORS.successBgTranslucent30}` : `1px solid ${COLORS.overlayWhite10}`,
-                                background: isUploaded ? COLORS.successBgTranslucent10 : COLORS.overlayWhite04,
-                                color: isUploaded ? COLORS.successLight : 'var(--text-muted)',
-                                opacity: doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked ? 0.5 : 1,
-                                cursor: doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked ? 'not-allowed' : 'pointer',
-                                flex: 1
-                              }}
-                            >
-                              {hasLocalFile ? 'Cambiar' : (docGuardado ? 'Reemplazar' : (error && doc.documento === 'fotografia' ? '🔄 Reintentar' : '⬆ Subir'))}
-                            </button>
-                          )}
+
                           {hasLocalFile && documents[doc.documento] && (
                             <>
                               <button
@@ -4112,18 +4044,17 @@ function PreRegistroPresidente() {
               );
             })()}
 
-            {/* FORMULARIO MANUAL DE IDENTIDAD */}
+            {/* FORMULARIO MANUAL DE IDENTIDAD — MATCH INVITACION CARDS */}
             <div style={{
-              background: `linear-gradient(135deg, ${COLORS.brandBlueLight06} 0%, ${COLORS.overlaySlateSuperLight} 100%)`,
-              border: `1px solid ${COLORS.brandBlueLight20}`,
-              borderRadius: '24px',
+              backgroundColor: 'white',
+              border: `1px solid var(--color-border)`,
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+              borderRadius: '16px',
               padding: '28px',
               marginBottom: '35px',
-              backdropFilter: 'blur(8px)',
               position: 'relative',
               overflow: 'hidden'
             }}>
-              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: `linear-gradient(90deg, transparent, ${COLORS.brandBlueLight50}, transparent)` }} />
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
                 <div style={{ width: '5px', height: '24px', background: `linear-gradient(180deg, ${COLORS.brandBlueLight}, ${COLORS.primary})`, borderRadius: '4px' }} />
@@ -4501,56 +4432,7 @@ function PreRegistroPresidente() {
                     )}
                     {/* Action buttons */}
                     <div style={{ display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' }}>
-                      {!isApproved && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (doc.documento !== 'formatoAfiliacion') {
-                              const inputId = `file-val-${doc.documento}`;
-                              Swal.fire(buildCaptureSourceDialog(getCameraCaptureKind(doc.documento), COLORS)).then((result) => {
-                                if (result.isConfirmed) {
-                                  setCameraTargetKey(inputId);
-                                  setIsCameraOpen(true);
-                                } else if (result.dismiss === Swal.DismissReason.cancel) {
-                                  document.getElementById(inputId)?.click();
-                                }
-                              });
-                              return;
-                            }
-                            if (doc.documento === 'fotografia') {
-                              Swal.fire({
-                                title: 'Selecciona una opción',
-                                text: '¿Cómo deseas cargar la fotografía?',
-                                icon: 'question',
-                                showCancelButton: true,
-                                confirmButtonText: '📷 Tomar con cámara',
-                                cancelButtonText: '📁 Subir archivo',
-                                confirmButtonColor: COLORS.primary,
-                                cancelButtonColor: COLORS.slate500
-                              }).then((result) => {
-                                if (result.isConfirmed) {
-                                  setCameraTargetKey('file-val-fotografia');
-                                  setIsCameraOpen(true);
-                                } else if (result.dismiss === Swal.DismissReason.cancel) {
-                                  document.getElementById(`file-val-${doc.documento}`).click();
-                                }
-                              });
-                            } else {
-                              document.getElementById(`file-val-${doc.documento}`).click();
-                            }
-                          }}
-                          className="doc-action-btn"
-                          style={{
-                            border: isUploaded ? `1px solid ${COLORS.successBgTranslucent30}` : `1px solid ${COLORS.overlayWhite10}`,
-                            background: isUploaded ? COLORS.successBgTranslucent10 : COLORS.overlayWhite04,
-                            color: isUploaded ? COLORS.successLight : 'var(--text-muted)',
-                            cursor: 'pointer',
-                            flex: 1
-                          }}
-                        >
-                          {hasLocalFile ? '🔄 Cambiar' : (docGuardado ? '🔄 Reemplazar' : '⬆ Subir')}
-                        </button>
-                      )}
+
                       {hasLocalFile && documents[doc.documento] && (
                         <>
                           <button
