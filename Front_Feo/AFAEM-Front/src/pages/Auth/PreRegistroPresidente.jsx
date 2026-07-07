@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../routes/paths';
-import { FaUpload, FaCheckCircle, FaTimesCircle, FaChevronRight, FaChevronLeft, FaFileAlt, FaClock, FaCamera, FaTrash } from 'react-icons/fa';
+import { FaUpload, FaCheckCircle, FaTimesCircle, FaChevronRight, FaChevronLeft, FaFileAlt, FaClock, FaCamera, FaTrash, FaSearchPlus, FaSyncAlt } from 'react-icons/fa';
 import CameraCaptureModal from '../../components/Common/CameraCaptureModal';
 import AfaemLogo from '../../assets/afaem-logo@4x.png';
 import FmfLogo from '../../assets/fmf-logo.png';
@@ -17,7 +17,7 @@ import { parseJwt, verificarCurp } from '../../services/auth';
 import { DEFAULT_BANK_INFO } from '../../utils/paymentPdf';
 import Modal from '../../components/partials/Forms/Modal';
 import { useRBAC } from '../../hooks/useRBAC';
-import { openSecurePath } from '../../utils/secureFetch';
+import { openSecurePath, fetchSecureBlobUrl } from '../../utils/secureFetch';
 import { buildCaptureSourceDialog, getCameraCaptureKind } from '../../utils/cameraCapture';
 
 const convertToDDMMYYYY = (dateStr) => {
@@ -231,13 +231,14 @@ const DETALLES_SEGUROS = {
 
 function PreRegistroPresidente() {
   const navigate = useNavigate();
-  const { estatusId, refreshAccess } = useRBAC();
+  const { estatusId, refreshAccess, isLoading: rbacLoading } = useRBAC();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const nombreUsuarioCompleto = user?.usuario?.nombre || user?.nombre || user?.Nombre || user?.NombreUsuario || 'Usuario';
 
   // Estados Generales
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [pasoActual, setPasoActual] = useState(0); // 0 = Bienvenida, 1 = Pago/Seguro, 2 = Revisión de orden, 3 = Documentos, 4 = Revisión de solicitud
+  const [pasoActual, setPasoActual] = useState(null); // 0 = Bienvenida, 1 = Pago/Seguro, 2 = Revisión de orden, 3 = Documentos, 4 = Revisión de solicitud
   const [estadoPago, setEstadoPago] = useState(null); // null, 1=NO ENVIADO, 2=ESPERA, 3=ACTIVO, 4=RECHAZADO
   const [ordenPendienteId, setOrdenPendienteId] = useState(null); // ID si se guardó la orden a la mitad
   const [estadoSolicitud, setEstadoSolicitud] = useState(null); // 1=ESPERA, 2/3=RECHAZADA, 4=BORRADOR
@@ -247,11 +248,13 @@ function PreRegistroPresidente() {
   const [curpExistente, setCurpExistente] = useState(false);
   const [tieneEstadoBackend, setTieneEstadoBackend] = useState(false);
   const [referenciaPago, setReferenciaPago] = useState('');
-  const [previewDoc, setPreviewDoc] = useState(null); // { file: File, title: string }
+  const [previewDoc, setPreviewDoc] = useState(null); // { file?: File, url?: string, type?: 'image' | 'pdf', title: string }
   const [previewUrl, setPreviewUrl] = useState('');
 
   useEffect(() => {
-    if (previewDoc?.file) {
+    if (previewDoc?.url) {
+      setPreviewUrl(previewDoc.url);
+    } else if (previewDoc?.file) {
       const url = URL.createObjectURL(previewDoc.file);
       setPreviewUrl(url);
       return () => {
@@ -351,6 +354,64 @@ function PreRegistroPresidente() {
       return '+52';
     }
   });
+  const [previews, setPreviews] = useState({});
+
+  useEffect(() => {
+    if (!documentosGuardados || documentosGuardados.length === 0) return;
+
+    const docIdMap = {
+      8: 'actaNacimiento',
+      38: 'identificacion',
+      37: 'fotografia',
+      10: 'formatoAfiliacion'
+    };
+
+    documentosGuardados.forEach(async (d) => {
+      const docAfiliacionId = Number(d.DocumentoAfiliacionId || d.documentoAfiliacionId);
+      const key = docIdMap[docAfiliacionId];
+      if (!key) return;
+
+      try {
+        const url = await fetchSecureBlobUrl(d.Url || d.url);
+        setPreviews(prev => {
+          if (prev[key]) return prev;
+          return { ...prev, [key]: url };
+        });
+      } catch (err) {
+        console.error(`Error fetching secure preview for ${key}:`, err);
+      }
+    });
+  }, [documentosGuardados]);
+
+  useEffect(() => {
+    Object.keys(documents).forEach(key => {
+      const file = documents[key];
+      if (file) {
+        if (file.type?.startsWith('image/')) {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            setPreviews(prev => {
+              if (prev[key] === reader.result) return prev;
+              return { ...prev, [key]: reader.result };
+            });
+          };
+          reader.readAsDataURL(file);
+        } else if (file.type === 'application/pdf') {
+          const url = URL.createObjectURL(file);
+          setPreviews(prev => ({ ...prev, [key]: url }));
+        }
+      } else {
+        setPreviews(prev => {
+          if (prev[key] === null) return prev;
+          if (prev[key] && prev[key].startsWith('blob:')) {
+            URL.revokeObjectURL(prev[key]);
+          }
+          return { ...prev, [key]: null };
+        });
+      }
+    });
+  }, [documents]);
+
   const [, setFotoPreview] = useState(null);
   const [detailsOpen, setDetailsOpen] = useState({});
   const [tipoAfiliacion, setTipoAfiliacion] = useState('');
@@ -376,6 +437,43 @@ function PreRegistroPresidente() {
     identificacion: 38,
     fotografia: 37,
     formatoAfiliacion: 10,
+  };
+
+  const triggerDocUpload = (docKey, isValidationFlow = false) => {
+    if (docKey === 'formatoAfiliacion' && formatAfiliacionLocked) {
+      return Swal.fire('Acción requerida', 'Debes completar todos los datos de identidad y documentos anteriores antes de subir el formato de afiliación.', 'warning');
+    }
+    const inputId = isValidationFlow ? `file-val-${docKey}` : `file-${docKey}`;
+    if (docKey === 'fotografia') {
+      Swal.fire({
+        title: 'Selecciona una opción',
+        text: '¿Cómo deseas cargar la fotografía?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: '📷 Tomar con cámara',
+        cancelButtonText: '📁 Subir archivo',
+        confirmButtonColor: COLORS.primary,
+        cancelButtonColor: COLORS.slate500
+      }).then((result) => {
+        if (result.isConfirmed) {
+          setCameraTargetKey(inputId);
+          setIsCameraOpen(true);
+        } else if (result.dismiss === Swal.DismissReason.cancel) {
+          const inputEl = document.getElementById(inputId);
+          if (inputEl) inputEl.click();
+        }
+      });
+    } else {
+      Swal.fire(buildCaptureSourceDialog(getCameraCaptureKind(docKey), COLORS)).then((result) => {
+        if (result.isConfirmed) {
+          setCameraTargetKey(inputId);
+          setIsCameraOpen(true);
+        } else if (result.dismiss === Swal.DismissReason.cancel) {
+          const inputEl = document.getElementById(inputId);
+          if (inputEl) inputEl.click();
+        }
+      });
+    }
   };
 
   const handleCameraPhotoCaptured = (file) => {
@@ -593,8 +691,13 @@ function PreRegistroPresidente() {
         // Pago pendiente
         setPasoActual(1);
       }
+      setTieneEstadoBackend(true);
+    } else if (estatusId === null && !rbacLoading) {
+      // Si ya cargó y no hay estatus, iniciar en paso 0 (Bienvenida)
+      setPasoActual(0);
+      setTieneEstadoBackend(true);
     }
-  }, [estatusId, navigate, tieneEstadoBackend]);
+  }, [estatusId, rbacLoading, navigate, tieneEstadoBackend]);
 
   // Sincronizar nombre y teléfono desde localStorage, y rellenar Tipo de Afiliación
   useEffect(() => {
@@ -1871,9 +1974,7 @@ function PreRegistroPresidente() {
       setOcrResults(prev => ({
         ...prev,
         [field]: value,
-        ...extra,
-        actaNacimiento: prev.actaNacimiento || 'Manual',
-        identificacion: prev.identificacion || 'Manual'
+        ...extra
       }));
 
       if (value.length === 18) {
@@ -1889,9 +1990,7 @@ function PreRegistroPresidente() {
     } else {
       setOcrResults(prev => ({
         ...prev,
-        [field]: value,
-        actaNacimiento: prev.actaNacimiento || 'Manual',
-        identificacion: prev.identificacion || 'Manual'
+        [field]: value
       }));
     }
   };
@@ -2193,6 +2292,91 @@ function PreRegistroPresidente() {
     }
   };
 
+  const esMayorDeEdad = (() => {
+    if (!ocrResults.fecha_nac) return false;
+    const val = convertToYYYYMMDD(ocrResults.fecha_nac);
+    if (!val) return false;
+    const fechaDate = new Date(val);
+    if (fechaDate.getFullYear() < 1900) return false;
+    if (fechaDate.getFullYear() > new Date().getFullYear()) return false;
+    const limitDate = new Date(new Date().setFullYear(new Date().getFullYear() - 18));
+    return fechaDate <= limitDate;
+  })();
+
+  const isActaUploaded = !!documents.actaNacimiento || documentosGuardados.some(d => Number(d.DocumentoAfiliacionId || d.documentoAfiliacionId) === 8);
+  const isIneUploaded = !!documents.identificacion || documentosGuardados.some(d => Number(d.DocumentoAfiliacionId || d.documentoAfiliacionId) === 38);
+  const isFotoUploaded = !!documents.fotografia || documentosGuardados.some(d => Number(d.DocumentoAfiliacionId || d.documentoAfiliacionId) === 37);
+
+  const formatAfiliacionLocked = !(
+    ocrResults.equipo && nombreEquipoValido && ocrResults.nombre && ocrResults.curp &&
+    ocrResults.fecha_nac && esMayorDeEdad && ocrResults.nacionalidad && ocrResults.sexo &&
+    ocrResults.telefono && liga && tipoAfiliacion &&
+    isActaUploaded && isIneUploaded && isFotoUploaded
+  );
+
+  if (rbacLoading || pasoActual === null) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: '#f1f5f9',
+        fontFamily: "'Outfit', sans-serif"
+      }}>
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '20px',
+          padding: '40px',
+          background: 'white',
+          borderRadius: '24px',
+          boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)',
+          border: '1px solid #e2e8f0'
+        }}>
+          <img
+            src={AfaemLogo}
+            alt="AFAEM"
+            style={{ height: '80px', width: 'auto', objectFit: 'contain', marginBottom: '10px' }}
+          />
+          <div style={{
+            width: '50px',
+            height: '50px',
+            border: `5px solid rgba(11, 78, 166, 0.1)`,
+            borderTop: `5px solid #0b4ea6`,
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite'
+          }} />
+          <style>{`
+            @keyframes spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+          `}</style>
+          <p style={{
+            margin: 0,
+            fontSize: '15px',
+            fontWeight: '700',
+            color: '#1e293b',
+            letterSpacing: '0.5px'
+          }}>
+            Verificando estatus de registro...
+          </p>
+          <p style={{
+            margin: 0,
+            fontSize: '12px',
+            color: '#64748b',
+            textAlign: 'center'
+          }}>
+            Por favor, espera un momento.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fade-in prereg-dark-page" style={{
       minHeight: '100vh',
@@ -2385,7 +2569,7 @@ function PreRegistroPresidente() {
         }
 
         /* Stepper header styling (Blue Header!) */
-        .prereg-dark-page .card > div:first-child {
+        .prereg-stepper-header {
           background: var(--color-primary) !important;
           border-bottom: 1px solid rgba(255, 255, 255, 0.15) !important;
         }
@@ -2681,6 +2865,10 @@ function PreRegistroPresidente() {
           transform: scale(1.05) !important; 
         }
 
+        .doc-glass-card:hover .overlay-actions {
+          opacity: 1 !important;
+        }
+
         .doc-status-pill {
           position: absolute; 
           top: 12px; 
@@ -2771,10 +2959,19 @@ function PreRegistroPresidente() {
           transition: all 0.25s ease !important;
         }
 
+        .premium-input.filled {
+          border-color: #10b981 !important;
+        }
+
         .premium-input:focus {
           background: #ffffff !important;
           border-color: var(--color-primary) !important;
           box-shadow: 0 0 0 3px rgba(11, 78, 166, 0.15) !important;
+        }
+
+        .premium-input.filled:focus {
+          border-color: #10b981 !important;
+          box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15) !important;
         }
 
         .premium-input::placeholder { color: #9ca3af !important; }
@@ -2838,24 +3035,11 @@ function PreRegistroPresidente() {
         }
       `}</style>
 
-      {/* HEADER LOGOS */}
-      <div style={{ width: '95%', maxWidth: '1400px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <img
-          src={AfaemLogo}
-          alt="AFAEM"
-          style={{ height: '70px', width: 'auto', objectFit: 'contain' }}
-        />
-        <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
-          <img src={FmfLogo} alt="FMF" style={{ height: '45px', width: 'auto', objectFit: 'contain', opacity: 0.9 }} />
-          <img src={AmateurLogo} alt="Amateur" style={{ height: '45px', width: 'auto', objectFit: 'contain', opacity: 0.9 }} />
-        </div>
-      </div>
-
       <div className="card glass" style={{ width: '95%', maxWidth: '1400px', padding: 0, overflow: 'hidden' }}>
         {/* PASO 0: BIENVENIDA */}
         {pasoActual === 0 && (
           <div style={{ padding: '60px 40px', textAlign: 'center' }}>
-            <h1 style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '10px' }}>Bienvenido, {user.Nombre || user.NombreUsuario || user.Correo || user.email || 'Usuario'}</h1>
+            <h1 style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '10px' }}>Bienvenido, {nombreUsuarioCompleto}</h1>
             <p style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-muted)', marginBottom: '30px' }}>Comencemos con tu registro inicial</p>
             <p style={{ fontSize: '16px', color: 'var(--text-muted)', lineHeight: '1.6', margin: '30px 0', borderTop: '1px solid var(--border-light)', paddingTop: '30px' }}>
               Para activar tu cuenta y comenzar a gestionar tu equipo, necesitamos completar dos pasos.
@@ -2868,13 +3052,40 @@ function PreRegistroPresidente() {
 
         {/* ===== GLASS STEPPER HEADER (PASO 1, 2 Y 3) ===== */}
         {(pasoActual === 1 || pasoActual === 3 || pasoActual === 5) && (
-          <div style={{
+          <div className="prereg-stepper-header" style={{
             padding: '16px 24px 14px',
             borderBottom: `1px solid rgba(255, 255, 255, 0.15)`,
           }}>
-            <p style={{ textAlign: 'center', fontSize: '11px', fontWeight: '700', color: '#ffffff', letterSpacing: '2px', textTransform: 'uppercase', margin: '0 0 12px', opacity: 0.8 }}>
-              PROCESO DE ACTIVACIÓN
-            </p>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '16px',
+              flexWrap: 'wrap',
+              gap: '12px'
+            }}>
+              <img
+                src={AfaemLogo}
+                alt="AFAEM"
+                style={{ height: '45px', width: 'auto', objectFit: 'contain' }}
+              />
+              <p style={{
+                fontSize: '11px',
+                fontWeight: '700',
+                color: '#ffffff',
+                letterSpacing: '2px',
+                textTransform: 'uppercase',
+                margin: 0,
+                opacity: 0.8,
+                textAlign: 'center'
+              }}>
+                PROCESO DE ACTIVACIÓN
+              </p>
+              <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+                <img src={FmfLogo} alt="FMF" style={{ height: '30px', width: 'auto', objectFit: 'contain', opacity: 0.9 }} />
+                <img src={AmateurLogo} alt="Amateur" style={{ height: '30px', width: 'auto', objectFit: 'contain', opacity: 0.9 }} />
+              </div>
+            </div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               {/* STEP 1 */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
@@ -3446,7 +3657,7 @@ function PreRegistroPresidente() {
                 </div>
 
                 <h1 style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '15px' }}>
-                  ¡Bienvenido, {user.Nombre || user.NombreUsuario || user.Correo || user.email || 'Usuario'}!
+                  ¡Bienvenido, {nombreUsuarioCompleto}!
                 </h1>
 
                 <div style={{ maxWidth: '500px' }}>
@@ -3671,14 +3882,14 @@ function PreRegistroPresidente() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '20px', marginBottom: '20px' }}>
                 <div className="premium-input-group">
                   <label className="premium-label">Asociación</label>
-                  <input type="text" value={asociacion} disabled className="premium-input" style={{ backgroundColor: COLORS.slate500, cursor: 'not-allowed' }} />
+                  <input type="text" value={asociacion} disabled className={`premium-input ${asociacion ? 'filled' : ''}`} style={{ backgroundColor: COLORS.slate500, cursor: 'not-allowed' }} />
                 </div>
                 <div className="premium-input-group">
                   <label className="premium-label">Liga Destino</label>
                   <select
                     value={liga}
                     onChange={(e) => setLiga(e.target.value)}
-                    className="premium-input"
+                    className={`premium-input ${liga ? 'filled' : ''}`}
                     style={{ cursor: 'pointer' }}
                   >
                     <option value="">Selecciona...</option>
@@ -3690,7 +3901,7 @@ function PreRegistroPresidente() {
                   <select
                     value={cargoSeleccionado}
                     onChange={(e) => setCargoSeleccionado(e.target.value)}
-                    className="premium-input"
+                    className={`premium-input ${cargoSeleccionado ? 'filled' : ''}`}
                     style={{ cursor: 'pointer' }}
                   >
                     <option value="Presidente Equipo">Presidente Equipo</option>
@@ -3704,7 +3915,7 @@ function PreRegistroPresidente() {
                     placeholder="Nombre del Equipo"
                     value={ocrResults.equipo || ''}
                     onChange={(e) => handleManualOcrChange('equipo', e.target.value.toUpperCase())}
-                    className="premium-input"
+                    className={`premium-input ${ocrResults.equipo ? 'filled' : ''}`}
                   />
                   {nombreEquipoMensaje && (
                     <span style={{
@@ -3723,7 +3934,7 @@ function PreRegistroPresidente() {
                   <select
                     value={tipoAfiliacion}
                     onChange={(e) => setTipoAfiliacion(e.target.value)}
-                    className="premium-input"
+                    className={`premium-input ${tipoAfiliacion ? 'filled' : ''}`}
                     style={{ cursor: 'not-allowed', backgroundColor: COLORS.overlayWhite05 }}
                     disabled={true}
                   >
@@ -3735,314 +3946,329 @@ function PreRegistroPresidente() {
             </div>
 
             {/* TARJETAS DE DOCUMENTOS */}
-            {(() => {
-              const esMayorDeEdad = (() => {
-                if (!ocrResults.fecha_nac) return false;
-                const val = convertToYYYYMMDD(ocrResults.fecha_nac);
-                if (!val) return false;
-                const fechaDate = new Date(val);
-                if (fechaDate.getFullYear() < 1900) return false;
-                if (fechaDate.getFullYear() > new Date().getFullYear()) return false;
-                const limitDate = new Date(new Date().setFullYear(new Date().getFullYear() - 18));
-                return fechaDate <= limitDate;
-              })();
+            <div className="doc-cards-grid">
+              {requisitos.filter(r => r.documento !== 'formatoAfiliacion').map((doc, idx) => {
+                const docIdMap = {
+                  actaNacimiento: 8,
+                  identificacion: 38,
+                  fotografia: 37,
+                  formatoAfiliacion: 10
+                };
+                const docAfiliacionId = docIdMap[doc.documento];
+                const docGuardado = documentosGuardados.find(d => Number(d.DocumentoAfiliacionId || d.documentoAfiliacionId) === Number(docAfiliacionId));
 
-              const formatAfiliacionLocked = !(
-                ocrResults.equipo && nombreEquipoValido && ocrResults.nombre && ocrResults.curp &&
-                ocrResults.fecha_nac && esMayorDeEdad && ocrResults.nacionalidad && ocrResults.sexo &&
-                ocrResults.telefono && liga && tipoAfiliacion &&
-                documents.actaNacimiento && documents.identificacion && documents.fotografia
-              );
-              return (
-                <div className="doc-cards-grid">
-                  {requisitos.map((doc, idx) => {
-                    const docIdMap = {
-                      actaNacimiento: 8,
-                      identificacion: 38,
-                      fotografia: 37,
-                      formatoAfiliacion: 10
-                    };
-                    const docAfiliacionId = docIdMap[doc.documento];
-                    const docGuardado = documentosGuardados.find(d => Number(d.DocumentoAfiliacionId || d.documentoAfiliacionId) === Number(docAfiliacionId));
+                const hasLocalFile = !!documents[doc.documento];
+                const isUploaded = hasLocalFile || !!docGuardado;
+                const isOcrDoc = ['actaNacimiento', 'identificacion'].includes(doc.documento);
+                const ocrProcessed = isOcrDoc && ocrResults[doc.documento];
+                const icons = { actaNacimiento: '📜', identificacion: '🪪', fotografia: '📸', formatoAfiliacion: '📝' };
 
-                    const hasLocalFile = !!documents[doc.documento];
-                    const isUploaded = hasLocalFile || !!docGuardado;
-                    const isOcrDoc = ['actaNacimiento', 'identificacion'].includes(doc.documento);
-                    const ocrProcessed = isOcrDoc && ocrResults[doc.documento];
-                    const icons = { actaNacimiento: '📜', identificacion: '🪪', fotografia: '📸', formatoAfiliacion: '📝' };
+                let statusLabel, statusColor, statusDotColor, statusBg;
+                if (docGuardado) {
+                  const estId = Number(docGuardado.EstadoValidacionId || docGuardado.estadoValidacionId);
+                  if (estId === 2) {
+                    statusLabel = 'Aprobado'; statusColor = COLORS.success; statusDotColor = COLORS.success; statusBg = COLORS.successBgTranslucent10;
+                  } else if (estId === 3) {
+                    statusLabel = 'Rechazado'; statusColor = COLORS.danger; statusDotColor = COLORS.danger; statusBg = COLORS.dangerBgTranslucent10;
+                  } else {
+                    statusLabel = 'En espera'; statusColor = COLORS.warning; statusDotColor = COLORS.warning; statusBg = COLORS.warningBgTranslucent12;
+                  }
+                } else if (hasLocalFile) {
+                  statusLabel = 'Listo'; statusColor = COLORS.successLight; statusDotColor = COLORS.success; statusBg = COLORS.successBgTranslucent10;
+                } else if (ocrProcessed) {
+                  statusLabel = 'Procesado'; statusColor = COLORS.successLight; statusDotColor = COLORS.success; statusBg = COLORS.successBgTranslucent10;
+                } else {
+                  statusLabel = 'Pendiente'; statusColor = COLORS.warning; statusDotColor = COLORS.warningDark; statusBg = COLORS.warningBgTranslucent12;
+                }
 
-                    let statusLabel, statusColor, statusDotColor, statusBg;
-                    if (docGuardado) {
-                      const estId = Number(docGuardado.EstadoValidacionId || docGuardado.estadoValidacionId);
-                      if (estId === 2) {
-                        statusLabel = 'Aprobado'; statusColor = COLORS.success; statusDotColor = COLORS.success; statusBg = COLORS.successBgTranslucent10;
-                      } else if (estId === 3) {
-                        statusLabel = 'Rechazado'; statusColor = COLORS.danger; statusDotColor = COLORS.danger; statusBg = COLORS.dangerBgTranslucent10;
-                      } else {
-                        statusLabel = 'En espera'; statusColor = COLORS.warning; statusDotColor = COLORS.warning; statusBg = COLORS.warningBgTranslucent12;
+                const isApproved = docGuardado && Number(docGuardado.EstadoValidacionId || docGuardado.estadoValidacionId) === 2;
+                const isRejected = docGuardado && Number(docGuardado.EstadoValidacionId || docGuardado.estadoValidacionId) === 3;
+
+                return (
+                  <div
+                    key={idx}
+                    className={`doc-glass-card${isUploaded ? ' uploaded' : ''}`}
+                    onClick={() => {
+                      if (isApproved) return;
+                      if (isUploaded) return;
+                      triggerDocUpload(doc.documento);
+                    }}
+                    onDragEnter={(e) => { if (!isApproved && !(doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked)) { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({ ...prev, [doc.documento]: true })); } }}
+                    onDragOver={(e) => { if (!isApproved && !(doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked)) { e.preventDefault(); e.stopPropagation(); } }}
+                    onDragLeave={(e) => { if (!isApproved && !(doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked)) { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({ ...prev, [doc.documento]: false })); } }}
+                    onDrop={(e) => {
+                      if (isApproved) return;
+                      if (doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        return Swal.fire('Acción requerida', 'Debes completar todos los datos de identidad y documentos anteriores antes de subir el formato de afiliación.', 'warning');
                       }
-                    } else if (hasLocalFile) {
-                      statusLabel = 'Listo'; statusColor = COLORS.successLight; statusDotColor = COLORS.success; statusBg = COLORS.successBgTranslucent10;
-                    } else if (ocrProcessed) {
-                      statusLabel = 'Procesado'; statusColor = COLORS.successLight; statusDotColor = COLORS.success; statusBg = COLORS.successBgTranslucent10;
-                    } else {
-                      statusLabel = 'Pendiente'; statusColor = COLORS.warning; statusDotColor = COLORS.warningDark; statusBg = COLORS.warningBgTranslucent12;
-                    }
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setDragActive(prev => ({ ...prev, [doc.documento]: false }));
+                      const file = e.dataTransfer.files[0];
+                      if (file) {
+                        if (!validarArchivoPermitido(file)) return;
+                        if (docGuardado) {
+                          handleReemplazarDocumento(docAfiliacionId, file);
+                          setDocuments(prev => ({ ...prev, [doc.documento]: file }));
+                        } else {
+                          handleFileUpload(doc.documento, file);
+                        }
+                      }
+                    }}
+                    style={{
+                      cursor: isApproved ? 'default' : (doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked ? 'not-allowed' : 'pointer'),
+                      border: dragActive[doc.documento] ? `2px solid ${COLORS.primary}` : (isUploaded ? `2px solid ${COLORS.success}` : `2px dashed ${COLORS.slate300}`),
+                      backgroundColor: dragActive[doc.documento] ? 'rgba(26, 59, 92, 0.05)' : undefined,
+                      padding: '16px'
+                    }}
+                  >
+                    {/* Top sheen */}
+                    <div className="top-sheen" style={{ background: isUploaded ? `linear-gradient(90deg,transparent,${COLORS.successBgTranslucent40},transparent)` : `linear-gradient(90deg,transparent,${COLORS.overlayWhite06},transparent)` }} />
+                    {/* Status pill */}
+                    <div className="doc-status-pill" style={{ background: statusBg, color: statusColor }}>
+                      <div className="doc-status-dot" style={{ background: statusDotColor, boxShadow: `0 0 5px ${statusDotColor}` }} />
+                      {statusLabel}
+                    </div>
 
-                    const isApproved = docGuardado && Number(docGuardado.EstadoValidacionId || docGuardado.estadoValidacionId) === 2;
-                    const isRejected = docGuardado && Number(docGuardado.EstadoValidacionId || docGuardado.estadoValidacionId) === 3;
-
-                    return (
-                      <div
-                        key={idx}
-                        className={`doc-glass-card${isUploaded ? ' uploaded' : ''}`}
-                        onClick={() => {
-                          if (isApproved) return;
-                          if (doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked) {
-                            return Swal.fire('Acción requerida', 'Debes completar todos los datos de identidad y documentos anteriores antes de subir el formato de afiliación.', 'warning');
-                          }
-                          if (doc.documento !== 'formatoAfiliacion') {
-                            const inputId = `file-${doc.documento}`;
-                            Swal.fire(buildCaptureSourceDialog(getCameraCaptureKind(doc.documento), COLORS)).then((result) => {
-                              if (result.isConfirmed) {
-                                setCameraTargetKey(inputId);
-                                setIsCameraOpen(true);
-                              } else if (result.dismiss === Swal.DismissReason.cancel) {
-                                document.getElementById(inputId)?.click();
-                              }
-                            });
-                            return;
-                          }
-                          if (doc.documento === 'fotografia') {
-                            Swal.fire({
-                              title: 'Selecciona una opción',
-                              text: '¿Cómo deseas cargar la fotografía?',
-                              icon: 'question',
-                              showCancelButton: true,
-                              confirmButtonText: '📷 Tomar con cámara',
-                              cancelButtonText: '📁 Subir archivo',
-                              confirmButtonColor: COLORS.primary,
-                              cancelButtonColor: COLORS.slate500
-                            }).then((result) => {
-                              if (result.isConfirmed) {
-                                setCameraTargetKey('file-fotografia');
-                                setIsCameraOpen(true);
-                              } else if (result.dismiss === Swal.DismissReason.cancel) {
-                                document.getElementById(`file-${doc.documento}`).click();
-                              }
-                            });
-                          } else {
-                            document.getElementById(`file-${doc.documento}`).click();
-                          }
-                        }}
-                        onDragEnter={(e) => { if (!isApproved && !(doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked)) { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({ ...prev, [doc.documento]: true })); } }}
-                        onDragOver={(e) => { if (!isApproved && !(doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked)) { e.preventDefault(); e.stopPropagation(); } }}
-                        onDragLeave={(e) => { if (!isApproved && !(doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked)) { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({ ...prev, [doc.documento]: false })); } }}
-                        onDrop={(e) => {
-                          if (isApproved) return;
-                          if (doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            return Swal.fire('Acción requerida', 'Debes completar todos los datos de identidad y documentos anteriores antes de subir el formato de afiliación.', 'warning');
-                          }
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setDragActive(prev => ({ ...prev, [doc.documento]: false }));
-                          const file = e.dataTransfer.files[0];
-                          if (file) {
-                            if (!validarArchivoPermitido(file)) return;
-                            if (docGuardado) {
-                              handleReemplazarDocumento(docAfiliacionId, file);
-                              setDocuments(prev => ({ ...prev, [doc.documento]: file }));
-                            } else {
-                              handleFileUpload(doc.documento, file);
-                            }
-                          }
-                        }}
-                        style={{
-                          cursor: isApproved ? 'default' : (doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked ? 'not-allowed' : 'pointer'),
-                          border: dragActive[doc.documento] ? `2px solid ${COLORS.primary}` : (isUploaded ? `2px solid ${COLORS.success}` : `2px dashed ${COLORS.slate300}`),
-                          backgroundColor: dragActive[doc.documento] ? 'rgba(26, 59, 92, 0.05)' : undefined
-                        }}
-                      >
-                        {/* Top sheen */}
-                        <div className="top-sheen" style={{ background: isUploaded ? `linear-gradient(90deg,transparent,${COLORS.successBgTranslucent40},transparent)` : `linear-gradient(90deg,transparent,${COLORS.overlayWhite06},transparent)` }} />
-                        {/* Status pill */}
-                        <div className="doc-status-pill" style={{ background: statusBg, color: statusColor }}>
-                          <div className="doc-status-dot" style={{ background: statusDotColor, boxShadow: `0 0 5px ${statusDotColor}` }} />
-                          {statusLabel}
-                        </div>
-                        {/* Icon */}
-                        <div className="doc-glass-icon" style={{
-                          background: isUploaded ? `linear-gradient(135deg,${COLORS.successBgTranslucent10},${COLORS.greenMediumTranslucent})` : `linear-gradient(135deg,${COLORS.primaryBgTranslucent},${COLORS.overlaySlateSuperLight})`,
-                          border: isUploaded ? `1px solid ${COLORS.successBgTranslucent18}` : `1px solid ${COLORS.brandBlueLight12}`,
-                        }}>
-                          {isUploaded ? (
-                            <span>{icons[doc.documento]}</span>
-                          ) : (
-                            <div style={{ width: '100%', textAlign: 'center', color: COLORS.slate400, cursor: 'pointer' }}>
-                              <FaUpload style={{ fontSize: '28px', marginBottom: '6px' }} />
-                              <p style={{ margin: 0, fontSize: '10px', fontWeight: '800' }}>SUBIR ARCHIVO</p>
+                    {/* Preview / Empty State Container */}
+                    <div style={{
+                      height: '140px',
+                      width: '100%',
+                      backgroundColor: isUploaded ? '#ffffff' : 'rgba(248, 250, 252, 0.05)',
+                      borderRadius: '16px',
+                      marginBottom: '16px',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: isUploaded ? `1px solid ${COLORS.successBgTranslucent18}` : `1px dashed ${COLORS.brandBlueLight12}`
+                    }}>
+                      {isUploaded && previews[doc.documento] ? (
+                        <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
+                          {(documents[doc.documento]?.type === 'application/pdf' ||
+                            (docGuardado && (docGuardado.Url || docGuardado.url || '').toLowerCase().endsWith('.pdf'))) ? (
+                            <div style={{ width: '100%', height: '100%', position: 'relative', backgroundColor: '#ffffff' }}>
+                              <iframe
+                                src={`${previews[doc.documento]}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
+                                title={`Preview ${doc.nombre}`}
+                                style={{
+                                  width: '100%',
+                                  height: '100%',
+                                  border: 'none',
+                                  pointerEvents: 'none'
+                                }}
+                              />
+                              <div style={{
+                                position: 'absolute',
+                                bottom: '8px',
+                                left: '8px',
+                                backgroundColor: 'rgba(30, 41, 59, 0.8)',
+                                color: '#ffffff',
+                                fontSize: '10px',
+                                fontWeight: '800',
+                                padding: '4px 8px',
+                                borderRadius: '999px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}>
+                                <FaFileAlt /> PDF
+                              </div>
                             </div>
-                          )}
-                        </div>
-                        {/* Title */}
-                        <h4 style={{ fontSize: '14px', fontWeight: '800', color: isUploaded ? COLORS.successLight : 'var(--text-main)', margin: '0 0 5px' }}>
-                          {doc.nombre}
-                        </h4>
-                        {doc.documento === 'fotografia' && (
-                          <p style={{ fontSize: '11px', color: COLORS.overlayWhite60, margin: '5px 0 10px', fontStyle: 'italic', lineHeight: '1.4' }}>
-                            Mantén una postura recta, visibilidad de hombros, sin sonrisa, ni accesorios como lentes, aretes o gorras.
-                          </p>
-                        )}
-                        {/* Filename */}
-                        <p style={{ fontSize: '10px', color: isUploaded ? COLORS.successLightTranslucent80 : 'var(--text-muted)', margin: '0 0 18px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '90%' }}>
-                          {hasLocalFile ? `📎 ${documents[doc.documento].name}` : (docGuardado ? '📎 Archivo enviado' : 'Sin archivo seleccionado')}
-                        </p>
-                        {/* Rejection reason display */}
-                        {isRejected && docGuardado.ObservacionesDocumento && (
-                          <div style={{ background: COLORS.dangerBgTranslucent, color: COLORS.dangerLight, padding: '10px 14px', border: `1px solid ${COLORS.dangerBgTranslucent30}`, borderRadius: '10px', fontSize: '11px', fontWeight: '700', marginBottom: '14px', width: '100%', textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
-                            Motivo de rechazo: {docGuardado.ObservacionesDocumento}
-                          </div>
-                        )}
-                        {/* Photo error */}
-                        {error && doc.documento === 'fotografia' && (
-                          <div style={{ background: COLORS.dangerBgTranslucent10, color: 'var(--danger)', padding: '10px 14px', borderRadius: '10px', fontSize: '12px', fontWeight: '600', marginBottom: '14px', width: '100%', textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
-                            ⚠️ {error}
-                          </div>
-                        )}
-                        {/* Photo validation bypass button */}
-                        {fotoValidacionFallida && doc.documento === 'fotografia' && fotoArchivoPendiente && (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleForzarSubidaFoto(e);
-                            }}
-                            className="doc-action-btn"
-                            style={{
-                              border: `1px solid ${COLORS.warningBgTranslucent40}`,
-                              background: COLORS.warningBgTranslucent,
-                              color: COLORS.warning,
-                              marginBottom: '14px',
-                              width: '100%',
-                              fontWeight: '700',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            ⚠️ Omitir validación y usar esta foto
-                          </button>
-                        )}
-                        {/* Action buttons */}
-                        <div style={{ display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' }}>
-                          {doc.hasDownload && !isApproved && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked) {
-                                  e.preventDefault();
-                                  return Swal.fire('Acción requerida', 'Debes completar todos los datos de identidad y documentos anteriores antes de descargar el formato de afiliación pre-llenado.', 'warning');
-                                }
-                                handleDownloadFormato(e);
-                              }}
-                              className="doc-download-btn"
-                              style={doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
-                            >⬇ Descargar</button>
+                          ) : (
+                            <img
+                              src={previews[doc.documento]}
+                              alt="Preview"
+                              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                            />
                           )}
 
-                          {hasLocalFile && documents[doc.documento] && (
-                            <>
+                          {/* OVERLAY ACTIONS */}
+                          {!isApproved && (
+                            <div className="overlay-actions" style={{
+                              position: 'absolute',
+                              top: 0, left: 0, right: 0, bottom: 0,
+                              backgroundColor: 'rgba(15, 23, 42, 0.75)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '12px',
+                              opacity: 0,
+                              transition: 'opacity 0.2s ease',
+                              backdropFilter: 'blur(2px)'
+                            }}>
                               <button
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setPreviewDoc({ file: documents[doc.documento], title: doc.nombre });
+                                  const isPdf = documents[doc.documento]?.type === 'application/pdf' ||
+                                    (docGuardado && (docGuardado.Url || docGuardado.url || '').toLowerCase().endsWith('.pdf'));
+                                  setPreviewDoc({
+                                    url: previews[doc.documento],
+                                    type: isPdf ? 'pdf' : 'image',
+                                    title: doc.nombre
+                                  });
                                 }}
-                                className="doc-action-btn"
+                                className="btn-zoom"
                                 style={{
-                                  border: `1px solid ${COLORS.brandBlueLight50}`,
-                                  background: COLORS.brandBlueLight10,
-                                  color: COLORS.secondaryLight,
-                                  fontWeight: '700',
-                                  cursor: 'pointer',
-                                  flex: 1
+                                  width: '36px', height: '36px', borderRadius: '50%',
+                                  backgroundColor: '#ffffff', color: '#1e293b', border: 'none',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', cursor: 'pointer'
                                 }}
                               >
-                                👁 Ver
+                                <FaSearchPlus />
                               </button>
                               <button
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setDocuments(prev => ({ ...prev, [doc.documento]: null }));
-                                  if (setPreviews) {
+                                  triggerDocUpload(doc.documento);
+                                }}
+                                className="btn-change"
+                                style={{
+                                  width: '36px', height: '36px', borderRadius: '50%',
+                                  backgroundColor: '#38bdf8', color: '#ffffff', border: 'none',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', cursor: 'pointer'
+                                }}
+                              >
+                                <FaSyncAlt />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  const result = await Swal.fire({
+                                    title: '¿Quitar documento?',
+                                    text: 'Se eliminará el documento cargado actualmente.',
+                                    icon: 'warning',
+                                    showCancelButton: true,
+                                    confirmButtonText: 'Sí, quitar',
+                                    cancelButtonText: 'Cancelar',
+                                    confirmButtonColor: COLORS.danger,
+                                    cancelButtonColor: COLORS.slate400
+                                  });
+                                  if (result.isConfirmed) {
+                                    setDocuments(prev => ({ ...prev, [doc.documento]: null }));
                                     setPreviews(prev => ({ ...prev, [doc.documento]: null }));
+                                    if (docGuardado) {
+                                      setDocumentosGuardados(prev => prev.filter(d => Number(d.DocumentoAfiliacionId || d.documentoAfiliacionId) !== Number(docAfiliacionId)));
+                                    }
                                   }
                                 }}
-                                className="doc-action-btn"
+                                className="btn-delete"
                                 style={{
-                                  border: `1px solid ${COLORS.dangerBgTranslucent30}`,
-                                  background: COLORS.dangerBgTranslucent10,
-                                  color: COLORS.dangerLight,
-                                  cursor: 'pointer',
-                                  flex: '0 0 auto',
-                                  width: '40px',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center'
+                                  width: '36px', height: '36px', borderRadius: '50%',
+                                  backgroundColor: COLORS.danger, color: '#ffffff', border: 'none',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', cursor: 'pointer'
                                 }}
                               >
                                 <FaTrash />
                               </button>
-                            </>
+                            </div>
                           )}
-                          {!hasLocalFile && docGuardado && (
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openSecurePath(docGuardado.Url || docGuardado.url);
-                              }}
-                              className="doc-action-btn"
-                              style={{
-                                border: `1px solid ${COLORS.brandBlueLight50}`,
-                                background: COLORS.brandBlueLight10,
-                                color: COLORS.secondaryLight,
-                                fontWeight: '700',
-                                cursor: 'pointer',
-                                flex: 1
-                              }}
-                            >
-                              👁 Ver
-                            </button>
-                          )}
-                          <input
-                            type="file"
-                            id={`file-${doc.documento}`}
-                            style={{ display: 'none' }}
-                            accept=".pdf,.png,.jpg,.jpeg"
-                            onClick={(e) => e.stopPropagation()}
-                            onChange={(e) => {
-                              const file = e.target.files[0];
-                              if (!file) return;
-                              if (!validarArchivoPermitido(file)) {
-                                e.target.value = '';
-                                return;
-                              }
-                              if (docGuardado) {
-                                handleReemplazarDocumento(docAfiliacionId, file);
-                                setDocuments(prev => ({ ...prev, [doc.documento]: file }));
-                              } else {
-                                handleFileUpload(doc.documento, file);
-                              }
-                            }}
-                          />
                         </div>
+                      ) : (
+                        <div style={{ width: '100%', textAlign: 'center', color: COLORS.slate400, cursor: 'pointer' }}>
+                          <FaUpload style={{ fontSize: '28px', marginBottom: '6px' }} />
+                          <p style={{ margin: 0, fontSize: '10px', fontWeight: '800' }}>SUBIR ARCHIVO</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Title */}
+                    <h4 style={{ fontSize: '14px', fontWeight: '800', color: isUploaded ? COLORS.successLight : 'var(--text-main)', margin: '0 0 5px' }}>
+                      {doc.nombre}
+                    </h4>
+                    {doc.documento === 'fotografia' && (
+                      <p style={{ fontSize: '11px', color: COLORS.overlayWhite60, margin: '5px 0 10px', fontStyle: 'italic', lineHeight: '1.4' }}>
+                        Mantén una postura recta, visibilidad de hombros, sin sonrisa, ni accesorios como lentes, aretes o gorras.
+                      </p>
+                    )}
+                    {/* Filename */}
+                    <p style={{ fontSize: '10px', color: isUploaded ? COLORS.successLightTranslucent80 : 'var(--text-muted)', margin: '0 0 18px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '90%' }}>
+                      {hasLocalFile ? `📎 ${documents[doc.documento].name}` : (docGuardado ? '📎 Archivo enviado' : 'Sin archivo seleccionado')}
+                    </p>
+                    {/* Rejection reason display */}
+                    {isRejected && docGuardado.ObservacionesDocumento && (
+                      <div style={{ background: COLORS.dangerBgTranslucent, color: COLORS.dangerLight, padding: '10px 14px', border: `1px solid ${COLORS.dangerBgTranslucent30}`, borderRadius: '10px', fontSize: '11px', fontWeight: '700', marginBottom: '14px', width: '100%', textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
+                        Motivo de rechazo: {docGuardado.ObservacionesDocumento}
                       </div>
-                    );
-                  })}
-                </div>
-              );
-            })()}
+                    )}
+                    {/* Photo error */}
+                    {error && doc.documento === 'fotografia' && (
+                      <div style={{ background: COLORS.dangerBgTranslucent10, color: 'var(--danger)', padding: '10px 14px', borderRadius: '10px', fontSize: '12px', fontWeight: '600', marginBottom: '14px', width: '100%', textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
+                        ⚠️ {error}
+                      </div>
+                    )}
+                    {/* Photo validation bypass button */}
+                    {fotoValidacionFallida && doc.documento === 'fotografia' && fotoArchivoPendiente && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleForzarSubidaFoto(e);
+                        }}
+                        className="doc-action-btn"
+                        style={{
+                          border: `1px solid ${COLORS.warningBgTranslucent40}`,
+                          background: COLORS.warningBgTranslucent,
+                          color: COLORS.warning,
+                          marginBottom: '14px',
+                          width: '100%',
+                          fontWeight: '700',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        ⚠️ Omitir validación y usar esta foto
+                      </button>
+                    )}
+                    {/* Action buttons */}
+                    <div style={{ display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' }}>
+                      {doc.hasDownload && !isApproved && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked) {
+                              e.preventDefault();
+                              return Swal.fire('Acción requerida', 'Debes completar todos los datos de identidad y documentos anteriores antes de descargar el formato de afiliación pre-llenado.', 'warning');
+                            }
+                            handleDownloadFormato(e);
+                          }}
+                          className="doc-download-btn"
+                          style={doc.documento === 'formatoAfiliacion' && formatAfiliacionLocked ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
+                        >⬇ Descargar</button>
+                      )}
+                      <input
+                        type="file"
+                        id={`file-${doc.documento}`}
+                        style={{ display: 'none' }}
+                        accept=".pdf,.png,.jpg,.jpeg"
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => {
+                          const file = e.target.files[0];
+                          if (!file) return;
+                          if (!validarArchivoPermitido(file)) {
+                            e.target.value = '';
+                            return;
+                          }
+                          if (docGuardado) {
+                            handleReemplazarDocumento(docAfiliacionId, file);
+                            setDocuments(prev => ({ ...prev, [doc.documento]: file }));
+                          } else {
+                            handleFileUpload(doc.documento, file);
+                          }
+                        }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
 
             {/* FORMULARIO MANUAL DE IDENTIDAD — MATCH INVITACION CARDS */}
             <div style={{
@@ -4073,7 +4299,7 @@ function PreRegistroPresidente() {
                     placeholder="APELLIDOS NOMBRES"
                     value={ocrResults.nombre || ''}
                     onChange={(e) => handleManualOcrChange('nombre', e.target.value.toUpperCase())}
-                    className="premium-input"
+                    className={`premium-input ${ocrResults.nombre ? 'filled' : ''}`}
                     disabled={true}
                     style={{ cursor: 'not-allowed', backgroundColor: COLORS.overlayWhite05 }}
                   />
@@ -4085,9 +4311,12 @@ function PreRegistroPresidente() {
                     placeholder="Se auto-completará con el documento de identidad"
                     maxLength={18}
                     value={ocrResults.curp || ''}
-                    onChange={(e) => handleManualOcrChange('curp', e.target.value.toUpperCase())}
-                    className="premium-input"
+                    onChange={(e) => handleManualOcrChange('curp', e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+                    className={`premium-input ${(ocrResults.curp && ocrResults.curp.length === 18) ? 'filled' : ''}`}
                   />
+                  <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginTop: '4px', display: 'block' }}>
+                    Debe tener exactamente 18 caracteres
+                  </span>
                   {curpExistente && (
                     <div style={{ color: COLORS.danger, fontSize: '12px', marginTop: '4px', fontWeight: 'bold' }}>
                       Esta CURP ya está registrada a otra persona.
@@ -4099,9 +4328,10 @@ function PreRegistroPresidente() {
                   <input
                     type="text"
                     placeholder="Ej. MEXICANA"
+                    maxLength={30}
                     value={ocrResults.nacionalidad || ''}
-                    onChange={(e) => handleManualOcrChange('nacionalidad', e.target.value.toUpperCase())}
-                    className="premium-input"
+                    onChange={(e) => handleManualOcrChange('nacionalidad', e.target.value.toUpperCase().replace(/[^A-ZÁÉÍÓÚÜÑ\s]/g, ''))}
+                    className={`premium-input ${ocrResults.nacionalidad ? 'filled' : ''}`}
                   />
                 </div>
               </div>
@@ -4110,14 +4340,17 @@ function PreRegistroPresidente() {
                 <div className="premium-input-group">
                   <label className="premium-label">Fecha de Nacimiento *</label>
                   <input
-                    type="text"
-                    value={ocrResults.fecha_nac || ''}
-                    onChange={(e) => handleManualOcrChange('fecha_nac', e.target.value)}
-                    placeholder="DD/MM/AAAA"
-                    className="premium-input"
+                    type="date"
+                    value={ocrResults.fecha_nac ? convertToYYYYMMDD(ocrResults.fecha_nac) : ''}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const converted = convertToDDMMYYYY(val);
+                      handleManualOcrChange('fecha_nac', converted);
+                    }}
+                    className={`premium-input ${(ocrResults.fecha_nac && esMayorDeEdad) ? 'filled' : ''}`}
                   />
                   <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)', marginTop: '4px', display: 'block' }}>
-                    Día/Mes/Año (ej: 25/12/1990)
+                    Selecciona tu fecha de nacimiento
                   </span>
                   {(() => {
                     const dateStr = ocrResults.fecha_nac || '';
@@ -4147,7 +4380,7 @@ function PreRegistroPresidente() {
                   <select
                     value={ocrResults.sexo || ''}
                     onChange={(e) => handleManualOcrChange('sexo', e.target.value)}
-                    className="premium-input"
+                    className={`premium-input ${ocrResults.sexo ? 'filled' : ''}`}
                     style={user.usuario?.sexoId ? { cursor: 'not-allowed', backgroundColor: COLORS.overlayWhite05 } : { cursor: 'pointer' }}
                     disabled={!!user.usuario?.sexoId}
                   >
@@ -4163,7 +4396,7 @@ function PreRegistroPresidente() {
                     <select
                       value={codigoPais}
                       onChange={(e) => setCodigoPais(e.target.value)}
-                      className="premium-input"
+                      className={`premium-input ${codigoPais ? 'filled' : ''}`}
                       disabled={true}
                       style={{
                         width: '100px',
@@ -4203,7 +4436,7 @@ function PreRegistroPresidente() {
                       maxLength={10}
                       value={ocrResults.telefono || ''}
                       onChange={(e) => handleManualOcrChange('telefono', e.target.value.replace(/\D/g, ''))}
-                      className="premium-input"
+                      className={`premium-input ${ocrResults.telefono ? 'filled' : ''}`}
                       disabled={true}
                       readOnly={true}
                       style={{ cursor: 'not-allowed', flexGrow: 1, backgroundColor: COLORS.overlayWhite05 }}
@@ -4212,6 +4445,330 @@ function PreRegistroPresidente() {
                 </div>
               </div>
             </div>
+
+            {/* Formato de Afiliación Oficial Card - Same design as RegistroJugadores */}
+            {(() => {
+              const docIdMap = { formatoAfiliacion: 10 };
+              const docAfiliacionId = 10;
+              const docGuardado = documentosGuardados.find(d => Number(d.DocumentoAfiliacionId || d.documentoAfiliacionId) === 10);
+              const hasLocalFile = !!documents.formatoAfiliacion;
+              const isUploaded = hasLocalFile || !!docGuardado;
+              const isApproved = docGuardado && Number(docGuardado.EstadoValidacionId || docGuardado.estadoValidacionId) === 2;
+              const isRejected = docGuardado && Number(docGuardado.EstadoValidacionId || docGuardado.estadoValidacionId) === 3;
+              const isEnEspera = docGuardado && !isApproved && !isRejected;
+
+              let statusLabel = 'Pendiente', statusColor = COLORS.warning, statusDotColor = COLORS.warning, statusBg = COLORS.warningBgTranslucent12;
+              if (docGuardado) {
+                const estId = Number(docGuardado.EstadoValidacionId || docGuardado.estadoValidacionId);
+                if (estId === 2) {
+                  statusLabel = 'Aprobado'; statusColor = COLORS.success; statusDotColor = COLORS.success; statusBg = COLORS.successBgTranslucent10;
+                } else if (estId === 3) {
+                  statusLabel = 'Rechazado'; statusColor = COLORS.danger; statusDotColor = COLORS.danger; statusBg = COLORS.dangerBgTranslucent10;
+                } else {
+                  statusLabel = 'En espera'; statusColor = COLORS.warning; statusDotColor = COLORS.warning; statusBg = COLORS.warningBgTranslucent12;
+                }
+              } else if (hasLocalFile) {
+                statusLabel = 'Listo'; statusColor = COLORS.successLight; statusDotColor = COLORS.success; statusBg = COLORS.successBgTranslucent10;
+              }
+
+              return (
+                <div style={{
+                  marginTop: '25px',
+                  borderTop: `1px solid var(--color-border)`,
+                  paddingTop: '25px',
+                  marginBottom: '20px'
+                }}>
+                  <h4 style={{ fontSize: '15px', fontWeight: '800', color: 'var(--color-text)', marginBottom: '6px', textAlign: 'center' }}>
+                    Formato de Afiliación Oficial:
+                    <span style={{ fontSize: '13px', color: 'var(--color-text-secondary)', textAlign: 'center', maxWidth: '600px', margin: '0 auto 20px auto', lineHeight: '1.5' }}>
+                      Descarga el formato prellenado, fírmalo y súbelo escaneado en formato PDF o imagen.
+                    </span>
+                  </h4>
+
+
+                  {formatAfiliacionLocked && (
+                    <div style={{ backgroundColor: '#fef2f2', border: `1px solid #fee2e2`, borderRadius: '12px', padding: '12px', marginBottom: '20px', maxWidth: '600px', margin: '0 auto 20px auto', textAlign: 'center' }}>
+                      <span style={{ color: '#9b1c1c', fontSize: '13px', fontWeight: '700' }}>
+                        Debes completar todos tus datos y subir los documentos anteriores para descargar el formato.
+                      </span>
+                    </div>
+                  )}
+
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', marginBottom: '24px', flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (formatAfiliacionLocked) {
+                          return Swal.fire('Acción requerida', 'Debes completar todos los datos de identidad y documentos anteriores antes de descargar el formato de afiliación pre-llenado.', 'warning');
+                        }
+                        handleDownloadFormato(e);
+                      }}
+                      disabled={formatAfiliacionLocked}
+                      style={{
+                        padding: '12px 28px',
+                        borderRadius: '12px',
+                        border: 'none',
+                        background: formatAfiliacionLocked ? '#cbd5e1' : COLORS.primary,
+                        color: 'white',
+                        fontWeight: '800',
+                        fontSize: '14px',
+                        cursor: formatAfiliacionLocked ? 'not-allowed' : 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        boxShadow: formatAfiliacionLocked ? 'none' : '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                      }}
+                    >
+                      📥 Descargar Formato Prellenado
+                    </button>
+                  </div>
+
+                  <div
+                    onClick={() => {
+                      if (isApproved) return;
+                      if (isUploaded) return;
+                      triggerDocUpload('formatoAfiliacion');
+                    }}
+                    onDragEnter={(e) => { if (!isApproved && !formatAfiliacionLocked) { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({ ...prev, formatoAfiliacion: true })); } }}
+                    onDragOver={(e) => { if (!isApproved && !formatAfiliacionLocked) { e.preventDefault(); e.stopPropagation(); } }}
+                    onDragLeave={(e) => { if (!isApproved && !formatAfiliacionLocked) { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({ ...prev, formatoAfiliacion: false })); } }}
+                    onDrop={(e) => {
+                      if (isApproved) return;
+                      if (formatAfiliacionLocked) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        return Swal.fire('Acción requerida', 'Debes completar todos los datos de identidad y documentos anteriores antes de subir el formato de afiliación.', 'warning');
+                      }
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setDragActive(prev => ({ ...prev, formatoAfiliacion: false }));
+                      const file = e.dataTransfer.files[0];
+                      if (file) {
+                        if (!validarArchivoPermitido(file)) return;
+                        if (docGuardado) {
+                          handleReemplazarDocumento(docAfiliacionId, file);
+                          setDocuments(prev => ({ ...prev, formatoAfiliacion: file }));
+                        } else {
+                          handleFileUpload('formatoAfiliacion', file);
+                        }
+                      }
+                    }}
+                    className={`doc-glass-card${isUploaded ? ' uploaded' : ''}`}
+                    style={{
+                      border: dragActive.formatoAfiliacion
+                        ? `2px solid ${COLORS.primary}`
+                        : (isUploaded ? `2px solid ${COLORS.success}` : (formatAfiliacionLocked ? `2px dashed #cbd5e1` : `2px dashed ${COLORS.brandBlueLight50}`)),
+                      borderRadius: '20px',
+                      padding: '16px',
+                      backgroundColor: dragActive.formatoAfiliacion ? 'rgba(26, 59, 92, 0.05)' : undefined,
+                      cursor: (formatAfiliacionLocked || isApproved) ? 'default' : 'pointer',
+                      transition: 'all 0.3s',
+                      maxWidth: '600px',
+                      margin: '0 auto',
+                      opacity: formatAfiliacionLocked ? 0.6 : 1,
+                      position: 'relative',
+                      overflow: 'hidden',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
+                    }}
+                  >
+                    {/* Top sheen */}
+                    <div className="top-sheen" style={{ background: isUploaded ? `linear-gradient(90deg,transparent,${COLORS.successBgTranslucent40},transparent)` : `linear-gradient(90deg,transparent,${COLORS.overlayWhite06},transparent)` }} />
+                    {/* Document Status Badge */}
+                    <span style={{
+                      position: 'absolute', top: '12px', right: '12px',
+                      backgroundColor: statusBg, color: statusColor,
+                      padding: '4px 10px', borderRadius: '20px',
+                      fontSize: '11px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '5px',
+                      zIndex: 1
+                    }}>
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: statusDotColor }} />
+                      {statusLabel}
+                    </span>
+
+                    {/* Preview / Empty State Container */}
+                    <div style={{
+                      height: '140px',
+                      width: '100%',
+                      backgroundColor: isUploaded ? '#ffffff' : 'rgba(248, 250, 252, 0.05)',
+                      borderRadius: '16px',
+                      marginBottom: '16px',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: isUploaded ? `1px solid ${COLORS.successBgTranslucent18}` : `1px dashed ${COLORS.brandBlueLight12}`
+                    }}>
+                      {isUploaded && previews.formatoAfiliacion ? (
+                        <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
+                          {(documents.formatoAfiliacion?.type === 'application/pdf' ||
+                            (docGuardado && (docGuardado.Url || docGuardado.url || '').toLowerCase().endsWith('.pdf'))) ? (
+                            <div style={{ width: '100%', height: '100%', position: 'relative', backgroundColor: '#ffffff' }}>
+                              <iframe
+                                src={`${previews.formatoAfiliacion}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
+                                title="Preview Formato de afiliación firmado"
+                                style={{
+                                  width: '100%',
+                                  height: '100%',
+                                  border: 'none',
+                                  pointerEvents: 'none'
+                                }}
+                              />
+                              <div style={{
+                                position: 'absolute',
+                                bottom: '8px',
+                                left: '8px',
+                                backgroundColor: 'rgba(30, 41, 59, 0.8)',
+                                color: '#ffffff',
+                                fontSize: '10px',
+                                fontWeight: '800',
+                                padding: '4px 8px',
+                                borderRadius: '999px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}>
+                                <FaFileAlt /> PDF
+                              </div>
+                            </div>
+                          ) : (
+                            <img
+                              src={previews.formatoAfiliacion}
+                              alt="Preview"
+                              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                            />
+                          )}
+
+                          {/* OVERLAY ACTIONS */}
+                          {!isApproved && (
+                            <div className="overlay-actions" style={{
+                              position: 'absolute',
+                              top: 0, left: 0, right: 0, bottom: 0,
+                              backgroundColor: 'rgba(15, 23, 42, 0.75)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '12px',
+                              opacity: 0,
+                              transition: 'opacity 0.2s ease',
+                              backdropFilter: 'blur(2px)'
+                            }}>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const isPdf = documents.formatoAfiliacion?.type === 'application/pdf' ||
+                                    (docGuardado && (docGuardado.Url || docGuardado.url || '').toLowerCase().endsWith('.pdf'));
+                                  setPreviewDoc({
+                                    url: previews.formatoAfiliacion,
+                                    type: isPdf ? 'pdf' : 'image',
+                                    title: 'Formato de afiliación firmado'
+                                  });
+                                }}
+                                className="btn-zoom"
+                                style={{
+                                  width: '36px', height: '36px', borderRadius: '50%',
+                                  backgroundColor: '#ffffff', color: '#1e293b', border: 'none',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', cursor: 'pointer'
+                                }}
+                              >
+                                <FaSearchPlus />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  triggerDocUpload('formatoAfiliacion');
+                                }}
+                                className="btn-change"
+                                style={{
+                                  width: '36px', height: '36px', borderRadius: '50%',
+                                  backgroundColor: '#38bdf8', color: '#ffffff', border: 'none',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', cursor: 'pointer'
+                                }}
+                              >
+                                <FaSyncAlt />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  const result = await Swal.fire({
+                                    title: '¿Quitar documento?',
+                                    text: 'Se eliminará el formato de afiliación firmado.',
+                                    icon: 'warning',
+                                    showCancelButton: true,
+                                    confirmButtonText: 'Sí, quitar',
+                                    cancelButtonText: 'Cancelar',
+                                    confirmButtonColor: COLORS.danger,
+                                    cancelButtonColor: COLORS.slate400
+                                  });
+                                  if (result.isConfirmed) {
+                                    setDocuments(prev => ({ ...prev, formatoAfiliacion: null }));
+                                    setPreviews(prev => ({ ...prev, formatoAfiliacion: null }));
+                                    if (docGuardado) {
+                                      setDocumentosGuardados(prev => prev.filter(d => Number(d.DocumentoAfiliacionId || d.documentoAfiliacionId) !== 10));
+                                    }
+                                  }
+                                }}
+                                className="btn-delete"
+                                style={{
+                                  width: '36px', height: '36px', borderRadius: '50%',
+                                  backgroundColor: COLORS.danger, color: '#ffffff', border: 'none',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', cursor: 'pointer'
+                                }}
+                              >
+                                <FaTrash />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div style={{ width: '100%', textAlign: 'center', color: COLORS.slate400, cursor: 'pointer' }}>
+                          <FaUpload style={{ fontSize: '28px', marginBottom: '6px' }} />
+                          <p style={{ margin: 0, fontSize: '10px', fontWeight: '800' }}>SUBIR ARCHIVO</p>
+                        </div>
+                      )}
+                    </div>
+
+                    <p style={{ margin: 0, fontWeight: '800', fontSize: '15px', color: 'var(--color-text)' }}>
+                      Formato de afiliación firmado
+                    </p>
+
+                    <p style={{ fontSize: '11px', color: isUploaded ? 'var(--color-text-secondary)' : 'var(--color-text-muted)', margin: '4px 0 0 0' }}>
+                      {hasLocalFile
+                        ? `📎 ${documents.formatoAfiliacion.name}`
+                        : (docGuardado ? '📎 Archivo enviado y guardado' : 'Solo se permiten formatos PDF o imágenes')}
+                    </p>
+                  </div>
+                  <input
+                    type="file"
+                    id="file-formatoAfiliacion"
+                    style={{ display: 'none' }}
+                    accept=".pdf,.png,.jpg,.jpeg"
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (!file) return;
+                      if (!validarArchivoPermitido(file)) {
+                        Swal.fire('Error', 'Tipo de archivo no permitido. Solo se aceptan PDFs e imágenes.', 'error');
+                        return;
+                      }
+                      if (docGuardado) {
+                        handleReemplazarDocumento(docAfiliacionId, file);
+                        setDocuments(prev => ({ ...prev, formatoAfiliacion: file }));
+                      } else {
+                        handleFileUpload('formatoAfiliacion', file);
+                      }
+                    }}
+                  />
+                </div>
+              );
+            })()}
 
             {/* BOTONES DE NAVEGACIÓN */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '20px', borderTop: `1px solid ${COLORS.overlayWhite06}` }}>
@@ -4271,7 +4828,7 @@ function PreRegistroPresidente() {
 
             {/* TARJETAS DE DOCUMENTOS */}
             <div className="doc-cards-grid">
-              {requisitos.map((doc, idx) => {
+              {requisitos.filter(r => r.documento !== 'formatoAfiliacion').map((doc, idx) => {
                 const docIdMap = {
                   actaNacimiento: 8,
                   identificacion: 38,
@@ -4308,42 +4865,6 @@ function PreRegistroPresidente() {
                   <div
                     key={idx}
                     className={`doc-glass-card${isUploaded ? ' uploaded' : ''}`}
-                    onClick={() => {
-                      if (isApproved) return;
-                      if (doc.documento !== 'formatoAfiliacion') {
-                        const inputId = `file-val-${doc.documento}`;
-                        Swal.fire(buildCaptureSourceDialog(getCameraCaptureKind(doc.documento), COLORS)).then((result) => {
-                          if (result.isConfirmed) {
-                            setCameraTargetKey(inputId);
-                            setIsCameraOpen(true);
-                          } else if (result.dismiss === Swal.DismissReason.cancel) {
-                            document.getElementById(inputId)?.click();
-                          }
-                        });
-                        return;
-                      }
-                      if (doc.documento === 'fotografia') {
-                        Swal.fire({
-                          title: 'Selecciona una opción',
-                          text: '¿Cómo deseas cargar la fotografía?',
-                          icon: 'question',
-                          showCancelButton: true,
-                          confirmButtonText: '📷 Tomar con cámara',
-                          cancelButtonText: '📁 Subir archivo',
-                          confirmButtonColor: COLORS.primary,
-                          cancelButtonColor: COLORS.slate500
-                        }).then((result) => {
-                          if (result.isConfirmed) {
-                            setCameraTargetKey('file-val-fotografia');
-                            setIsCameraOpen(true);
-                          } else if (result.dismiss === Swal.DismissReason.cancel) {
-                            document.getElementById(`file-val-${doc.documento}`).click();
-                          }
-                        });
-                      } else {
-                        document.getElementById(`file-val-${doc.documento}`).click();
-                      }
-                    }}
                     onDragEnter={(e) => { if (!isApproved) { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({ ...prev, [`val-${doc.documento}`]: true })); } }}
                     onDragOver={(e) => { if (!isApproved) { e.preventDefault(); e.stopPropagation(); } }}
                     onDragLeave={(e) => { if (!isApproved) { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({ ...prev, [`val-${doc.documento}`]: false })); } }}
@@ -4387,7 +4908,13 @@ function PreRegistroPresidente() {
                     style={{
                       cursor: isApproved ? 'default' : 'pointer',
                       border: dragActive[`val-${doc.documento}`] ? `2px solid ${COLORS.primary}` : (isUploaded ? `2px solid ${COLORS.success}` : `2px dashed ${COLORS.slate300}`),
-                      backgroundColor: dragActive[`val-${doc.documento}`] ? 'rgba(26, 59, 92, 0.05)' : undefined
+                      backgroundColor: dragActive[`val-${doc.documento}`] ? 'rgba(26, 59, 92, 0.05)' : undefined,
+                      padding: '16px'
+                    }}
+                    onClick={() => {
+                      if (isApproved) return;
+                      if (isUploaded) return;
+                      triggerDocUpload(doc.documento, true);
                     }}
                   >
                     {/* Top sheen */}
@@ -4397,13 +4924,148 @@ function PreRegistroPresidente() {
                       <div className="doc-status-dot" style={{ background: statusDotColor, boxShadow: `0 0 5px ${statusDotColor}` }} />
                       {statusLabel}
                     </div>
-                    {/* Icon */}
-                    <div className="doc-glass-icon" style={{
-                      background: isUploaded ? `linear-gradient(135deg,${COLORS.successBgTranslucent10},${COLORS.greenMediumTranslucent})` : `linear-gradient(135deg,${COLORS.primaryBgTranslucent},${COLORS.overlaySlateSuperLight})`,
-                      border: isUploaded ? `1px solid ${COLORS.successBgTranslucent18}` : `1px solid ${COLORS.brandBlueLight12}`,
+
+                    {/* Preview / Empty State Container */}
+                    <div style={{
+                      height: '140px',
+                      width: '100%',
+                      backgroundColor: isUploaded ? '#ffffff' : 'rgba(248, 250, 252, 0.05)',
+                      borderRadius: '16px',
+                      marginBottom: '16px',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: isUploaded ? `1px solid ${COLORS.successBgTranslucent18}` : `1px dashed ${COLORS.brandBlueLight12}`
                     }}>
-                      {isUploaded ? (
-                        <span>{icons[doc.documento]}</span>
+                      {isUploaded && previews[doc.documento] ? (
+                        <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
+                          {(documents[doc.documento]?.type === 'application/pdf' ||
+                            (docGuardado && (docGuardado.Url || docGuardado.url || '').toLowerCase().endsWith('.pdf'))) ? (
+                            <div style={{ width: '100%', height: '100%', position: 'relative', backgroundColor: '#ffffff' }}>
+                              <iframe
+                                src={`${previews[doc.documento]}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
+                                title={`Preview ${doc.nombre}`}
+                                style={{
+                                  width: '100%',
+                                  height: '100%',
+                                  border: 'none',
+                                  pointerEvents: 'none'
+                                }}
+                              />
+                              <div style={{
+                                position: 'absolute',
+                                bottom: '8px',
+                                left: '8px',
+                                backgroundColor: 'rgba(30, 41, 59, 0.8)',
+                                color: '#ffffff',
+                                fontSize: '10px',
+                                fontWeight: '800',
+                                padding: '4px 8px',
+                                borderRadius: '999px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}>
+                                <FaFileAlt /> PDF
+                              </div>
+                            </div>
+                          ) : (
+                            <img
+                              src={previews[doc.documento]}
+                              alt="Preview"
+                              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                            />
+                          )}
+
+                          {/* OVERLAY ACTIONS */}
+                          {!isApproved && (
+                            <div className="overlay-actions" style={{
+                              position: 'absolute',
+                              top: 0, left: 0, right: 0, bottom: 0,
+                              backgroundColor: 'rgba(15, 23, 42, 0.75)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '12px',
+                              opacity: 0,
+                              transition: 'opacity 0.2s ease',
+                              backdropFilter: 'blur(2px)'
+                            }}>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const isPdf = documents[doc.documento]?.type === 'application/pdf' ||
+                                    (docGuardado && (docGuardado.Url || docGuardado.url || '').toLowerCase().endsWith('.pdf'));
+                                  setPreviewDoc({
+                                    url: previews[doc.documento],
+                                    type: isPdf ? 'pdf' : 'image',
+                                    title: doc.nombre
+                                  });
+                                }}
+                                className="btn-zoom"
+                                style={{
+                                  width: '36px', height: '36px', borderRadius: '50%',
+                                  backgroundColor: '#ffffff', color: '#1e293b', border: 'none',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', cursor: 'pointer'
+                                }}
+                              >
+                                <FaSearchPlus />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  triggerDocUpload(doc.documento, true);
+                                }}
+                                className="btn-change"
+                                style={{
+                                  width: '36px', height: '36px', borderRadius: '50%',
+                                  backgroundColor: '#38bdf8', color: '#ffffff', border: 'none',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', cursor: 'pointer'
+                                }}
+                              >
+                                <FaSyncAlt />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  const result = await Swal.fire({
+                                    title: '¿Quitar documento?',
+                                    text: 'Se eliminará el documento cargado actualmente.',
+                                    icon: 'warning',
+                                    showCancelButton: true,
+                                    confirmButtonText: 'Sí, quitar',
+                                    cancelButtonText: 'Cancelar',
+                                    confirmButtonColor: COLORS.danger,
+                                    cancelButtonColor: COLORS.slate400
+                                  });
+                                  if (result.isConfirmed) {
+                                    setDocuments(prev => ({ ...prev, [doc.documento]: null }));
+                                    setPreviews(prev => ({ ...prev, [doc.documento]: null }));
+                                    if (docGuardado) {
+                                      setDocumentosGuardados(prev => prev.filter(d => Number(d.DocumentoAfiliacionId || d.documentoAfiliacionId) !== Number(docAfiliacionId)));
+                                    }
+                                  }
+                                }}
+                                className="btn-delete"
+                                style={{
+                                  width: '36px', height: '36px', borderRadius: '50%',
+                                  backgroundColor: COLORS.danger, color: '#ffffff', border: 'none',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', cursor: 'pointer'
+                                }}
+                              >
+                                <FaTrash />
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       ) : (
                         <div style={{ width: '100%', textAlign: 'center', color: COLORS.slate400, cursor: 'pointer' }}>
                           <FaUpload style={{ fontSize: '28px', marginBottom: '6px' }} />
@@ -4411,6 +5073,7 @@ function PreRegistroPresidente() {
                         </div>
                       )}
                     </div>
+
                     {/* Title */}
                     <h4 style={{ fontSize: '14px', fontWeight: '800', color: isUploaded ? COLORS.successLight : 'var(--text-main)', margin: '0 0 5px' }}>
                       {doc.nombre}
@@ -4430,79 +5093,38 @@ function PreRegistroPresidente() {
                         Motivo de rechazo: {docGuardado.ObservacionesDocumento}
                       </div>
                     )}
-                    {/* Action buttons */}
-                    <div style={{ display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' }}>
-
-                      {hasLocalFile && documents[doc.documento] && (
-                        <>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setPreviewDoc({ file: documents[doc.documento], title: doc.nombre });
-                            }}
-                            className="doc-action-btn"
-                            style={{
-                              border: `1px solid ${COLORS.brandBlueLight50}`,
-                              background: COLORS.brandBlueLight10,
-                              color: COLORS.secondaryLight,
-                              fontWeight: '700',
-                              cursor: 'pointer',
-                              flex: 1
-                            }}
-                          >
-                            👁 Ver
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDocuments(prev => ({ ...prev, [doc.documento]: null }));
-                              if (setPreviews) {
-                                setPreviews(prev => ({ ...prev, [doc.documento]: null }));
-                              }
-                            }}
-                            className="doc-action-btn"
-                            style={{
-                              border: `1px solid ${COLORS.dangerBgTranslucent30}`,
-                              background: COLORS.dangerBgTranslucent10,
-                              color: COLORS.dangerLight,
-                              cursor: 'pointer',
-                              flex: '0 0 auto',
-                              width: '40px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center'
-                            }}
-                          >
-                            <FaTrash />
-                          </button>
-                        </>
-                      )}
-                      {!hasLocalFile && docGuardado && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openSecurePath(docGuardado.Url || docGuardado.url);
-                          }}
-                          className="doc-action-btn"
-                          style={{
-                            border: `1px solid ${COLORS.brandBlueLight50}`,
-                            background: COLORS.brandBlueLight10,
-                            color: COLORS.secondaryLight,
-                            fontWeight: '700',
-                            cursor: 'pointer',
-                            flex: 1
-                          }}
-                        >
-                          👁 Ver
-                        </button>
-                      )}
+                    {/* Photo error */}
+                    {error && doc.documento === 'fotografia' && (
+                      <div style={{ background: COLORS.dangerBgTranslucent10, color: 'var(--danger)', padding: '10px 14px', borderRadius: '10px', fontSize: '12px', fontWeight: '600', marginBottom: '14px', width: '100%', textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
+                        ⚠️ {error}
+                      </div>
+                    )}
+                    {/* Photo validation bypass button */}
+                    {fotoValidacionFallida && doc.documento === 'fotografia' && fotoArchivoPendiente && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleForzarSubidaFoto(e);
+                        }}
+                        className="doc-action-btn"
+                        style={{
+                          border: `1px solid ${COLORS.warningBgTranslucent40}`,
+                          background: COLORS.warningBgTranslucent,
+                          color: COLORS.warning,
+                          marginBottom: '14px',
+                          width: '100%',
+                          fontWeight: '700',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        ⚠️ Omitir validación y usar esta foto
+                      </button>
+                    )}
+                    {/* Input element */}
+                    <div style={{ display: 'none' }}>
                       <input
                         type="file"
                         id={`file-val-${doc.documento}`}
-                        style={{ display: 'none' }}
                         accept=".pdf,.png,.jpg,.jpeg"
                         onClick={(e) => e.stopPropagation()}
                         onChange={async (e) => {
@@ -4550,6 +5172,316 @@ function PreRegistroPresidente() {
                 );
               })}
             </div>
+
+            {/* Formato de Afiliación Oficial Card - validation mode */}
+            {(() => {
+              const docIdMap = { formatoAfiliacion: 10 };
+              const docAfiliacionId = 10;
+              const docGuardado = documentosGuardados.find(d => Number(d.DocumentoAfiliacionId || d.documentoAfiliacionId) === 10);
+              const hasLocalFile = !!documents.formatoAfiliacion;
+              const isUploaded = hasLocalFile || !!docGuardado;
+              const isApproved = docGuardado && Number(docGuardado.EstadoValidacionId || docGuardado.estadoValidacionId) === 2;
+              const isRejected = docGuardado && Number(docGuardado.EstadoValidacionId || docGuardado.estadoValidacionId) === 3;
+              const isEnEspera = docGuardado && !isApproved && !isRejected;
+
+              let statusLabel = 'Pendiente', statusColor = COLORS.warning, statusDotColor = COLORS.warning, statusBg = COLORS.warningBgTranslucent12;
+              if (docGuardado) {
+                const estId = Number(docGuardado.EstadoValidacionId || docGuardado.estadoValidacionId);
+                if (estId === 2) {
+                  statusLabel = 'Aprobado'; statusColor = COLORS.success; statusDotColor = COLORS.success; statusBg = COLORS.successBgTranslucent10;
+                } else if (estId === 3) {
+                  statusLabel = 'Rechazado'; statusColor = COLORS.danger; statusDotColor = COLORS.danger; statusBg = COLORS.dangerBgTranslucent10;
+                } else {
+                  statusLabel = 'En espera'; statusColor = COLORS.warning; statusDotColor = COLORS.warning; statusBg = COLORS.warningBgTranslucent12;
+                }
+              } else if (hasLocalFile) {
+                statusLabel = 'Listo'; statusColor = COLORS.successLight; statusDotColor = COLORS.success; statusBg = COLORS.successBgTranslucent10;
+              }
+
+              return (
+                <div style={{
+                  marginTop: '25px',
+                  borderTop: `1px solid var(--color-border)`,
+                  paddingTop: '25px',
+                  marginBottom: '20px'
+                }}>
+                  <h4 style={{ fontSize: '15px', fontWeight: '800', color: 'var(--color-text)', marginBottom: '6px', textAlign: 'center' }}>
+                    Formato de Afiliación Oficial
+                  </h4>
+                  <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)', textAlign: 'center', maxWidth: '600px', margin: '0 auto 20px auto', lineHeight: '1.5' }}>
+                    Estado y validación de tu formato de afiliación firmado.
+                  </p>
+
+                  <div
+                    onClick={() => {
+                      if (isApproved) return;
+                      if (isUploaded) return;
+                      triggerDocUpload('formatoAfiliacion', true);
+                    }}
+                    onDragEnter={(e) => { if (!isApproved) { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({ ...prev, formatoAfiliacion: true })); } }}
+                    onDragOver={(e) => { if (!isApproved) { e.preventDefault(); e.stopPropagation(); } }}
+                    onDragLeave={(e) => { if (!isApproved) { e.preventDefault(); e.stopPropagation(); setDragActive(prev => ({ ...prev, formatoAfiliacion: false })); } }}
+                    onDrop={(e) => {
+                      if (isApproved) return;
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setDragActive(prev => ({ ...prev, formatoAfiliacion: false }));
+                      const file = e.dataTransfer.files[0];
+                      if (file) {
+                        if (!validarArchivoPermitido(file)) return;
+                        if (docGuardado) {
+                          handleReemplazarDocumento(docAfiliacionId, file);
+                          setDocuments(prev => ({ ...prev, formatoAfiliacion: file }));
+                        } else {
+                          handleFileUpload('formatoAfiliacion', file);
+                        }
+                      }
+                    }}
+                    className={`doc-glass-card${isUploaded ? ' uploaded' : ''}`}
+                    style={{
+                      border: dragActive.formatoAfiliacion
+                        ? `2px solid ${COLORS.primary}`
+                        : (isUploaded ? `2px solid ${COLORS.success}` : `2px dashed ${COLORS.brandBlueLight50}`),
+                      borderRadius: '20px',
+                      padding: '16px',
+                      backgroundColor: dragActive.formatoAfiliacion ? 'rgba(26, 59, 92, 0.05)' : undefined,
+                      cursor: isApproved ? 'default' : 'pointer',
+                      transition: 'all 0.3s',
+                      maxWidth: '600px',
+                      margin: '0 auto',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
+                    }}
+                  >
+                    {/* Top sheen */}
+                    <div className="top-sheen" style={{ background: isUploaded ? `linear-gradient(90deg,transparent,${COLORS.successBgTranslucent40},transparent)` : `linear-gradient(90deg,transparent,${COLORS.overlayWhite06},transparent)` }} />
+                    {/* Document Status Badge */}
+                    <span style={{
+                      position: 'absolute', top: '12px', right: '12px',
+                      backgroundColor: statusBg, color: statusColor,
+                      padding: '4px 10px', borderRadius: '20px',
+                      fontSize: '11px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '5px',
+                      zIndex: 1
+                    }}>
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: statusDotColor }} />
+                      {statusLabel}
+                    </span>
+
+                    {/* Preview / Empty State Container */}
+                    <div style={{
+                      height: '140px',
+                      width: '100%',
+                      backgroundColor: isUploaded ? '#ffffff' : 'rgba(248, 250, 252, 0.05)',
+                      borderRadius: '16px',
+                      marginBottom: '16px',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: isUploaded ? `1px solid ${COLORS.successBgTranslucent18}` : `1px dashed ${COLORS.brandBlueLight12}`
+                    }}>
+                      {isUploaded && previews.formatoAfiliacion ? (
+                        <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
+                          {(documents.formatoAfiliacion?.type === 'application/pdf' ||
+                            (docGuardado && (docGuardado.Url || docGuardado.url || '').toLowerCase().endsWith('.pdf'))) ? (
+                            <div style={{ width: '100%', height: '100%', position: 'relative', backgroundColor: '#ffffff' }}>
+                              <iframe
+                                src={`${previews.formatoAfiliacion}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
+                                title="Preview Formato de afiliación firmado"
+                                style={{
+                                  width: '100%',
+                                  height: '100%',
+                                  border: 'none',
+                                  pointerEvents: 'none'
+                                }}
+                              />
+                              <div style={{
+                                position: 'absolute',
+                                bottom: '8px',
+                                left: '8px',
+                                backgroundColor: 'rgba(30, 41, 59, 0.8)',
+                                color: '#ffffff',
+                                fontSize: '10px',
+                                fontWeight: '800',
+                                padding: '4px 8px',
+                                borderRadius: '999px',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}>
+                                <FaFileAlt /> PDF
+                              </div>
+                            </div>
+                          ) : (
+                            <img
+                              src={previews.formatoAfiliacion}
+                              alt="Preview"
+                              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                            />
+                          )}
+
+                          {/* OVERLAY ACTIONS */}
+                          {!isApproved && (
+                            <div className="overlay-actions" style={{
+                              position: 'absolute',
+                              top: 0, left: 0, right: 0, bottom: 0,
+                              backgroundColor: 'rgba(15, 23, 42, 0.75)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '12px',
+                              opacity: 0,
+                              transition: 'opacity 0.2s ease',
+                              backdropFilter: 'blur(2px)'
+                            }}>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const isPdf = documents.formatoAfiliacion?.type === 'application/pdf' ||
+                                    (docGuardado && (docGuardado.Url || docGuardado.url || '').toLowerCase().endsWith('.pdf'));
+                                  setPreviewDoc({
+                                    url: previews.formatoAfiliacion,
+                                    type: isPdf ? 'pdf' : 'image',
+                                    title: 'Formato de afiliación firmado'
+                                  });
+                                }}
+                                className="btn-zoom"
+                                style={{
+                                  width: '36px', height: '36px', borderRadius: '50%',
+                                  backgroundColor: '#ffffff', color: '#1e293b', border: 'none',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', cursor: 'pointer'
+                                }}
+                              >
+                                <FaSearchPlus />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  triggerDocUpload('formatoAfiliacion', true);
+                                }}
+                                className="btn-change"
+                                style={{
+                                  width: '36px', height: '36px', borderRadius: '50%',
+                                  backgroundColor: '#38bdf8', color: '#ffffff', border: 'none',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', cursor: 'pointer'
+                                }}
+                              >
+                                <FaSyncAlt />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  const result = await Swal.fire({
+                                    title: '¿Quitar documento?',
+                                    text: 'Se eliminará el formato de afiliación firmado.',
+                                    icon: 'warning',
+                                    showCancelButton: true,
+                                    confirmButtonText: 'Sí, quitar',
+                                    cancelButtonText: 'Cancelar',
+                                    confirmButtonColor: COLORS.danger,
+                                    cancelButtonColor: COLORS.slate400
+                                  });
+                                  if (result.isConfirmed) {
+                                    setDocuments(prev => ({ ...prev, formatoAfiliacion: null }));
+                                    setPreviews(prev => ({ ...prev, formatoAfiliacion: null }));
+                                    if (docGuardado) {
+                                      setDocumentosGuardados(prev => prev.filter(d => Number(d.DocumentoAfiliacionId || d.documentoAfiliacionId) !== 10));
+                                    }
+                                  }
+                                }}
+                                className="btn-delete"
+                                style={{
+                                  width: '36px', height: '36px', borderRadius: '50%',
+                                  backgroundColor: COLORS.danger, color: '#ffffff', border: 'none',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', cursor: 'pointer'
+                                }}
+                              >
+                                <FaTrash />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div style={{ width: '100%', textAlign: 'center', color: COLORS.slate400, cursor: 'pointer' }}>
+                          <FaUpload style={{ fontSize: '28px', marginBottom: '6px' }} />
+                          <p style={{ margin: 0, fontSize: '10px', fontWeight: '800' }}>SUBIR ARCHIVO</p>
+                        </div>
+                      )}
+                    </div>
+
+                    <p style={{ margin: 0, fontWeight: '800', fontSize: '15px', color: 'var(--color-text)' }}>
+                      Formato de afiliación firmado
+                    </p>
+
+                    <p style={{ fontSize: '11px', color: isUploaded ? 'var(--color-text-secondary)' : 'var(--color-text-muted)', margin: '4px 0 0 0' }}>
+                      {hasLocalFile
+                        ? `📎 ${documents.formatoAfiliacion.name}`
+                        : (docGuardado ? '📎 Archivo enviado y guardado' : 'Solo se permiten formatos PDF o imágenes')}
+                    </p>
+
+                    {isRejected && docGuardado.ObservacionesDocumento && (
+                      <div style={{ background: COLORS.dangerBgTranslucent, color: COLORS.dangerLight, padding: '10px 14px', border: `1px solid ${COLORS.dangerBgTranslucent30}`, borderRadius: '10px', fontSize: '11px', fontWeight: '700', marginTop: '14px', width: '100%', textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
+                        Motivo de rechazo: {docGuardado.ObservacionesDocumento}
+                      </div>
+                    )}
+                  </div>
+                  <input
+                    type="file"
+                    id="file-val-formatoAfiliacion"
+                    style={{ display: 'none' }}
+                    accept=".pdf,.png,.jpg,.jpeg"
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={async (e) => {
+                      const file = e.target.files[0];
+                      if (!file) return;
+
+                      if (!validarArchivoPermitido(file)) {
+                        e.target.value = '';
+                        return;
+                      }
+
+                      try {
+                        const metadata = JSON.parse(localStorage.getItem('afaem_doc_metadata') || '{}');
+                        const previousFile = metadata.formatoAfiliacion;
+                        if (previousFile && previousFile.size === file.size) {
+                          const result = await Swal.fire({
+                            title: '¿Subir el mismo archivo?',
+                            text: 'Parece que estás intentando subir exactamente el mismo archivo que subiste anteriormente. Por favor, asegúrate de subir el documento con las correcciones correspondientes. ¿Deseas continuar de todos modos?',
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonText: 'Sí, subir',
+                            cancelButtonText: 'Cancelar',
+                            confirmButtonColor: COLORS.primary,
+                            cancelButtonColor: COLORS.slate400
+                          });
+                          if (!result.isConfirmed) {
+                            e.target.value = '';
+                            return;
+                          }
+                        }
+                      } catch (err) {
+                        console.warn("Error verifying file metadata duplicate:", err);
+                      }
+
+                      if (docGuardado) {
+                        handleReemplazarDocumento(docAfiliacionId, file);
+                        setDocuments(prev => ({ ...prev, formatoAfiliacion: file }));
+                      } else {
+                        handleFileUpload('formatoAfiliacion', file);
+                      }
+                    }}
+                  />
+                </div>
+              );
+            })()}
 
             {/* BOTONES DE NAVEGACIÓN */}
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', paddingTop: '20px', borderTop: `1px solid ${COLORS.overlayWhite06}` }}>
@@ -4867,48 +5799,58 @@ function PreRegistroPresidente() {
           tamanio="grande"
         >
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
-            {previewDoc.file.type.startsWith('image/') ? (
-              previewUrl ? (
-                <img
-                  src={previewUrl}
-                  alt={previewDoc.title}
-                  style={{ maxWidth: '100%', maxHeight: '70vh', objectFit: 'contain', borderRadius: '8px', boxShadow: `0 4px 12px ${COLORS.shadow10}` }}
-                />
-              ) : (
-                <div style={{ padding: '40px', color: 'var(--text-muted)' }}>Cargando vista previa...</div>
-              )
-            ) : previewDoc.file.type === 'application/pdf' ? (
-              previewUrl ? (
-                <iframe
-                  src={`${previewUrl}#toolbar=0&navpanes=0`}
-                  title={previewDoc.title}
-                  style={{ width: '100%', height: '65vh', border: 'none', borderRadius: '8px' }}
-                />
-              ) : (
-                <div style={{ padding: '40px', color: 'var(--text-muted)' }}>Cargando vista previa...</div>
-              )
-            ) : (
-              <div style={{ padding: '40px', textAlign: 'center', color: COLORS.slate500 }}>
-                <p style={{ fontSize: '16px', fontWeight: 'bold' }}>No se puede previsualizar este tipo de archivo directamente.</p>
-                <p style={{ fontSize: '14px' }}>Archivo: {previewDoc.file.name}</p>
-                <a
-                  href={previewUrl}
-                  download={previewDoc.file.name}
-                  style={{
-                    display: 'inline-block',
-                    marginTop: '15px',
-                    padding: '10px 20px',
-                    backgroundColor: COLORS.primary,
-                    color: 'white',
-                    borderRadius: '8px',
-                    textDecoration: 'none',
-                    fontWeight: 'bold'
-                  }}
-                >
-                  Descargar archivo
-                </a>
-              </div>
-            )}
+            {(() => {
+              const isImage = previewDoc.type === 'image' ||
+                (previewDoc.file?.type && previewDoc.file.type.startsWith('image/'));
+              const isPdf = previewDoc.type === 'pdf' ||
+                (previewDoc.file?.type && previewDoc.file.type === 'application/pdf');
+              const fileName = previewDoc.file?.name || previewDoc.title || 'documento';
+
+              if (isImage) {
+                return previewUrl ? (
+                  <img
+                    src={previewUrl}
+                    alt={previewDoc.title}
+                    style={{ maxWidth: '100%', maxHeight: '70vh', objectFit: 'contain', borderRadius: '8px', boxShadow: `0 4px 12px ${COLORS.shadow10}` }}
+                  />
+                ) : (
+                  <div style={{ padding: '40px', color: 'var(--text-muted)' }}>Cargando vista previa...</div>
+                );
+              } else if (isPdf) {
+                return previewUrl ? (
+                  <iframe
+                    src={`${previewUrl}#toolbar=0&navpanes=0`}
+                    title={previewDoc.title}
+                    style={{ width: '100%', height: '65vh', border: 'none', borderRadius: '8px' }}
+                  />
+                ) : (
+                  <div style={{ padding: '40px', color: 'var(--text-muted)' }}>Cargando vista previa...</div>
+                );
+              } else {
+                return (
+                  <div style={{ padding: '40px', textAlign: 'center', color: COLORS.slate500 }}>
+                    <p style={{ fontSize: '16px', fontWeight: 'bold' }}>No se puede previsualizar este tipo de archivo directamente.</p>
+                    <p style={{ fontSize: '14px' }}>Archivo: {fileName}</p>
+                    <a
+                      href={previewUrl}
+                      download={fileName}
+                      style={{
+                        display: 'inline-block',
+                        marginTop: '15px',
+                        padding: '10px 20px',
+                        backgroundColor: COLORS.primary,
+                        color: 'white',
+                        borderRadius: '8px',
+                        textDecoration: 'none',
+                        fontWeight: 'bold'
+                      }}
+                    >
+                      Descargar archivo
+                    </a>
+                  </div>
+                );
+              }
+            })()}
           </div>
         </Modal>
       )}
