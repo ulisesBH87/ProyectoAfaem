@@ -231,13 +231,14 @@ const DETALLES_SEGUROS = {
 
 function PreRegistroPresidente() {
   const navigate = useNavigate();
-  const { estatusId, refreshAccess } = useRBAC();
+  const { estatusId, refreshAccess, isLoading: rbacLoading } = useRBAC();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const nombreUsuarioCompleto = user?.usuario?.nombre || user?.nombre || user?.Nombre || user?.NombreUsuario || 'Usuario';
 
   // Estados Generales
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [pasoActual, setPasoActual] = useState(0); // 0 = Bienvenida, 1 = Pago/Seguro, 2 = Revisión de orden, 3 = Documentos, 4 = Revisión de solicitud
+  const [pasoActual, setPasoActual] = useState(null); // 0 = Bienvenida, 1 = Pago/Seguro, 2 = Revisión de orden, 3 = Documentos, 4 = Revisión de solicitud
   const [estadoPago, setEstadoPago] = useState(null); // null, 1=NO ENVIADO, 2=ESPERA, 3=ACTIVO, 4=RECHAZADO
   const [ordenPendienteId, setOrdenPendienteId] = useState(null); // ID si se guardó la orden a la mitad
   const [estadoSolicitud, setEstadoSolicitud] = useState(null); // 1=ESPERA, 2/3=RECHAZADA, 4=BORRADOR
@@ -690,8 +691,13 @@ function PreRegistroPresidente() {
         // Pago pendiente
         setPasoActual(1);
       }
+      setTieneEstadoBackend(true);
+    } else if (estatusId === null && !rbacLoading) {
+      // Si ya cargó y no hay estatus, iniciar en paso 0 (Bienvenida)
+      setPasoActual(0);
+      setTieneEstadoBackend(true);
     }
-  }, [estatusId, navigate, tieneEstadoBackend]);
+  }, [estatusId, rbacLoading, navigate, tieneEstadoBackend]);
 
   // Sincronizar nombre y teléfono desde localStorage, y rellenar Tipo de Afiliación
   useEffect(() => {
@@ -2308,6 +2314,69 @@ function PreRegistroPresidente() {
     isActaUploaded && isIneUploaded && isFotoUploaded
   );
 
+  if (rbacLoading || pasoActual === null) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: '#f1f5f9',
+        fontFamily: "'Outfit', sans-serif"
+      }}>
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '20px',
+          padding: '40px',
+          background: 'white',
+          borderRadius: '24px',
+          boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.05)',
+          border: '1px solid #e2e8f0'
+        }}>
+          <img
+            src={AfaemLogo}
+            alt="AFAEM"
+            style={{ height: '80px', width: 'auto', objectFit: 'contain', marginBottom: '10px' }}
+          />
+          <div style={{
+            width: '50px',
+            height: '50px',
+            border: `5px solid rgba(11, 78, 166, 0.1)`,
+            borderTop: `5px solid #0b4ea6`,
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite'
+          }} />
+          <style>{`
+            @keyframes spin {
+              0% { transform: rotate(0deg); }
+              100% { transform: rotate(360deg); }
+            }
+          `}</style>
+          <p style={{
+            margin: 0,
+            fontSize: '15px',
+            fontWeight: '700',
+            color: '#1e293b',
+            letterSpacing: '0.5px'
+          }}>
+            Verificando estatus de registro...
+          </p>
+          <p style={{
+            margin: 0,
+            fontSize: '12px',
+            color: '#64748b',
+            textAlign: 'center'
+          }}>
+            Por favor, espera un momento.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fade-in prereg-dark-page" style={{
       minHeight: '100vh',
@@ -2970,7 +3039,7 @@ function PreRegistroPresidente() {
         {/* PASO 0: BIENVENIDA */}
         {pasoActual === 0 && (
           <div style={{ padding: '60px 40px', textAlign: 'center' }}>
-            <h1 style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '10px' }}>Bienvenido, {user.Nombre || user.NombreUsuario || user.Correo || user.email || 'Usuario'}</h1>
+            <h1 style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '10px' }}>Bienvenido, {nombreUsuarioCompleto}</h1>
             <p style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-muted)', marginBottom: '30px' }}>Comencemos con tu registro inicial</p>
             <p style={{ fontSize: '16px', color: 'var(--text-muted)', lineHeight: '1.6', margin: '30px 0', borderTop: '1px solid var(--border-light)', paddingTop: '30px' }}>
               Para activar tu cuenta y comenzar a gestionar tu equipo, necesitamos completar dos pasos.
@@ -2987,26 +3056,26 @@ function PreRegistroPresidente() {
             padding: '16px 24px 14px',
             borderBottom: `1px solid rgba(255, 255, 255, 0.15)`,
           }}>
-            <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center', 
-              marginBottom: '16px', 
-              flexWrap: 'wrap', 
-              gap: '12px' 
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '16px',
+              flexWrap: 'wrap',
+              gap: '12px'
             }}>
               <img
                 src={AfaemLogo}
                 alt="AFAEM"
                 style={{ height: '45px', width: 'auto', objectFit: 'contain' }}
               />
-              <p style={{ 
-                fontSize: '11px', 
-                fontWeight: '700', 
-                color: '#ffffff', 
-                letterSpacing: '2px', 
-                textTransform: 'uppercase', 
-                margin: 0, 
+              <p style={{
+                fontSize: '11px',
+                fontWeight: '700',
+                color: '#ffffff',
+                letterSpacing: '2px',
+                textTransform: 'uppercase',
+                margin: 0,
                 opacity: 0.8,
                 textAlign: 'center'
               }}>
@@ -3588,7 +3657,7 @@ function PreRegistroPresidente() {
                 </div>
 
                 <h1 style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '15px' }}>
-                  ¡Bienvenido, {user.Nombre || user.NombreUsuario || user.Correo || user.email || 'Usuario'}!
+                  ¡Bienvenido, {nombreUsuarioCompleto}!
                 </h1>
 
                 <div style={{ maxWidth: '500px' }}>
@@ -4410,11 +4479,12 @@ function PreRegistroPresidente() {
                   marginBottom: '20px'
                 }}>
                   <h4 style={{ fontSize: '15px', fontWeight: '800', color: 'var(--color-text)', marginBottom: '6px', textAlign: 'center' }}>
-                    Formato de Afiliación Oficial
+                    Formato de Afiliación Oficial:
+                    <span style={{ fontSize: '13px', color: 'var(--color-text-secondary)', textAlign: 'center', maxWidth: '600px', margin: '0 auto 20px auto', lineHeight: '1.5' }}>
+                      Descarga el formato prellenado, fírmalo y súbelo escaneado en formato PDF o imagen.
+                    </span>
                   </h4>
-                  <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)', textAlign: 'center', maxWidth: '600px', margin: '0 auto 20px auto', lineHeight: '1.5' }}>
-                    Descarga el formato prellenado, fírmalo y súbelo escaneado en formato PDF o imagen.
-                  </p>
+
 
                   {formatAfiliacionLocked && (
                     <div style={{ backgroundColor: '#fef2f2', border: `1px solid #fee2e2`, borderRadius: '12px', padding: '12px', marginBottom: '20px', maxWidth: '600px', margin: '0 auto 20px auto', textAlign: 'center' }}>
