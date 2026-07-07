@@ -4,6 +4,7 @@ from typing import Optional
 class CatalogoBase(BaseModel):
     nombre: str
     descripcion: Optional[str] = None
+    estatus: Optional[bool] = True
 
 class CatalogoCreate(CatalogoBase):
     modalidadId: Optional[int] = None

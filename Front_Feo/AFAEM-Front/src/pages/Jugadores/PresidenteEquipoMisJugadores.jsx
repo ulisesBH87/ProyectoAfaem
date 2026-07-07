@@ -491,12 +491,21 @@ export default function PresidenteEquipoMisJugadores() {
           const regDateStr = player.FechaIngreso ? formatFecha(player.FechaIngreso.split('T')[0]) : '—';
           const isProximo = esSeguroProximoAVencer(player.Vigencia);
 
+          const getFontSizeForText = (text, defaultSize = '16px') => {
+            if (!text) return defaultSize;
+            const len = text.length;
+            if (len > 25) return '11px';
+            if (len > 18) return '12px';
+            if (len > 12) return '14px';
+            return defaultSize;
+          };
+
           return (
             <div style={{ display: 'flex', gap: '20px', flexDirection: 'column', fontFamily: "'Outfit', 'Inter', sans-serif" }}>
               {/* CABECERA CON BANNER */}
               <div style={{
                 background: `linear-gradient(135deg, ${COLORS.slate800}, ${COLORS.slate900})`,
-                padding: '25px 20px',
+                padding: '15px 15px',
                 color: 'white',
                 display: 'flex',
                 alignItems: 'center',
@@ -517,7 +526,7 @@ export default function PresidenteEquipoMisJugadores() {
                   color: COLORS.primary,
                   flexShrink: 0
                 }}>
-                  🛡️
+                  ⚽
                 </div>
                 <div style={{ minWidth: 0, flexGrow: 1 }}>
                   <h3 style={{ margin: 0, fontSize: '22px', fontWeight: '800', color: '#ffffff', letterSpacing: '-0.5px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -533,17 +542,17 @@ export default function PresidenteEquipoMisJugadores() {
               <div style={{ padding: '20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', background: '#f8fafc', borderRadius: '12px' }}>
                 {/* NUI */}
                 <div style={{ background: 'white', padding: '10px 14px', borderRadius: '10px', border: '1px solid #e2e8f0', display: 'flex', gap: '10px', alignItems: 'center' }}>
-                  <div>
+                  <div style={{ minWidth: 0, width: '100%' }}>
                     <div style={{ fontSize: '13px', fontWeight: '700', color: COLORS.slate400, textTransform: 'uppercase', letterSpacing: '0.5px' }}>NUI</div>
-                    <div style={{ fontSize: '16px', fontWeight: '750', color: COLORS.slate800 }}>{player.NUI || 'No asignado'}</div>
+                    <div style={{ fontSize: getFontSizeForText(player.NUI || 'No asignado'), fontWeight: '750', color: COLORS.slate800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{player.NUI || 'No asignado'}</div>
                   </div>
                 </div>
 
                 {/* EQUIPO */}
                 <div style={{ background: 'white', padding: '10px 14px', borderRadius: '10px', border: '1px solid #e2e8f0', display: 'flex', gap: '10px', alignItems: 'center' }}>
-                  <div style={{ minWidth: 0 }}>
+                  <div style={{ minWidth: 0, width: '100%' }}>
                     <div style={{ fontSize: '13px', fontWeight: '700', color: COLORS.slate400, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Equipo</div>
-                    <div style={{ fontSize: '16px', fontWeight: '750', color: COLORS.slate800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ fontSize: getFontSizeForText(player.Equipo ? player.Equipo.toUpperCase() : 'SIN EQUIPO'), fontWeight: '750', color: COLORS.slate800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {player.Equipo ? player.Equipo.toUpperCase() : 'SIN EQUIPO'}
                     </div>
                   </div>
@@ -551,17 +560,17 @@ export default function PresidenteEquipoMisJugadores() {
 
                 {/* POSICION */}
                 <div style={{ background: 'white', padding: '10px 14px', borderRadius: '10px', border: '1px solid #e2e8f0', display: 'flex', gap: '10px', alignItems: 'center' }}>
-                  <div>
+                  <div style={{ minWidth: 0, width: '100%' }}>
                     <div style={{ fontSize: '13px', fontWeight: '700', color: COLORS.slate400, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Posición / Rol</div>
-                    <div style={{ fontSize: '16px', fontWeight: '750', color: COLORS.slate800 }}>{player.Rol || 'Miembro Registrado'}</div>
+                    <div style={{ fontSize: getFontSizeForText(player.Rol || 'Miembro Registrado'), fontWeight: '750', color: COLORS.slate800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{player.Rol || 'Miembro Registrado'}</div>
                   </div>
                 </div>
 
                 {/* DORSAL */}
                 <div style={{ background: 'white', padding: '10px 14px', borderRadius: '10px', border: '1px solid #e2e8f0', display: 'flex', gap: '10px', alignItems: 'center' }}>
-                  <div>
+                  <div style={{ minWidth: 0, width: '100%' }}>
                     <div style={{ fontSize: '13px', fontWeight: '700', color: COLORS.slate400, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Playera</div>
-                    <div style={{ fontSize: '16px', fontWeight: '750', color: COLORS.slate800 }}>
+                    <div style={{ fontSize: getFontSizeForText(player.NumeroCamiseta ? `# ${player.NumeroCamiseta}` : 'No asignado'), fontWeight: '750', color: COLORS.slate800 }}>
                       {player.NumeroCamiseta ? `# ${player.NumeroCamiseta}` : 'No asignado'}
                     </div>
                   </div>
@@ -569,18 +578,70 @@ export default function PresidenteEquipoMisJugadores() {
 
                 {/* REGISTRO */}
                 <div style={{ background: 'white', padding: '10px 14px', borderRadius: '10px', border: '1px solid #e2e8f0', display: 'flex', gap: '10px', alignItems: 'center' }}>
-                  <div>
+                  <div style={{ minWidth: 0, width: '100%' }}>
                     <div style={{ fontSize: '13px', fontWeight: '700', color: COLORS.slate400, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Registro</div>
-                    <div style={{ fontSize: '16px', fontWeight: '750', color: COLORS.slate800 }}>{regDateStr}</div>
+                    <div style={{ fontSize: getFontSizeForText(regDateStr), fontWeight: '750', color: COLORS.slate800 }}>{regDateStr}</div>
                   </div>
                 </div>
 
                 {/* ESTATUS */}
                 <div style={{ background: 'white', padding: '10px 14px', borderRadius: '10px', border: '1px solid #e2e8f0', display: 'flex', gap: '10px', alignItems: 'center' }}>
-                  <div>
-                    <div style={{ fontSize: '13px', fontWeight: '700', color: COLORS.slate400, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Estatus</div>
-                    <div style={{ fontSize: '16px', fontWeight: '750', color: player.Estatus ? COLORS.greenDark : COLORS.danger }}>
-                      {player.Estatus ? 'Activo / Aprobado' : 'Inactivo / Pendiente'}
+                  <div style={{ minWidth: 0, width: '100%' }}>
+                    <div style={{ fontSize: '13px', fontWeight: '700', color: COLORS.slate400, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>Estatus</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      <span
+                        className="status-badge-table"
+                        style={{
+                          background: player.Estatus ? COLORS.greenBg : COLORS.dangerBg,
+                          color: player.Estatus ? COLORS.greenDeep : COLORS.dangerDeep,
+                          border: player.Estatus ? `1px solid ${COLORS.greenBgDark}` : `1px solid ${COLORS.dangerBgMedium}`,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          margin: 0,
+                          padding: '2px 8px',
+                          borderRadius: '6px',
+                          fontSize: '10px',
+                          fontWeight: '800'
+                        }}
+                      >
+                        {player.Estatus ? <FaCheckCircle size={10} /> : <FaExclamationCircle size={10} />}
+                        {player.Estatus ? 'ACTIVO' : 'INACTIVO'}
+                      </span>
+
+                      {player.EstatusDocumentos && (
+                        <span
+                          className="status-badge-table"
+                          style={{
+                            background:
+                              player.EstatusDocumentos === 'Aprobado' ? COLORS.greenBg50 :
+                                player.EstatusDocumentos === 'Rechazado' ? COLORS.dangerBgLight :
+                                  player.EstatusDocumentos === 'En espera' ? COLORS.warningBgLight : COLORS.slate50,
+                            color:
+                              player.EstatusDocumentos === 'Aprobado' ? COLORS.greenDark :
+                                player.EstatusDocumentos === 'Rechazado' ? COLORS.dangerDark :
+                                  player.EstatusDocumentos === 'En espera' ? COLORS.warningDark : COLORS.slate500,
+                            border:
+                              player.EstatusDocumentos === 'Aprobado' ? `1px solid ${COLORS.greenBgDark}` :
+                                player.EstatusDocumentos === 'Rechazado' ? `1px solid ${COLORS.dangerBgMedium}` :
+                                  player.EstatusDocumentos === 'En espera' ? `1px solid ${COLORS.warningBgDark}` : `1px solid ${COLORS.slate300}`,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            margin: 0,
+                            padding: '2px 8px',
+                            borderRadius: '6px',
+                            fontSize: '10px',
+                            fontWeight: '800'
+                          }}
+                        >
+                          {player.EstatusDocumentos === 'Aprobado' && <FaCheckCircle size={10} />}
+                          {player.EstatusDocumentos === 'Rechazado' && <FaExclamationCircle size={10} />}
+                          {player.EstatusDocumentos === 'En espera' && <FaExclamationCircle size={10} style={{ color: COLORS.warningDark }} />}
+                          {player.EstatusDocumentos === 'Pendiente' && <FaUser size={10} style={{ color: COLORS.slate500 }} />}
+                          DOCS: {player.EstatusDocumentos.toUpperCase()}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -608,7 +669,7 @@ export default function PresidenteEquipoMisJugadores() {
                       {inicioSegStr}
                     </div>
                     <div>
-                      <strong style={{ color: COLORS.slate500, fontSize: '13px', textTransform: 'uppercase', display: 'block', marginBottom: '2px' }}>Fin Seguro (Vigencia):</strong>
+                      <strong style={{ color: COLORS.slate500, fontSize: '13px', textTransform: 'uppercase', display: 'block', marginBottom: '2px' }}>Vigencia:</strong>
                       {finSegStr}
                     </div>
                   </div>

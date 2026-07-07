@@ -123,17 +123,28 @@ def validar_invitacion_presidente(request: Request, token_identificador: str, to
 
 # == REGISTROS ==
 @router.get("/catalogos-registro", response_model=CatalogosRegistroResponse)
-def get_catalogos_registro(db: Session = Depends(get_db)):
+def get_catalogos_registro(admin_mode: bool = Query(False), db: Session = Depends(get_db)):
     try:
         from sqlalchemy.orm import joinedload
-        ligas = db.query(Ligas).options(
+        query_ligas = db.query(Ligas).options(
             joinedload(Ligas.CategoriaRelacion),
             joinedload(Ligas.ModalidadRelacion),
             joinedload(Ligas.RamaRelacion)
-        ).all()
-        categorias = db.query(CatalogoCategorias).all()
-        modalidades = db.query(CatalogoModalidad).all()
-        ramas = db.query(CatalogoRamas).all()
+        )
+        query_cats = db.query(CatalogoCategorias)
+        query_mods = db.query(CatalogoModalidad)
+        query_ramas = db.query(CatalogoRamas)
+
+        if not admin_mode:
+            query_ligas = query_ligas.filter(Ligas.Estatus == True)
+            query_cats = query_cats.filter(CatalogoCategorias.Estatus == True)
+            query_mods = query_mods.filter(CatalogoModalidad.Estatus == True)
+            query_ramas = query_ramas.filter(CatalogoRamas.Estatus == True)
+
+        ligas = query_ligas.all()
+        categorias = query_cats.all()
+        modalidades = query_mods.all()
+        ramas = query_ramas.all()
         seguros = db.query(Seguro).all()
         roles_equipo = db.query(RolesDeEquipo).filter(RolesDeEquipo.Eliminado == False).all()
 
@@ -153,14 +164,15 @@ def get_catalogos_registro(db: Session = Depends(get_db)):
                 "descripcion": l.Descripcionliga,
                 "modalidadId": l.ModalidadId,
                 "categoriaId": l.CategoriaId,
-                "ramaId": l.RamaId
+                "ramaId": l.RamaId,
+                "estatus": getattr(l, "Estatus", True)
             })
 
         return {
             "ligas": ligas_desc,
-            "categorias": [{"id": c.CategoriaId, "nombre": c.NombreCategoria} for c in categorias],
-            "modalidades": [{"id": m.ModalidadId, "nombre": m.NombreModalidad} for m in modalidades],
-            "ramas": [{"id": r.RamaId, "nombre": r.Nombre} for r in ramas],
+            "categorias": [{"id": c.CategoriaId, "nombre": c.NombreCategoria, "estatus": getattr(c, "Estatus", True)} for c in categorias],
+            "modalidades": [{"id": m.ModalidadId, "nombre": m.NombreModalidad, "estatus": getattr(m, "Estatus", True)} for m in modalidades],
+            "ramas": [{"id": r.RamaId, "nombre": r.Nombre, "estatus": getattr(r, "Estatus", True)} for r in ramas],
             "seguros": [
                 {
                     "id": s.SeguroId,
