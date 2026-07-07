@@ -1375,7 +1375,7 @@ def get_presidentes_activos(db: Session = Depends(get_db), usuario = Depends(obt
         equipos_jugando = db.query(
             EquiposJugando.PresidenteEquipoId,
             EquiposJugando.EntrenadorEquipoId,
-            Equipos.EquipoId,
+            EquiposJugando.EquiposJugandoId,
             Equipos.NombreEquipo
         ).join(Equipos, Equipos.EquipoId == EquiposJugando.EquipoId).all()
         
@@ -1386,14 +1386,14 @@ def get_presidentes_activos(db: Session = Depends(get_db), usuario = Depends(obt
                 if ej.PresidenteEquipoId not in equipos_por_directivo:
                     equipos_por_directivo[ej.PresidenteEquipoId] = []
                 equipos_por_directivo[ej.PresidenteEquipoId].append({
-                    "id": ej.EquipoId,
+                    "id": ej.EquiposJugandoId,
                     "nombre": ej.NombreEquipo
                 })
             if ej.EntrenadorEquipoId is not None:
                 if ej.EntrenadorEquipoId not in equipos_por_directivo:
                     equipos_por_directivo[ej.EntrenadorEquipoId] = []
                 equipos_por_directivo[ej.EntrenadorEquipoId].append({
-                    "id": ej.EquipoId,
+                    "id": ej.EquiposJugandoId,
                     "nombre": ej.NombreEquipo
                 })
 
