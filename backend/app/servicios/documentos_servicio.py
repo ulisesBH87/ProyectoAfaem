@@ -26,12 +26,19 @@ async def subir_documento_servicio(db, persona_id, documento_afiliacion_id, arch
     ruta = os.path.join(UPLOAD_DIR, nombre)
 
     file_bytes = await archivo.read()
-    try:
-        from app.utilidades.procesador_documentos import procesar_documento_subido
-        file_bytes = procesar_documento_subido(file_bytes, archivo.filename)
-    except Exception as e:
-        import logging
-        logging.getLogger("documentos_servicio").error(f"Error procesando documento: {e}")
+    
+    # Excluir FOTOGRAFIA del recorte automático de documentos
+    from app.modelos.catalogos_modelo import DocumentoAfiliacion
+    d = db.query(DocumentoAfiliacion).filter(DocumentoAfiliacion.DocumentoAfiliacionId == documento_afiliacion_id).first()
+    nombre_doc = d.Documento.NombreDocumento.upper() if (d and d.Documento) else ""
+
+    if nombre_doc != "FOTOGRAFIA":
+        try:
+            from app.utilidades.procesador_documentos import procesar_documento_subido
+            file_bytes = procesar_documento_subido(file_bytes, archivo.filename)
+        except Exception as e:
+            import logging
+            logging.getLogger("documentos_servicio").error(f"Error procesando documento: {e}")
 
     with open(ruta, "wb") as buffer:
         buffer.write(file_bytes)
@@ -128,12 +135,13 @@ async def subir_documento_servicio2(db, persona_id, documento_afiliacion_ids, ar
         ruta_db = os.path.join("uploads", upload_subfolder, nombre).replace("\\", "/")
 
         file_bytes = await archivo.read()
-        try:
-            from app.utilidades.procesador_documentos import procesar_documento_subido
-            file_bytes = procesar_documento_subido(file_bytes, archivo.filename)
-        except Exception as e:
-            import logging
-            logging.getLogger("documentos_servicio").error(f"Error procesando documento: {e}")
+        if nombre_doc != "FOTOGRAFIA":
+            try:
+                from app.utilidades.procesador_documentos import procesar_documento_subido
+                file_bytes = procesar_documento_subido(file_bytes, archivo.filename)
+            except Exception as e:
+                import logging
+                logging.getLogger("documentos_servicio").error(f"Error procesando documento: {e}")
 
         with open(ruta_absoluta, "wb") as buffer:
             buffer.write(file_bytes)
@@ -237,12 +245,13 @@ async def subir_documentos_jugador_equipo(
         ruta_db = os.path.join("uploads", upload_subfolder, nombre_archivo).replace("\\", "/")
 
         file_bytes = await archivo.read()
-        try:
-            from app.utilidades.procesador_documentos import procesar_documento_subido
-            file_bytes = procesar_documento_subido(file_bytes, archivo.filename)
-        except Exception as e:
-            import logging
-            logging.getLogger("documentos_servicio").error(f"Error procesando documento: {e}")
+        if nombre_doc != "FOTOGRAFIA":
+            try:
+                from app.utilidades.procesador_documentos import procesar_documento_subido
+                file_bytes = procesar_documento_subido(file_bytes, archivo.filename)
+            except Exception as e:
+                import logging
+                logging.getLogger("documentos_servicio").error(f"Error procesando documento: {e}")
 
         with open(ruta_absoluta, "wb") as buffer:
             buffer.write(file_bytes)
