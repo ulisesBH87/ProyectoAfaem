@@ -210,7 +210,16 @@ def enviar_solicitud_completa_servicio(db, solicitud_id, usuario_id, curp=None, 
     solicitud_completa = solicitud_repositorio.enviar_solicitud_completa_repo(db, solicitud_id)
     if not solicitud_completa:
         raise HTTPException(400, "Error al enviar la solicitud")
-    
+
+    # Actualizar EstatusId del presidente a 4 (DOCUMENTOS_EN_REVISION)
+    from app.modelos.presidente_equipo_modelo import PresidenteEquipo
+    from app.enums.estatus_presidente_enum import PresidenteEquipoEstatus
+    if usuario and usuario.PersonaId:
+        presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == usuario.PersonaId).first()
+        if presidente:
+            presidente.EstatusId = int(PresidenteEquipoEstatus.DOCUMENTOS_EN_REVISION)
+            db.commit()
+
     return {"mensaje": "Solicitud enviada correctamente"}
 
 # --- SECCIÓN ADMINISTRADORA: VALIDACIÓN DE SOLICITUDES ---
