@@ -355,6 +355,7 @@ function PreRegistroPresidente() {
     }
   });
   const [previews, setPreviews] = useState({});
+  const [docMimeTypes, setDocMimeTypes] = useState({});
 
   useEffect(() => {
     if (!documentosGuardados || documentosGuardados.length === 0) return;
@@ -372,11 +373,48 @@ function PreRegistroPresidente() {
       if (!key) return;
 
       try {
-        const url = await fetchSecureBlobUrl(d.Url || d.url);
-        setPreviews(prev => {
-          if (prev[key]) return prev;
-          return { ...prev, [key]: url };
-        });
+        const path = d.Url || d.url;
+        if (!path) return;
+
+        let url;
+        let mimeType = '';
+
+        if (path.startsWith('http') || path.startsWith('data:')) {
+          url = path;
+          if (path.toLowerCase().endsWith('.pdf')) {
+            mimeType = 'application/pdf';
+          } else {
+            mimeType = 'image/jpeg';
+          }
+        } else {
+          const cleanPath = path.replace(/\\/g, '/');
+          const pathWithSlash = cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`;
+          const fullUrl = `${API_BASE}${pathWithSlash}`;
+
+          const token = localStorage.getItem('token');
+          const headers = {};
+          if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+          }
+
+          const response = await fetch(fullUrl, { headers });
+          if (response.ok) {
+            const blob = await response.blob();
+            url = URL.createObjectURL(blob);
+            mimeType = blob.type;
+          }
+        }
+
+        if (url) {
+          setPreviews(prev => {
+            if (prev[key]) return prev;
+            return { ...prev, [key]: url };
+          });
+          setDocMimeTypes(prev => {
+            if (prev[key]) return prev;
+            return { ...prev, [key]: mimeType };
+          });
+        }
       } catch (err) {
         console.error(`Error fetching secure preview for ${key}:`, err);
       }
@@ -387,6 +425,7 @@ function PreRegistroPresidente() {
     Object.keys(documents).forEach(key => {
       const file = documents[key];
       if (file) {
+        setDocMimeTypes(prev => ({ ...prev, [key]: file.type }));
         if (file.type?.startsWith('image/')) {
           const reader = new FileReader();
           reader.onloadend = () => {
@@ -401,6 +440,7 @@ function PreRegistroPresidente() {
           setPreviews(prev => ({ ...prev, [key]: url }));
         }
       } else {
+        setDocMimeTypes(prev => ({ ...prev, [key]: null }));
         setPreviews(prev => {
           if (prev[key] === null) return prev;
           if (prev[key] && prev[key].startsWith('blob:')) {
@@ -4148,8 +4188,7 @@ function PreRegistroPresidente() {
                     }}>
                       {isUploaded && previews[doc.documento] ? (
                         <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
-                          {(documents[doc.documento]?.type === 'application/pdf' ||
-                            (docGuardado && (docGuardado.Url || docGuardado.url || '').toLowerCase().endsWith('.pdf'))) ? (
+                          {docMimeTypes[doc.documento] === 'application/pdf' ? (
                             <div style={{ width: '100%', height: '100%', position: 'relative', backgroundColor: '#ffffff' }}>
                               <iframe
                                 src={`${previews[doc.documento]}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
@@ -4204,8 +4243,7 @@ function PreRegistroPresidente() {
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  const isPdf = documents[doc.documento]?.type === 'application/pdf' ||
-                                    (docGuardado && (docGuardado.Url || docGuardado.url || '').toLowerCase().endsWith('.pdf'));
+                                  const isPdf = docMimeTypes[doc.documento] === 'application/pdf';
                                   setPreviewDoc({
                                     url: previews[doc.documento],
                                     type: isPdf ? 'pdf' : 'image',
@@ -4702,8 +4740,7 @@ function PreRegistroPresidente() {
                     }}>
                       {isUploaded && previews.formatoAfiliacion ? (
                         <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
-                          {(documents.formatoAfiliacion?.type === 'application/pdf' ||
-                            (docGuardado && (docGuardado.Url || docGuardado.url || '').toLowerCase().endsWith('.pdf'))) ? (
+                          {docMimeTypes.formatoAfiliacion === 'application/pdf' ? (
                             <div style={{ width: '100%', height: '100%', position: 'relative', backgroundColor: '#ffffff' }}>
                               <iframe
                                 src={`${previews.formatoAfiliacion}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
@@ -4758,8 +4795,7 @@ function PreRegistroPresidente() {
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  const isPdf = documents.formatoAfiliacion?.type === 'application/pdf' ||
-                                    (docGuardado && (docGuardado.Url || docGuardado.url || '').toLowerCase().endsWith('.pdf'));
+                                  const isPdf = docMimeTypes.formatoAfiliacion === 'application/pdf';
                                   setPreviewDoc({
                                     url: previews.formatoAfiliacion,
                                     type: isPdf ? 'pdf' : 'image',
@@ -5045,8 +5081,7 @@ function PreRegistroPresidente() {
                     }}>
                       {isUploaded && previews[doc.documento] ? (
                         <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
-                          {(documents[doc.documento]?.type === 'application/pdf' ||
-                            (docGuardado && (docGuardado.Url || docGuardado.url || '').toLowerCase().endsWith('.pdf'))) ? (
+                          {docMimeTypes[doc.documento] === 'application/pdf' ? (
                             <div style={{ width: '100%', height: '100%', position: 'relative', backgroundColor: '#ffffff' }}>
                               <iframe
                                 src={`${previews[doc.documento]}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
@@ -5101,8 +5136,7 @@ function PreRegistroPresidente() {
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  const isPdf = documents[doc.documento]?.type === 'application/pdf' ||
-                                    (docGuardado && (docGuardado.Url || docGuardado.url || '').toLowerCase().endsWith('.pdf'));
+                                  const isPdf = docMimeTypes[doc.documento] === 'application/pdf';
                                   setPreviewDoc({
                                     url: previews[doc.documento],
                                     type: isPdf ? 'pdf' : 'image',
@@ -5395,8 +5429,7 @@ function PreRegistroPresidente() {
                     }}>
                       {isUploaded && previews.formatoAfiliacion ? (
                         <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
-                          {(documents.formatoAfiliacion?.type === 'application/pdf' ||
-                            (docGuardado && (docGuardado.Url || docGuardado.url || '').toLowerCase().endsWith('.pdf'))) ? (
+                          {docMimeTypes.formatoAfiliacion === 'application/pdf' ? (
                             <div style={{ width: '100%', height: '100%', position: 'relative', backgroundColor: '#ffffff' }}>
                               <iframe
                                 src={`${previews.formatoAfiliacion}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
@@ -5451,8 +5484,7 @@ function PreRegistroPresidente() {
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  const isPdf = documents.formatoAfiliacion?.type === 'application/pdf' ||
-                                    (docGuardado && (docGuardado.Url || docGuardado.url || '').toLowerCase().endsWith('.pdf'));
+                                  const isPdf = docMimeTypes.formatoAfiliacion === 'application/pdf';
                                   setPreviewDoc({
                                     url: previews.formatoAfiliacion,
                                     type: isPdf ? 'pdf' : 'image',
