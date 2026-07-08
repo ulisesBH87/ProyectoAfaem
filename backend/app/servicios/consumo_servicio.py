@@ -265,6 +265,7 @@ class ConsumptionService:
         
         por_operacion = {}
         por_registro = {}
+        operaciones_por_servicio = {}
         
         for r in resumenes:
             # Determinar divisa
@@ -289,6 +290,7 @@ class ConsumptionService:
                 
             por_operacion[r.TipoConsumo] = por_operacion.get(r.TipoConsumo, 0.0) + costo_val
             por_registro[r.TipoRegistro] = por_registro.get(r.TipoRegistro, 0) + r.CantidadOperaciones
+            operaciones_por_servicio[r.TipoConsumo] = operaciones_por_servicio.get(r.TipoConsumo, 0) + r.CantidadOperaciones
             
         tarifas_list = [
             {
@@ -309,6 +311,7 @@ class ConsumptionService:
             "costo_por_proveedor_mxn": por_proveedor_mxn,
             "costo_por_operacion": por_operacion,
             "operaciones_por_registro": por_registro,
+            "operaciones_por_servicio": operaciones_por_servicio,
             "tarifas": tarifas_list,
             "data": resumenes
         }

@@ -161,6 +161,45 @@ export default function ResumenesMaster() {
   const colorInfo = COLORS.violet; // Violeta
   const colorDark = COLORS.slate900; // Black glass
 
+  const getServiceIcon = (tipo) => {
+    switch (tipo) {
+      case 'OCR':
+        return <FaFileAlt />;
+      case 'PHOTO_SCAN':
+        return <FaUsers />;
+      case 'VERIFICAMEX':
+        return <FaUserCheck />;
+      default:
+        return <FaDatabase />;
+    }
+  };
+
+  const getServiceColor = (tipo) => {
+    switch (tipo) {
+      case 'OCR':
+        return colorInfo;
+      case 'PHOTO_SCAN':
+        return colorWarning;
+      case 'VERIFICAMEX':
+        return colorDanger;
+      default:
+        return colorPrimary;
+    }
+  };
+
+  const getServiceBg = (tipo) => {
+    switch (tipo) {
+      case 'OCR':
+        return COLORS.violetTranslucent15;
+      case 'PHOTO_SCAN':
+        return COLORS.warningBgTranslucent;
+      case 'VERIFICAMEX':
+        return COLORS.dangerBgTranslucent;
+      default:
+        return COLORS.brandBlueLight16;
+    }
+  };
+
   const formatMonthName = (m, y) => {
     const meses = [
       "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -517,7 +556,6 @@ export default function ResumenesMaster() {
             <p style={{ color: COLORS.slate500, fontSize: '13px', marginBottom: '30px' }}>
               Cantidad de transacciones registradas por día en el sistema durante el último periodo de actividad.
             </p>
-
             <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', height: '180px', gap: '12px', paddingBottom: '10px', borderBottom: `1.5px solid ${COLORS.slate200}`, overflowX: 'auto' }}>
               {diario.length > 0 ? (
                 diario.map((d, idx) => {
@@ -541,7 +579,7 @@ export default function ResumenesMaster() {
       ) : (
         <>
           {/* CONSUMPTION KPI CARDS SECTION */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginBottom: '30px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginBottom: '24px' }}>
             {/* Total Operaciones */}
             <div style={{ background: COLORS.white, border: `1px solid ${COLORS.shadow10}`, borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: `0 8px 32px 0 ${COLORS.shadow05}` }}>
               <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: COLORS.brandBlueLight16, color: colorPrimary, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>
@@ -583,47 +621,82 @@ export default function ResumenesMaster() {
                 <div style={{ fontSize: '11px', color: COLORS.slate500, marginTop: '2px' }}>Pesos Mexicanos (MXN)</div>
               </div>
             </div>
+          </div>
 
-            {/* OCR */}
-            <div style={{ background: COLORS.white, border: `1px solid ${COLORS.shadow10}`, borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: `0 8px 32px 0 ${COLORS.shadow05}` }}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: COLORS.violetTranslucent15, color: colorInfo, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>
-                <FaFileAlt />
-              </div>
-              <div>
-                <div style={{ fontSize: '10px', fontWeight: '700', color: COLORS.slate600, textTransform: 'uppercase', letterSpacing: '1px' }}>Costo OCR</div>
-                <div style={{ fontSize: '24px', fontWeight: '900', color: COLORS.slate900, marginTop: '2px' }}>
-                  {loadingConsumo ? '...' : (consumoResumen?.costo_por_operacion?.OCR ?? 0).toFixed(4)}
-                </div>
-                <div style={{ fontSize: '11px', color: COLORS.slate500, marginTop: '2px' }}>USD</div>
-              </div>
+          {/* CONSUMOS POR SERVICIO (UNIDADES) */}
+          <div style={{ background: COLORS.white, border: `1px solid ${COLORS.slate200}`, borderRadius: '16px', padding: '20px', marginBottom: '24px', boxShadow: 'var(--shadow-sm)' }}>
+            <h4 style={{ fontSize: '13px', fontWeight: '800', color: COLORS.slate700, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <FaFileAlt style={{ color: colorPrimary }} /> Consumos por Servicio (Unidades)
+            </h4>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+              {consumoResumen?.tarifas && consumoResumen.tarifas.length > 0 ? (
+                consumoResumen.tarifas.map((tar, idx) => {
+                  const icon = getServiceIcon(tar.tipo_consumo);
+                  const color = getServiceColor(tar.tipo_consumo);
+                  const bg = getServiceBg(tar.tipo_consumo);
+                  const count = consumoResumen?.operaciones_por_servicio?.[tar.tipo_consumo] ?? 0;
+
+                  return (
+                    <div key={idx} style={{ background: COLORS.slate50, border: `1px solid ${COLORS.slate200}`, borderRadius: '12px', padding: '16px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+                      <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: bg, color: color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>
+                        {icon}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '9px', fontWeight: '700', color: COLORS.slate500, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                          {tar.tipo_consumo}
+                        </div>
+                        <div style={{ fontSize: '20px', fontWeight: '900', color: COLORS.slate900, marginTop: '2px' }}>
+                          {loadingConsumo ? '...' : count}
+                        </div>
+                        <div style={{ fontSize: '11px', color: COLORS.slate400 }}>
+                          {count === 1 ? 'Unidad' : 'Unidades'}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div style={{ fontSize: '12px', color: COLORS.slate500, fontStyle: 'italic' }}>Cargando unidades...</div>
+              )}
             </div>
+          </div>
 
-            {/* Foto */}
-            <div style={{ background: COLORS.white, border: `1px solid ${COLORS.shadow10}`, borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: `0 8px 32px 0 ${COLORS.shadow05}` }}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: COLORS.warningBgTranslucent, color: colorWarning, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>
-                <FaUsers />
-              </div>
-              <div>
-                <div style={{ fontSize: '10px', fontWeight: '700', color: COLORS.slate600, textTransform: 'uppercase', letterSpacing: '1px' }}>Costo Fotos</div>
-                <div style={{ fontSize: '24px', fontWeight: '900', color: COLORS.slate900, marginTop: '2px' }}>
-                  {loadingConsumo ? '...' : (consumoResumen?.costo_por_operacion?.PHOTO_SCAN ?? 0).toFixed(2)}
-                </div>
-                <div style={{ fontSize: '11px', color: COLORS.slate500, marginTop: '2px' }}>MXN</div>
-              </div>
-            </div>
+          {/* COSTOS POR SERVICIO */}
+          <div style={{ background: COLORS.white, border: `1px solid ${COLORS.slate200}`, borderRadius: '16px', padding: '20px', marginBottom: '24px', boxShadow: 'var(--shadow-sm)' }}>
+            <h4 style={{ fontSize: '13px', fontWeight: '800', color: COLORS.slate700, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <FaCoins style={{ color: colorSuccess }} /> Costos por Servicio (Acumulado del Periodo)
+            </h4>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+              {consumoResumen?.tarifas && consumoResumen.tarifas.length > 0 ? (
+                consumoResumen.tarifas.map((tar, idx) => {
+                  const icon = getServiceIcon(tar.tipo_consumo);
+                  const color = getServiceColor(tar.tipo_consumo);
+                  const bg = getServiceBg(tar.tipo_consumo);
+                  const cost = consumoResumen?.costo_por_operacion?.[tar.tipo_consumo] ?? 0.0;
+                  const decimalPlaces = tar.divisa === 'USD' ? 4 : 2;
 
-            {/* VerificaMex */}
-            <div style={{ background: COLORS.white, border: `1px solid ${COLORS.shadow10}`, borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: `0 8px 32px 0 ${COLORS.shadow05}` }}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: COLORS.dangerBgTranslucent, color: colorDanger, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>
-                <FaUserCheck />
-              </div>
-              <div>
-                <div style={{ fontSize: '10px', fontWeight: '700', color: COLORS.slate600, textTransform: 'uppercase', letterSpacing: '1px' }}>Costo VerificaMex</div>
-                <div style={{ fontSize: '24px', fontWeight: '900', color: COLORS.slate900, marginTop: '2px' }}>
-                  {loadingConsumo ? '...' : (consumoResumen?.costo_por_operacion?.VERIFICAMEX ?? 0).toFixed(2)}
-                </div>
-                <div style={{ fontSize: '11px', color: COLORS.slate500, marginTop: '2px' }}>MXN</div>
-              </div>
+                  return (
+                    <div key={idx} style={{ background: COLORS.slate50, border: `1px solid ${COLORS.slate200}`, borderRadius: '12px', padding: '16px', display: 'flex', alignItems: 'center', gap: '14px' }}>
+                      <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: bg, color: color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>
+                        {icon}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '9px', fontWeight: '700', color: COLORS.slate500, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                          Costo {tar.tipo_consumo}
+                        </div>
+                        <div style={{ fontSize: '20px', fontWeight: '900', color: COLORS.slate900, marginTop: '2px' }}>
+                          {loadingConsumo ? '...' : cost.toFixed(decimalPlaces)}
+                        </div>
+                        <div style={{ fontSize: '11px', color: COLORS.slate400, fontWeight: '700' }}>
+                          {tar.divisa}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div style={{ fontSize: '12px', color: COLORS.slate500, fontStyle: 'italic' }}>Cargando costos...</div>
+              )}
             </div>
           </div>
 
