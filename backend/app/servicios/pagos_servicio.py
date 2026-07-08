@@ -328,6 +328,21 @@ class PagosServicio:
         if not afiliacion_val:
             afiliacion_val = solicitud.Afiliacion if (solicitud and solicitud.Afiliacion) else None
 
+        # Obtener equipo temporal y telefono
+        nombre_equipo = None
+        liga_id = None
+        telefono = None
+
+        if solicitud:
+            from app.modelos.equipo_temporal_modelo import EquipoTemporal
+            equipo_temp = self.db.query(EquipoTemporal).filter(EquipoTemporal.SolicitudId == solicitud.SolicitudId).first()
+            if equipo_temp:
+                nombre_equipo = equipo_temp.NombreEquipo
+                liga_id = equipo_temp.LigaId
+
+        if usuario and usuario.PersonaRelacion:
+            telefono = usuario.PersonaRelacion.NumeroTelefono
+
         return {
             "tiene_orden": True,
             "orden_pago_id": orden.OrdenPagoId,
@@ -340,7 +355,10 @@ class PagosServicio:
                 "observaciones": solicitud.ObservacionesSolicitud
             } if solicitud else None,
             "total": float(orden.TotalPagar) if orden.TotalPagar else 0,
-            "referencia_pago": orden.ReferenciaPago
+            "referencia_pago": orden.ReferenciaPago,
+            "nombre_equipo": nombre_equipo,
+            "liga_id": liga_id,
+            "telefono": telefono
         }
 
 
