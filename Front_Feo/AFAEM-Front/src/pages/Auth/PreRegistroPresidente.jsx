@@ -355,6 +355,7 @@ function PreRegistroPresidente() {
     }
   });
   const [previews, setPreviews] = useState({});
+  const [docMimeTypes, setDocMimeTypes] = useState({});
 
   useEffect(() => {
     if (!documentosGuardados || documentosGuardados.length === 0) return;
@@ -372,11 +373,48 @@ function PreRegistroPresidente() {
       if (!key) return;
 
       try {
-        const url = await fetchSecureBlobUrl(d.Url || d.url);
-        setPreviews(prev => {
-          if (prev[key]) return prev;
-          return { ...prev, [key]: url };
-        });
+        const path = d.Url || d.url;
+        if (!path) return;
+
+        let url;
+        let mimeType = '';
+
+        if (path.startsWith('http') || path.startsWith('data:')) {
+          url = path;
+          if (path.toLowerCase().endsWith('.pdf')) {
+            mimeType = 'application/pdf';
+          } else {
+            mimeType = 'image/jpeg';
+          }
+        } else {
+          const cleanPath = path.replace(/\\/g, '/');
+          const pathWithSlash = cleanPath.startsWith('/') ? cleanPath : `/${cleanPath}`;
+          const fullUrl = `${API_BASE}${pathWithSlash}`;
+
+          const token = localStorage.getItem('token');
+          const headers = {};
+          if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+          }
+
+          const response = await fetch(fullUrl, { headers });
+          if (response.ok) {
+            const blob = await response.blob();
+            url = URL.createObjectURL(blob);
+            mimeType = blob.type;
+          }
+        }
+
+        if (url) {
+          setPreviews(prev => {
+            if (prev[key]) return prev;
+            return { ...prev, [key]: url };
+          });
+          setDocMimeTypes(prev => {
+            if (prev[key]) return prev;
+            return { ...prev, [key]: mimeType };
+          });
+        }
       } catch (err) {
         console.error(`Error fetching secure preview for ${key}:`, err);
       }
@@ -387,6 +425,7 @@ function PreRegistroPresidente() {
     Object.keys(documents).forEach(key => {
       const file = documents[key];
       if (file) {
+        setDocMimeTypes(prev => ({ ...prev, [key]: file.type }));
         if (file.type?.startsWith('image/')) {
           const reader = new FileReader();
           reader.onloadend = () => {
@@ -401,6 +440,7 @@ function PreRegistroPresidente() {
           setPreviews(prev => ({ ...prev, [key]: url }));
         }
       } else {
+        setDocMimeTypes(prev => ({ ...prev, [key]: null }));
         setPreviews(prev => {
           if (prev[key] === null) return prev;
           if (prev[key] && prev[key].startsWith('blob:')) {
@@ -4148,8 +4188,7 @@ function PreRegistroPresidente() {
                     }}>
                       {isUploaded && previews[doc.documento] ? (
                         <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
-                          {(documents[doc.documento]?.type === 'application/pdf' ||
-                            (docGuardado && (docGuardado.Url || docGuardado.url || '').toLowerCase().endsWith('.pdf'))) ? (
+                          {docMimeTypes[doc.documento] === 'application/pdf' ? (
                             <div style={{ width: '100%', height: '100%', position: 'relative', backgroundColor: '#ffffff' }}>
                               <iframe
                                 src={`${previews[doc.documento]}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
@@ -4187,91 +4226,92 @@ function PreRegistroPresidente() {
                           )}
 
                           {/* OVERLAY ACTIONS */}
-                          {!isApproved && (
-                            <div className="overlay-actions" style={{
-                              position: 'absolute',
-                              top: 0, left: 0, right: 0, bottom: 0,
-                              backgroundColor: 'rgba(15, 23, 42, 0.75)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '12px',
-                              opacity: 0,
-                              transition: 'opacity 0.2s ease',
-                              backdropFilter: 'blur(2px)'
-                            }}>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  const isPdf = documents[doc.documento]?.type === 'application/pdf' ||
-                                    (docGuardado && (docGuardado.Url || docGuardado.url || '').toLowerCase().endsWith('.pdf'));
-                                  setPreviewDoc({
-                                    url: previews[doc.documento],
-                                    type: isPdf ? 'pdf' : 'image',
-                                    title: doc.nombre
-                                  });
-                                }}
-                                className="btn-zoom"
-                                style={{
-                                  width: '36px', height: '36px', borderRadius: '50%',
-                                  backgroundColor: '#ffffff', color: '#1e293b', border: 'none',
-                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', cursor: 'pointer'
-                                }}
-                              >
-                                <FaSearchPlus />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  triggerDocUpload(doc.documento);
-                                }}
-                                className="btn-change"
-                                style={{
-                                  width: '36px', height: '36px', borderRadius: '50%',
-                                  backgroundColor: '#38bdf8', color: '#ffffff', border: 'none',
-                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', cursor: 'pointer'
-                                }}
-                              >
-                                <FaSyncAlt />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={async (e) => {
-                                  e.stopPropagation();
-                                  const result = await Swal.fire({
-                                    title: '¿Quitar documento?',
-                                    text: 'Se eliminará el documento cargado actualmente.',
-                                    icon: 'warning',
-                                    showCancelButton: true,
-                                    confirmButtonText: 'Sí, quitar',
-                                    cancelButtonText: 'Cancelar',
-                                    confirmButtonColor: COLORS.danger,
-                                    cancelButtonColor: COLORS.slate400
-                                  });
-                                  if (result.isConfirmed) {
-                                    setDocuments(prev => ({ ...prev, [doc.documento]: null }));
-                                    setPreviews(prev => ({ ...prev, [doc.documento]: null }));
-                                    if (docGuardado) {
-                                      setDocumentosGuardados(prev => prev.filter(d => Number(d.DocumentoAfiliacionId || d.documentoAfiliacionId) !== Number(docAfiliacionId)));
+                          <div className="overlay-actions" style={{
+                            position: 'absolute',
+                            top: 0, left: 0, right: 0, bottom: 0,
+                            backgroundColor: 'rgba(15, 23, 42, 0.75)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '12px',
+                            opacity: 0,
+                            transition: 'opacity 0.2s ease',
+                            backdropFilter: 'blur(2px)'
+                          }}>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const isPdf = docMimeTypes[doc.documento] === 'application/pdf';
+                                setPreviewDoc({
+                                  url: previews[doc.documento],
+                                  type: isPdf ? 'pdf' : 'image',
+                                  title: doc.nombre
+                                });
+                              }}
+                              className="btn-zoom"
+                              style={{
+                                width: '36px', height: '36px', borderRadius: '50%',
+                                backgroundColor: '#ffffff', color: '#1e293b', border: 'none',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', cursor: 'pointer'
+                              }}
+                            >
+                              <FaSearchPlus />
+                            </button>
+                            {!isApproved && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    triggerDocUpload(doc.documento);
+                                  }}
+                                  className="btn-change"
+                                  style={{
+                                    width: '36px', height: '36px', borderRadius: '50%',
+                                    backgroundColor: '#38bdf8', color: '#ffffff', border: 'none',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', cursor: 'pointer'
+                                  }}
+                                >
+                                  <FaSyncAlt />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    const result = await Swal.fire({
+                                      title: '¿Quitar documento?',
+                                      text: 'Se eliminará el documento cargado actualmente.',
+                                      icon: 'warning',
+                                      showCancelButton: true,
+                                      confirmButtonText: 'Sí, quitar',
+                                      cancelButtonText: 'Cancelar',
+                                      confirmButtonColor: COLORS.danger,
+                                      cancelButtonColor: COLORS.slate400
+                                    });
+                                    if (result.isConfirmed) {
+                                      setDocuments(prev => ({ ...prev, [doc.documento]: null }));
+                                      setPreviews(prev => ({ ...prev, [doc.documento]: null }));
+                                      if (docGuardado) {
+                                        setDocumentosGuardados(prev => prev.filter(d => Number(d.DocumentoAfiliacionId || d.documentoAfiliacionId) !== Number(docAfiliacionId)));
+                                      }
                                     }
-                                  }
-                                }}
-                                className="btn-delete"
-                                style={{
-                                  width: '36px', height: '36px', borderRadius: '50%',
-                                  backgroundColor: COLORS.danger, color: '#ffffff', border: 'none',
-                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', cursor: 'pointer'
-                                }}
-                              >
-                                <FaTrash />
-                              </button>
-                            </div>
-                          )}
+                                  }}
+                                  className="btn-delete"
+                                  style={{
+                                    width: '36px', height: '36px', borderRadius: '50%',
+                                    backgroundColor: COLORS.danger, color: '#ffffff', border: 'none',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', cursor: 'pointer'
+                                  }}
+                                >
+                                  <FaTrash />
+                                </button>
+                              </>
+                            )}
+                          </div>
                         </div>
                       ) : (
                         <div style={{ width: '100%', textAlign: 'center', color: COLORS.slate400, cursor: 'pointer' }}>
@@ -4702,8 +4742,7 @@ function PreRegistroPresidente() {
                     }}>
                       {isUploaded && previews.formatoAfiliacion ? (
                         <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
-                          {(documents.formatoAfiliacion?.type === 'application/pdf' ||
-                            (docGuardado && (docGuardado.Url || docGuardado.url || '').toLowerCase().endsWith('.pdf'))) ? (
+                          {docMimeTypes.formatoAfiliacion === 'application/pdf' ? (
                             <div style={{ width: '100%', height: '100%', position: 'relative', backgroundColor: '#ffffff' }}>
                               <iframe
                                 src={`${previews.formatoAfiliacion}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
@@ -4741,91 +4780,92 @@ function PreRegistroPresidente() {
                           )}
 
                           {/* OVERLAY ACTIONS */}
-                          {!isApproved && (
-                            <div className="overlay-actions" style={{
-                              position: 'absolute',
-                              top: 0, left: 0, right: 0, bottom: 0,
-                              backgroundColor: 'rgba(15, 23, 42, 0.75)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '12px',
-                              opacity: 0,
-                              transition: 'opacity 0.2s ease',
-                              backdropFilter: 'blur(2px)'
-                            }}>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  const isPdf = documents.formatoAfiliacion?.type === 'application/pdf' ||
-                                    (docGuardado && (docGuardado.Url || docGuardado.url || '').toLowerCase().endsWith('.pdf'));
-                                  setPreviewDoc({
-                                    url: previews.formatoAfiliacion,
-                                    type: isPdf ? 'pdf' : 'image',
-                                    title: 'Formato de afiliación firmado'
-                                  });
-                                }}
-                                className="btn-zoom"
-                                style={{
-                                  width: '36px', height: '36px', borderRadius: '50%',
-                                  backgroundColor: '#ffffff', color: '#1e293b', border: 'none',
-                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', cursor: 'pointer'
-                                }}
-                              >
-                                <FaSearchPlus />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  triggerDocUpload('formatoAfiliacion');
-                                }}
-                                className="btn-change"
-                                style={{
-                                  width: '36px', height: '36px', borderRadius: '50%',
-                                  backgroundColor: '#38bdf8', color: '#ffffff', border: 'none',
-                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', cursor: 'pointer'
-                                }}
-                              >
-                                <FaSyncAlt />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={async (e) => {
-                                  e.stopPropagation();
-                                  const result = await Swal.fire({
-                                    title: '¿Quitar documento?',
-                                    text: 'Se eliminará el formato de afiliación firmado.',
-                                    icon: 'warning',
-                                    showCancelButton: true,
-                                    confirmButtonText: 'Sí, quitar',
-                                    cancelButtonText: 'Cancelar',
-                                    confirmButtonColor: COLORS.danger,
-                                    cancelButtonColor: COLORS.slate400
-                                  });
-                                  if (result.isConfirmed) {
-                                    setDocuments(prev => ({ ...prev, formatoAfiliacion: null }));
-                                    setPreviews(prev => ({ ...prev, formatoAfiliacion: null }));
-                                    if (docGuardado) {
-                                      setDocumentosGuardados(prev => prev.filter(d => Number(d.DocumentoAfiliacionId || d.documentoAfiliacionId) !== 10));
+                          <div className="overlay-actions" style={{
+                            position: 'absolute',
+                            top: 0, left: 0, right: 0, bottom: 0,
+                            backgroundColor: 'rgba(15, 23, 42, 0.75)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '12px',
+                            opacity: 0,
+                            transition: 'opacity 0.2s ease',
+                            backdropFilter: 'blur(2px)'
+                          }}>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const isPdf = docMimeTypes.formatoAfiliacion === 'application/pdf';
+                                setPreviewDoc({
+                                  url: previews.formatoAfiliacion,
+                                  type: isPdf ? 'pdf' : 'image',
+                                  title: 'Formato de afiliación firmado'
+                                });
+                              }}
+                              className="btn-zoom"
+                              style={{
+                                width: '36px', height: '36px', borderRadius: '50%',
+                                backgroundColor: '#ffffff', color: '#1e293b', border: 'none',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', cursor: 'pointer'
+                              }}
+                            >
+                              <FaSearchPlus />
+                            </button>
+                            {!isApproved && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    triggerDocUpload('formatoAfiliacion');
+                                  }}
+                                  className="btn-change"
+                                  style={{
+                                    width: '36px', height: '36px', borderRadius: '50%',
+                                    backgroundColor: '#38bdf8', color: '#ffffff', border: 'none',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', cursor: 'pointer'
+                                  }}
+                                >
+                                  <FaSyncAlt />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    const result = await Swal.fire({
+                                      title: '¿Quitar documento?',
+                                      text: 'Se eliminará el formato de afiliación firmado.',
+                                      icon: 'warning',
+                                      showCancelButton: true,
+                                      confirmButtonText: 'Sí, quitar',
+                                      cancelButtonText: 'Cancelar',
+                                      confirmButtonColor: COLORS.danger,
+                                      cancelButtonColor: COLORS.slate400
+                                    });
+                                    if (result.isConfirmed) {
+                                      setDocuments(prev => ({ ...prev, formatoAfiliacion: null }));
+                                      setPreviews(prev => ({ ...prev, formatoAfiliacion: null }));
+                                      if (docGuardado) {
+                                        setDocumentosGuardados(prev => prev.filter(d => Number(d.DocumentoAfiliacionId || d.documentoAfiliacionId) !== 10));
+                                      }
                                     }
-                                  }
-                                }}
-                                className="btn-delete"
-                                style={{
-                                  width: '36px', height: '36px', borderRadius: '50%',
-                                  backgroundColor: COLORS.danger, color: '#ffffff', border: 'none',
-                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', cursor: 'pointer'
-                                }}
-                              >
-                                <FaTrash />
-                              </button>
-                            </div>
-                          )}
+                                  }}
+                                  className="btn-delete"
+                                  style={{
+                                    width: '36px', height: '36px', borderRadius: '50%',
+                                    backgroundColor: COLORS.danger, color: '#ffffff', border: 'none',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', cursor: 'pointer'
+                                  }}
+                                >
+                                  <FaTrash />
+                                </button>
+                              </>
+                            )}
+                          </div>
                         </div>
                       ) : (
                         <div style={{ width: '100%', textAlign: 'center', color: COLORS.slate400, cursor: 'pointer' }}>
@@ -5045,8 +5085,7 @@ function PreRegistroPresidente() {
                     }}>
                       {isUploaded && previews[doc.documento] ? (
                         <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
-                          {(documents[doc.documento]?.type === 'application/pdf' ||
-                            (docGuardado && (docGuardado.Url || docGuardado.url || '').toLowerCase().endsWith('.pdf'))) ? (
+                          {docMimeTypes[doc.documento] === 'application/pdf' ? (
                             <div style={{ width: '100%', height: '100%', position: 'relative', backgroundColor: '#ffffff' }}>
                               <iframe
                                 src={`${previews[doc.documento]}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
@@ -5084,91 +5123,92 @@ function PreRegistroPresidente() {
                           )}
 
                           {/* OVERLAY ACTIONS */}
-                          {!isApproved && (
-                            <div className="overlay-actions" style={{
-                              position: 'absolute',
-                              top: 0, left: 0, right: 0, bottom: 0,
-                              backgroundColor: 'rgba(15, 23, 42, 0.75)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '12px',
-                              opacity: 0,
-                              transition: 'opacity 0.2s ease',
-                              backdropFilter: 'blur(2px)'
-                            }}>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  const isPdf = documents[doc.documento]?.type === 'application/pdf' ||
-                                    (docGuardado && (docGuardado.Url || docGuardado.url || '').toLowerCase().endsWith('.pdf'));
-                                  setPreviewDoc({
-                                    url: previews[doc.documento],
-                                    type: isPdf ? 'pdf' : 'image',
-                                    title: doc.nombre
-                                  });
-                                }}
-                                className="btn-zoom"
-                                style={{
-                                  width: '36px', height: '36px', borderRadius: '50%',
-                                  backgroundColor: '#ffffff', color: '#1e293b', border: 'none',
-                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', cursor: 'pointer'
-                                }}
-                              >
-                                <FaSearchPlus />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  triggerDocUpload(doc.documento, true);
-                                }}
-                                className="btn-change"
-                                style={{
-                                  width: '36px', height: '36px', borderRadius: '50%',
-                                  backgroundColor: '#38bdf8', color: '#ffffff', border: 'none',
-                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', cursor: 'pointer'
-                                }}
-                              >
-                                <FaSyncAlt />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={async (e) => {
-                                  e.stopPropagation();
-                                  const result = await Swal.fire({
-                                    title: '¿Quitar documento?',
-                                    text: 'Se eliminará el documento cargado actualmente.',
-                                    icon: 'warning',
-                                    showCancelButton: true,
-                                    confirmButtonText: 'Sí, quitar',
-                                    cancelButtonText: 'Cancelar',
-                                    confirmButtonColor: COLORS.danger,
-                                    cancelButtonColor: COLORS.slate400
-                                  });
-                                  if (result.isConfirmed) {
-                                    setDocuments(prev => ({ ...prev, [doc.documento]: null }));
-                                    setPreviews(prev => ({ ...prev, [doc.documento]: null }));
-                                    if (docGuardado) {
-                                      setDocumentosGuardados(prev => prev.filter(d => Number(d.DocumentoAfiliacionId || d.documentoAfiliacionId) !== Number(docAfiliacionId)));
+                          <div className="overlay-actions" style={{
+                            position: 'absolute',
+                            top: 0, left: 0, right: 0, bottom: 0,
+                            backgroundColor: 'rgba(15, 23, 42, 0.75)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '12px',
+                            opacity: 0,
+                            transition: 'opacity 0.2s ease',
+                            backdropFilter: 'blur(2px)'
+                          }}>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const isPdf = docMimeTypes[doc.documento] === 'application/pdf';
+                                setPreviewDoc({
+                                  url: previews[doc.documento],
+                                  type: isPdf ? 'pdf' : 'image',
+                                  title: doc.nombre
+                                });
+                              }}
+                              className="btn-zoom"
+                              style={{
+                                width: '36px', height: '36px', borderRadius: '50%',
+                                backgroundColor: '#ffffff', color: '#1e293b', border: 'none',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', cursor: 'pointer'
+                              }}
+                            >
+                              <FaSearchPlus />
+                            </button>
+                            {!isApproved && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    triggerDocUpload(doc.documento, true);
+                                  }}
+                                  className="btn-change"
+                                  style={{
+                                    width: '36px', height: '36px', borderRadius: '50%',
+                                    backgroundColor: '#38bdf8', color: '#ffffff', border: 'none',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', cursor: 'pointer'
+                                  }}
+                                >
+                                  <FaSyncAlt />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    const result = await Swal.fire({
+                                      title: '¿Quitar documento?',
+                                      text: 'Se eliminará el documento cargado actualmente.',
+                                      icon: 'warning',
+                                      showCancelButton: true,
+                                      confirmButtonText: 'Sí, quitar',
+                                      cancelButtonText: 'Cancelar',
+                                      confirmButtonColor: COLORS.danger,
+                                      cancelButtonColor: COLORS.slate400
+                                    });
+                                    if (result.isConfirmed) {
+                                      setDocuments(prev => ({ ...prev, [doc.documento]: null }));
+                                      setPreviews(prev => ({ ...prev, [doc.documento]: null }));
+                                      if (docGuardado) {
+                                        setDocumentosGuardados(prev => prev.filter(d => Number(d.DocumentoAfiliacionId || d.documentoAfiliacionId) !== Number(docAfiliacionId)));
+                                      }
                                     }
-                                  }
-                                }}
-                                className="btn-delete"
-                                style={{
-                                  width: '36px', height: '36px', borderRadius: '50%',
-                                  backgroundColor: COLORS.danger, color: '#ffffff', border: 'none',
-                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', cursor: 'pointer'
-                                }}
-                              >
-                                <FaTrash />
-                              </button>
-                            </div>
-                          )}
+                                  }}
+                                  className="btn-delete"
+                                  style={{
+                                    width: '36px', height: '36px', borderRadius: '50%',
+                                    backgroundColor: COLORS.danger, color: '#ffffff', border: 'none',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', cursor: 'pointer'
+                                  }}
+                                >
+                                  <FaTrash />
+                                </button>
+                              </>
+                            )}
+                          </div>
                         </div>
                       ) : (
                         <div style={{ width: '100%', textAlign: 'center', color: COLORS.slate400, cursor: 'pointer' }}>
@@ -5395,8 +5435,7 @@ function PreRegistroPresidente() {
                     }}>
                       {isUploaded && previews.formatoAfiliacion ? (
                         <div className="preview-container" style={{ width: '100%', height: '100%', position: 'relative' }}>
-                          {(documents.formatoAfiliacion?.type === 'application/pdf' ||
-                            (docGuardado && (docGuardado.Url || docGuardado.url || '').toLowerCase().endsWith('.pdf'))) ? (
+                          {docMimeTypes.formatoAfiliacion === 'application/pdf' ? (
                             <div style={{ width: '100%', height: '100%', position: 'relative', backgroundColor: '#ffffff' }}>
                               <iframe
                                 src={`${previews.formatoAfiliacion}#toolbar=0&navpanes=0&scrollbar=0&view=FitH`}
@@ -5434,91 +5473,92 @@ function PreRegistroPresidente() {
                           )}
 
                           {/* OVERLAY ACTIONS */}
-                          {!isApproved && (
-                            <div className="overlay-actions" style={{
-                              position: 'absolute',
-                              top: 0, left: 0, right: 0, bottom: 0,
-                              backgroundColor: 'rgba(15, 23, 42, 0.75)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '12px',
-                              opacity: 0,
-                              transition: 'opacity 0.2s ease',
-                              backdropFilter: 'blur(2px)'
-                            }}>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  const isPdf = documents.formatoAfiliacion?.type === 'application/pdf' ||
-                                    (docGuardado && (docGuardado.Url || docGuardado.url || '').toLowerCase().endsWith('.pdf'));
-                                  setPreviewDoc({
-                                    url: previews.formatoAfiliacion,
-                                    type: isPdf ? 'pdf' : 'image',
-                                    title: 'Formato de afiliación firmado'
-                                  });
-                                }}
-                                className="btn-zoom"
-                                style={{
-                                  width: '36px', height: '36px', borderRadius: '50%',
-                                  backgroundColor: '#ffffff', color: '#1e293b', border: 'none',
-                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', cursor: 'pointer'
-                                }}
-                              >
-                                <FaSearchPlus />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  triggerDocUpload('formatoAfiliacion', true);
-                                }}
-                                className="btn-change"
-                                style={{
-                                  width: '36px', height: '36px', borderRadius: '50%',
-                                  backgroundColor: '#38bdf8', color: '#ffffff', border: 'none',
-                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', cursor: 'pointer'
-                                }}
-                              >
-                                <FaSyncAlt />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={async (e) => {
-                                  e.stopPropagation();
-                                  const result = await Swal.fire({
-                                    title: '¿Quitar documento?',
-                                    text: 'Se eliminará el formato de afiliación firmado.',
-                                    icon: 'warning',
-                                    showCancelButton: true,
-                                    confirmButtonText: 'Sí, quitar',
-                                    cancelButtonText: 'Cancelar',
-                                    confirmButtonColor: COLORS.danger,
-                                    cancelButtonColor: COLORS.slate400
-                                  });
-                                  if (result.isConfirmed) {
-                                    setDocuments(prev => ({ ...prev, formatoAfiliacion: null }));
-                                    setPreviews(prev => ({ ...prev, formatoAfiliacion: null }));
-                                    if (docGuardado) {
-                                      setDocumentosGuardados(prev => prev.filter(d => Number(d.DocumentoAfiliacionId || d.documentoAfiliacionId) !== 10));
+                          <div className="overlay-actions" style={{
+                            position: 'absolute',
+                            top: 0, left: 0, right: 0, bottom: 0,
+                            backgroundColor: 'rgba(15, 23, 42, 0.75)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '12px',
+                            opacity: 0,
+                            transition: 'opacity 0.2s ease',
+                            backdropFilter: 'blur(2px)'
+                          }}>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const isPdf = docMimeTypes.formatoAfiliacion === 'application/pdf';
+                                setPreviewDoc({
+                                  url: previews.formatoAfiliacion,
+                                  type: isPdf ? 'pdf' : 'image',
+                                  title: 'Formato de afiliación firmado'
+                                });
+                              }}
+                              className="btn-zoom"
+                              style={{
+                                width: '36px', height: '36px', borderRadius: '50%',
+                                backgroundColor: '#ffffff', color: '#1e293b', border: 'none',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', cursor: 'pointer'
+                              }}
+                            >
+                              <FaSearchPlus />
+                            </button>
+                            {!isApproved && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    triggerDocUpload('formatoAfiliacion', true);
+                                  }}
+                                  className="btn-change"
+                                  style={{
+                                    width: '36px', height: '36px', borderRadius: '50%',
+                                    backgroundColor: '#38bdf8', color: '#ffffff', border: 'none',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', cursor: 'pointer'
+                                  }}
+                                >
+                                  <FaSyncAlt />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    const result = await Swal.fire({
+                                      title: '¿Quitar documento?',
+                                      text: 'Se eliminará el formato de afiliación firmado.',
+                                      icon: 'warning',
+                                      showCancelButton: true,
+                                      confirmButtonText: 'Sí, quitar',
+                                      cancelButtonText: 'Cancelar',
+                                      confirmButtonColor: COLORS.danger,
+                                      cancelButtonColor: COLORS.slate400
+                                    });
+                                    if (result.isConfirmed) {
+                                      setDocuments(prev => ({ ...prev, formatoAfiliacion: null }));
+                                      setPreviews(prev => ({ ...prev, formatoAfiliacion: null }));
+                                      if (docGuardado) {
+                                        setDocumentosGuardados(prev => prev.filter(d => Number(d.DocumentoAfiliacionId || d.documentoAfiliacionId) !== 10));
+                                      }
                                     }
-                                  }
-                                }}
-                                className="btn-delete"
-                                style={{
-                                  width: '36px', height: '36px', borderRadius: '50%',
-                                  backgroundColor: COLORS.danger, color: '#ffffff', border: 'none',
-                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', cursor: 'pointer'
-                                }}
-                              >
-                                <FaTrash />
-                              </button>
-                            </div>
-                          )}
+                                  }}
+                                  className="btn-delete"
+                                  style={{
+                                    width: '36px', height: '36px', borderRadius: '50%',
+                                    backgroundColor: COLORS.danger, color: '#ffffff', border: 'none',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)', cursor: 'pointer'
+                                  }}
+                                >
+                                  <FaTrash />
+                                </button>
+                              </>
+                            )}
+                          </div>
                         </div>
                       ) : (
                         <div style={{ width: '100%', textAlign: 'center', color: COLORS.slate400, cursor: 'pointer' }}>
