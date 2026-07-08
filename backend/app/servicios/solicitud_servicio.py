@@ -184,11 +184,22 @@ def enviar_solicitud_completa_servicio(db, solicitud_id, usuario_id, curp=None, 
             liga_final = liga_id if liga_id else equipo_temp.LigaId
             if nombre_final and liga_final:
                 from app.modelos.equipo_modelo import Equipos, EquiposJugando
+                from app.modelos.presidente_equipo_modelo import PresidenteEquipo
                 from sqlalchemy import func
-                equipo_existente = db.query(EquiposJugando).join(Equipos).filter(
+                
+                presidente = None
+                if usuario and usuario.PersonaId:
+                    presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == usuario.PersonaId).first()
+                
+                query_eq = db.query(EquiposJugando).join(Equipos).filter(
                     func.lower(Equipos.NombreEquipo) == func.lower(nombre_final),
                     EquiposJugando.LigaId == liga_final
-                ).first()
+                )
+                
+                if presidente:
+                    query_eq = query_eq.filter(EquiposJugando.PresidenteEquipoId != presidente.PresidenteEquipoId)
+                    
+                equipo_existente = query_eq.first()
                 if equipo_existente:
                     raise HTTPException(status_code=400, detail="Ya existe un equipo con este nombre registrado en la misma liga")
 
@@ -210,7 +221,16 @@ def enviar_solicitud_completa_servicio(db, solicitud_id, usuario_id, curp=None, 
     solicitud_completa = solicitud_repositorio.enviar_solicitud_completa_repo(db, solicitud_id)
     if not solicitud_completa:
         raise HTTPException(400, "Error al enviar la solicitud")
-    
+
+    # Actualizar EstatusId del presidente a 4 (DOCUMENTOS_EN_REVISION)
+    from app.modelos.presidente_equipo_modelo import PresidenteEquipo
+    from app.enums.estatus_presidente_enum import PresidenteEquipoEstatus
+    if usuario and usuario.PersonaId:
+        presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == usuario.PersonaId).first()
+        if presidente:
+            presidente.EstatusId = int(PresidenteEquipoEstatus.DOCUMENTOS_EN_REVISION)
+            db.commit()
+
     return {"mensaje": "Solicitud enviada correctamente"}
 
 # --- SECCIÓN ADMINISTRADORA: VALIDACIÓN DE SOLICITUDES ---
