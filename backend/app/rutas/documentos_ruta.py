@@ -7,6 +7,7 @@ import os
 from app.db.sesion import get_db
 from app.servicios.documentos_servicio import subir_documento_servicio2, proceso_presidente, presidente_solicitud
 from app.core.seguridad import obtener_usuario_actual
+from app.core.decoradores_consumo import track_consumption
 
 router = APIRouter(prefix="/documentos", tags=["Documentos"])
 
@@ -214,10 +215,14 @@ def obtener_usuario_o_sesion_temporal_con_log(request: Request, db: Session = De
 
 
 @router.post("/ocr")
+@track_consumption(tipo_consumo="OCR", proveedor="DEFAULT", tipo_registro_default="JUGADOR")
 def procesar_ocr_seguro(
+    request: Request,
     file_id: UploadFile = File(...),
     file_formato: Optional[UploadFile] = File(None),
-    token_payload = Depends(obtener_usuario_o_sesion_temporal_con_log)
+    token_payload = Depends(obtener_usuario_o_sesion_temporal_con_log),
+    db: Session = Depends(get_db),
+    tipo_registro: Optional[str] = Query("JUGADOR")
 ):
     """
     Recibe un documento de identidad y opcionalmente un formato de afiliación,
