@@ -64,6 +64,11 @@ export default defineConfig({
         changeOrigin: true,
         secure: false
       },
+      '/consumo': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+        secure: false
+      },
       '/catalogos': {
         target: 'http://127.0.0.1:8000',
         changeOrigin: true,
