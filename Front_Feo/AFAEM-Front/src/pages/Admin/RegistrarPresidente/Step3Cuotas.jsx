@@ -480,14 +480,16 @@ export default function Step3Cuotas({
       {/* MODAL DE DETALLE DE SEGUROS */}
       {seguroDetalle && (() => {
         const segNombreNormalizado = normalizarNombreSeguro(seguroDetalle.nombre);
-        const info = DETALLES_SEGUROS[segNombreNormalizado] || {
-          nombre: seguroDetalle.nombre,
-          precio: seguroDetalle.precio,
-          poliza: 'N/A',
-          vigencia: 'N/A',
-          alcance: seguroDetalle.descripcion || 'Información general de cobertura y beneficios.',
-          beneficios: [seguroDetalle.descripcion || 'Sin descripción adicional.'],
-          coberturas: []
+        const dbInfo = DETALLES_SEGUROS[segNombreNormalizado] || {};
+        const info = {
+          ...dbInfo,
+          nombre: seguroDetalle.nombre || dbInfo.nombre || seguroDetalle.Nombre || 'Seguro',
+          precio: seguroDetalle.precio !== undefined ? seguroDetalle.precio : (seguroDetalle.Precio !== undefined ? seguroDetalle.Precio : dbInfo.precio),
+          poliza: dbInfo.poliza || 'N/A',
+          vigencia: dbInfo.vigencia || 'N/A',
+          alcance: dbInfo.alcance || seguroDetalle.descripcion || 'Información general de cobertura y beneficios.',
+          beneficios: dbInfo.beneficios || [seguroDetalle.descripcion || 'Sin descripción adicional.'],
+          coberturas: dbInfo.coberturas || []
         };
         const esPresidente = ['TIPO G', 'TIPO J'].includes(segNombreNormalizado);
         const jugadoresRestantes = Math.max(0, segurosRequeridos - totalAsignados);
