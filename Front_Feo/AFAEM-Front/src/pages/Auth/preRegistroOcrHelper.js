@@ -121,7 +121,7 @@ export const procesarOCRReal = async (docKey, file, prevDoc, { API_BASE, Swal, s
     const formData = new FormData();
     formData.append('file_id', file);
     const token = localStorage.getItem('token') || sessionStorage.getItem('temp_token');
-    const response = await fetch(`${API_BASE}/documentos/ocr`, {
+    const response = await fetch(`${API_BASE}/documentos/ocr?tipo_registro=PRESIDENTE`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`

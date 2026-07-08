@@ -1691,7 +1691,7 @@ export default function ConfigurarEquipo() {
         didOpen: () => { Swal.showLoading(); }
       });
       try {
-        const data = await validarFotografia(file);
+        const data = await validarFotografia(file, "PRESIDENTE");
         if (data.valido) {
           // Convertir base64 a URL y a File
           const imageUrl = `data:${data.tipo_imagen};base64,${data.imagen}`;
@@ -1787,7 +1787,7 @@ export default function ConfigurarEquipo() {
         const formDataOcr = new FormData();
         formDataOcr.append('file_id', file);
         const token = localStorage.getItem('token') || sessionStorage.getItem('temp_token');
-        const response = await fetch(`${API_BASE}/documentos/ocr`, {
+        const response = await fetch(`${API_BASE}/documentos/ocr?tipo_registro=PRESIDENTE`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`

@@ -34,6 +34,23 @@ def track_consumption(tipo_consumo: str, proveedor: str, tipo_registro_default: 
                     idempotency_key = f"rand_{uuid.uuid4()}"
 
                 tipo_registro = kwargs.get("tipo_registro") or tipo_registro_default
+                if request:
+                    query_tipo_registro = request.query_params.get("tipo_registro")
+                    if query_tipo_registro:
+                        tipo_registro = query_tipo_registro
+                    else:
+                        referer = request.headers.get("referer", "").lower()
+                        referer_path = referer.split('?')[0].split('#')[0]
+                        is_president = (
+                            "pre-registro-presidente" in referer_path or
+                            "/ad/rp" in referer_path or
+                            "/pe/ce" in referer_path or
+                            "/pe/ie/" in referer_path or
+                            (("/ad/p" in referer_path or "/ad/p/" in referer_path) and "/ad/pg" not in referer_path and "/ad/pago" not in referer_path)
+                        )
+                        if is_president:
+                            tipo_registro = "PRESIDENTE"
+
                 if tipo_registro:
                     tipo_registro = tipo_registro.strip().upper()
 
