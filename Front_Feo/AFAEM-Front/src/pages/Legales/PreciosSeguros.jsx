@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { API_BASE } from '../../config/config';
 import COLORS from '../../styles/colors';
 import {
   FaShieldAlt,
@@ -192,6 +193,56 @@ const segurosPresidentes = [
 
 const PreciosSeguros = ({ hideHero = false }) => {
   const [abiertos, setAbiertos] = useState({});
+  const [segurosJugadoresList, setSegurosJugadoresList] = useState(segurosJugadores);
+  const [segurosPresidentesList, setSegurosPresidentesList] = useState(segurosPresidentes);
+  const [cargando, setCargando] = useState(false);
+
+  useEffect(() => {
+    const fetchSegurosDb = async () => {
+      setCargando(true);
+      try {
+        const res = await fetch(`${API_BASE}/ordenes-pago/seguros`);
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        const arr = Array.isArray(data) ? data : data.data || data.seguros || data.results || [];
+        
+        setSegurosJugadoresList(prev => prev.map(localSeg => {
+          const dbSeg = arr.find(s => {
+            const dbNameNorm = s.Nombre ? s.Nombre.toUpperCase().trim().replace(/[\u0022\u0027]/g, '') : '';
+            return dbNameNorm === `TIPO ${localSeg.id}` || dbNameNorm === localSeg.id;
+          });
+          if (dbSeg) {
+            return {
+              ...localSeg,
+              nombre: dbSeg.Nombre ? `TIPO "${dbSeg.Nombre.replace(/TIPO\s*/gi, '').trim()}" (Jugadores)` : localSeg.nombre,
+              precio: dbSeg.Precio !== undefined ? Number(dbSeg.Precio) : localSeg.precio,
+            };
+          }
+          return localSeg;
+        }));
+
+        setSegurosPresidentesList(prev => prev.map(localSeg => {
+          const dbSeg = arr.find(s => {
+            const dbNameNorm = s.Nombre ? s.Nombre.toUpperCase().trim().replace(/[\u0022\u0027]/g, '') : '';
+            return dbNameNorm === `TIPO ${localSeg.id}` || dbNameNorm === localSeg.id;
+          });
+          if (dbSeg) {
+            return {
+              ...localSeg,
+              nombre: dbSeg.Nombre ? `TIPO "${dbSeg.Nombre.replace(/TIPO\s*/gi, '').trim()}" (Presidentes)` : localSeg.nombre,
+              precio: dbSeg.Precio !== undefined ? Number(dbSeg.Precio) : localSeg.precio,
+            };
+          }
+          return localSeg;
+        }));
+      } catch (err) {
+        console.warn("Error fetching seguros from DB for prices view:", err);
+      } finally {
+        setCargando(false);
+      }
+    };
+    fetchSegurosDb();
+  }, []);
 
   const toggle = (id) => {
     setAbiertos((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -300,7 +351,7 @@ const PreciosSeguros = ({ hideHero = false }) => {
             </p>
           </div>
         </div>
-        {segurosJugadores.map(s => renderSeguroItem(s, false))}
+        {segurosJugadoresList.map(s => renderSeguroItem(s, false))}
       </div>
 
       <div className="legal-panel">
@@ -315,7 +366,7 @@ const PreciosSeguros = ({ hideHero = false }) => {
             </p>
           </div>
         </div>
-        {segurosPresidentes.map(s => renderSeguroItem(s, true))}
+        {segurosPresidentesList.map(s => renderSeguroItem(s, true))}
       </div>
     </div>
   );
