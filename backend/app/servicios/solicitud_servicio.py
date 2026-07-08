@@ -184,11 +184,22 @@ def enviar_solicitud_completa_servicio(db, solicitud_id, usuario_id, curp=None, 
             liga_final = liga_id if liga_id else equipo_temp.LigaId
             if nombre_final and liga_final:
                 from app.modelos.equipo_modelo import Equipos, EquiposJugando
+                from app.modelos.presidente_equipo_modelo import PresidenteEquipo
                 from sqlalchemy import func
-                equipo_existente = db.query(EquiposJugando).join(Equipos).filter(
+                
+                presidente = None
+                if usuario and usuario.PersonaId:
+                    presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == usuario.PersonaId).first()
+                
+                query_eq = db.query(EquiposJugando).join(Equipos).filter(
                     func.lower(Equipos.NombreEquipo) == func.lower(nombre_final),
                     EquiposJugando.LigaId == liga_final
-                ).first()
+                )
+                
+                if presidente:
+                    query_eq = query_eq.filter(EquiposJugando.PresidenteEquipoId != presidente.PresidenteEquipoId)
+                    
+                equipo_existente = query_eq.first()
                 if equipo_existente:
                     raise HTTPException(status_code=400, detail="Ya existe un equipo con este nombre registrado en la misma liga")
 
