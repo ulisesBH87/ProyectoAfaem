@@ -135,14 +135,21 @@ export default function DetalleSolicitudModal({
       text: 'Todos los documentos están marcados como aprobados. Al aceptar, se aprobará la solicitud del presidente y se crearán sus cupos para jugadores.',
       icon: 'question',
       showCancelButton: true,
+      showDenyButton: true,
       confirmButtonText: 'Aceptar',
-      cancelButtonText: 'Cancelar',
+      denyButtonText: 'Cancelar cambios',
+      cancelButtonText: 'Seguir revisando',
       confirmButtonColor: '#10b981',
+      denyButtonColor: '#ef4444',
       cancelButtonColor: '#94a3b8'
     });
 
     if (resultado.isConfirmed) {
       await alAprobar(SolicitudId, validaciones, true);
+    } else if (resultado.isDenied) {
+      // Revertir a las validaciones iniciales y cerrar el modal
+      setValidaciones(JSON.parse(JSON.stringify(validacionesInicialesRef.current)));
+      alCerrar();
     }
   };
 

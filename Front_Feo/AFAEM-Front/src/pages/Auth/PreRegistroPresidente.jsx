@@ -5291,7 +5291,7 @@ function PreRegistroPresidente() {
               const fotoGuardado = documentosGuardados.find(d => Number(d.DocumentoAfiliacionId || d.documentoAfiliacionId) === 37);
               const isFotoAprobada = fotoGuardado && Number(fotoGuardado.EstadoValidacionId || fotoGuardado.estadoValidacionId) === 2;
               const isFotoRechazada = fotoGuardado && Number(fotoGuardado.EstadoValidacionId || fotoGuardado.estadoValidacionId) === 3;
-              
+
               const isFormatoAprobado = isApproved;
               const isFormatoRechazado = isRejected;
 
@@ -5613,7 +5613,7 @@ function PreRegistroPresidente() {
                           gap: '6px'
                         }}
                       >
-                        ✨ Colocar nueva fotografía en el formato de afiliación ya subido
+                        Colocar nueva fotografía en el formato de afiliación ya subido
                       </button>
                     )}
                     {isFormatoRechazado && isFotoRechazada && (
