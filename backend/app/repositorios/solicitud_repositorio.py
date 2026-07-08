@@ -331,12 +331,17 @@ def obtener_personas_con_documentos_repo(db: Session, solicitud_id: int):
             "Documentos": docs_list
         })
         
+    from app.modelos.catalogo_tipos_solicitud import CatalogoTiposSolicitud
+    tipo_sol_rel = db.query(CatalogoTiposSolicitud).filter(CatalogoTiposSolicitud.TipoSolicitudId == solicitud.TipoSolicitudId).first()
+    tipo_solicitud_nombre = tipo_sol_rel.Nombre if tipo_sol_rel else "DESCONOCIDO"
+
     return {
         "Equipo": f"{persona_solicitante.Nombre} {persona_solicitante.PrimerApellido}" if persona_solicitante else "SOLICITANTE DESCONOCIDO",
         "SolicitudId": solicitud_id,
         "Jugadores": resultado,
         "ObservacionesGuardadas": solicitud.ObservacionesSolicitud,
-        "EstatusValidacion": solicitud.EstatusValidacion
+        "EstatusValidacion": solicitud.EstatusValidacion,
+        "TipoSolicitud": tipo_solicitud_nombre
     }
 
 def actualizar_validacion_solicitud_repo(db: Session, solicitud_id: int, estatus_db: int, observaciones: str = None):

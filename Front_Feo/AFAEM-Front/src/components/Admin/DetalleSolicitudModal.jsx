@@ -313,7 +313,7 @@ export default function DetalleSolicitudModal({
                   <p style={{ fontWeight: '500', maxWidth: '400px' }}>Esta solicitud no contiene documentos que requieran revisión. Puedes proceder a aprobarla o rechazarla directamente desde los controles principales.</p>
                 </div>
               ) : (
-                Jugadores.map((jugador) => (
+                Jugadores.map((jugador, idx) => (
                   <div key={jugador.Id} style={{ marginBottom: '30px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px', padding: '0 6px' }}>
                       <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: '#eff6ff', color: '#1e40af', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>
@@ -322,6 +322,32 @@ export default function DetalleSolicitudModal({
                       <div>
                         <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#1e293b' }}>{jugador.Nombre}</h4>
                         <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>CURP: {jugador.CURP || 'No disponible'}</p>
+                        {idx === 0 && datos.TipoSolicitud && (
+                          <div style={{ marginTop: '6px' }}>
+                            <span style={{
+                              fontSize: '11px',
+                              backgroundColor: '#f1f5f9',
+                              color: '#475569',
+                              padding: '3px 10px',
+                              borderRadius: '12px',
+                              border: '1px solid #cbd5e1',
+                              fontWeight: '700',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}>
+                              <FaFileAlt style={{ fontSize: '10px' }} /> Tipo de Solicitud: {
+                                (() => {
+                                  const clean = datos.TipoSolicitud.toUpperCase().trim();
+                                  if (clean.includes('PRESIDENTE')) return 'Crear cuenta de presidente';
+                                  if (clean.includes('EQUIPO')) return 'Crear equipo';
+                                  if (clean.includes('JUGADOR')) return 'Agregar jugadores';
+                                  return datos.TipoSolicitud;
+                                })()
+                              }
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
 
