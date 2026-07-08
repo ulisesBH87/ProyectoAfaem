@@ -9,7 +9,7 @@ import { C } from '../pages/Admin/RegistrarPresidente/constants';
  * Elimina la duplicación del bloque "cargar foto forzada" que existía
  * en dos ramas (else + catch) del componente original.
  */
-export function useFotografia({ setDocuments, setPreviews }) {
+export function useFotografia({ setDocuments, setPreviews, tipoRegistro = "JUGADOR" }) {
   const [fotoError, setFotoError] = useState(null);
   const [fotoFallida, setFotoFallida] = useState(false);
   const [fotoArchivo, setFotoArchivo] = useState(null);
@@ -52,7 +52,7 @@ export function useFotografia({ setDocuments, setPreviews }) {
     });
 
     try {
-      const data = await validarFotografia(archivo);
+      const data = await validarFotografia(archivo, tipoRegistro);
 
       if (data.valido) {
         // Convertir base64 → File

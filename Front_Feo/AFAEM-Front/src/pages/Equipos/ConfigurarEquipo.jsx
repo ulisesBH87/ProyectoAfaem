@@ -1691,7 +1691,7 @@ export default function ConfigurarEquipo() {
         didOpen: () => { Swal.showLoading(); }
       });
       try {
-        const data = await validarFotografia(file);
+        const data = await validarFotografia(file, "PRESIDENTE");
         if (data.valido) {
           // Convertir base64 a URL y a File
           const imageUrl = `data:${data.tipo_imagen};base64,${data.imagen}`;
@@ -1787,7 +1787,7 @@ export default function ConfigurarEquipo() {
         const formDataOcr = new FormData();
         formDataOcr.append('file_id', file);
         const token = localStorage.getItem('token') || sessionStorage.getItem('temp_token');
-        const response = await fetch(`${API_BASE}/documentos/ocr`, {
+        const response = await fetch(`${API_BASE}/documentos/ocr?tipo_registro=PRESIDENTE`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`
@@ -2494,7 +2494,7 @@ export default function ConfigurarEquipo() {
             if (tieneDatos) {
               Swal.fire({
                 title: '¿Abandonar registro?',
-                text: "Se perderán los documentos subidos y el progreso actual (excepto los campos guardados en la BD).",
+                text: "Se perderán los documentos subidos y el progreso actual.",
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: COLORS.danger,
@@ -4105,14 +4105,16 @@ export default function ConfigurarEquipo() {
 
       {seguroDetalle && (() => {
         const segNombreNormalizado = normalizarNombreSeguro(seguroDetalle.nombre);
-        const info = DETALLES_SEGUROS[segNombreNormalizado] || {
-          nombre: seguroDetalle.nombre,
-          precio: seguroDetalle.precio,
-          poliza: 'N/A',
-          vigencia: 'N/A',
-          alcance: seguroDetalle.descripcion || 'Información general de cobertura y beneficios.',
-          beneficios: [seguroDetalle.descripcion || 'Sin descripción adicional.'],
-          coberturas: []
+        const dbInfo = DETALLES_SEGUROS[segNombreNormalizado] || {};
+        const info = {
+          ...dbInfo,
+          nombre: seguroDetalle.nombre || dbInfo.nombre || seguroDetalle.Nombre || 'Seguro',
+          precio: seguroDetalle.precio !== undefined ? seguroDetalle.precio : (seguroDetalle.Precio !== undefined ? seguroDetalle.Precio : dbInfo.precio),
+          poliza: dbInfo.poliza || 'N/A',
+          vigencia: dbInfo.vigencia || 'N/A',
+          alcance: dbInfo.alcance || seguroDetalle.descripcion || 'Información general de cobertura y beneficios.',
+          beneficios: dbInfo.beneficios || [seguroDetalle.descripcion || 'Sin descripción adicional.'],
+          coberturas: dbInfo.coberturas || []
         };
 
         return createPortal(

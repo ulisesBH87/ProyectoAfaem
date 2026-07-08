@@ -1172,7 +1172,7 @@ function PreRegistroPresidente() {
     });
 
     try {
-      const data = await validarFotografia(archivo);
+      const data = await validarFotografia(archivo, "PRESIDENTE");
       if (data.valido) {
         setFotoPreview(`data:${data.tipo_imagen};base64,${data.imagen}`);
         setDocuments(prev => ({ ...prev, fotografia: archivo }));

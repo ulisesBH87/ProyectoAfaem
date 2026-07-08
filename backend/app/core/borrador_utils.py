@@ -32,11 +32,12 @@ def guardar_archivo_borrador(base64_data: str, filename: str, slot_id: int, key:
     unique_name = f"slot_{slot_id}_{key}_{uuid.uuid4().hex}_{safe_filename}"
     file_path = os.path.join(borradores_dir, unique_name)
     
-    try:
-        from app.utilidades.procesador_documentos import procesar_documento_subido
-        file_bytes = procesar_documento_subido(file_bytes, filename)
-    except Exception as e:
-        print(f"[BORRADOR UTILS] Error al recortar imagen de borrador: {e}")
+    if key != "fotografia":
+        try:
+            from app.utilidades.procesador_documentos import procesar_documento_subido
+            file_bytes = procesar_documento_subido(file_bytes, filename)
+        except Exception as e:
+            print(f"[BORRADOR UTILS] Error al recortar imagen de borrador: {e}")
 
     with open(file_path, "wb") as f:
         f.write(file_bytes)

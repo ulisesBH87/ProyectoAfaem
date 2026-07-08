@@ -1,6 +1,11 @@
 #RUTA DE VALIDACIÓN DE FOTOGRAFÍA
 #|importar las clases
-from fastapi import APIRouter, UploadFile, File
+from fastapi import APIRouter, UploadFile, File, Request, Query, Depends
+from typing import Optional
+from sqlalchemy.orm import Session
+from app.db.sesion import get_db
+from app.core.decoradores_consumo import track_consumption
+from app.core.seguridad import obtener_usuario_o_sesion_temporal
 
 #Importar las funciones de detección de rostros con FACE DETECTOR
 from app.servicios.foto_validacion import validacion_fotografia
@@ -12,10 +17,15 @@ import base64
 router = APIRouter(prefix="/fotografia", tags=["Fotografía"]) 
 
 #definir una ruta POST para validar un archivo
-@router.post("/") 
-
-#definir una función asincrónica que recibe un archivo como entrada
-async def validar_archivo(file: UploadFile = File(...)): 
+@router.post("/")
+@track_consumption(tipo_consumo="PHOTO_SCAN", proveedor="DEFAULT", tipo_registro_default="JUGADOR")
+async def validar_archivo(
+    request: Request,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    tipo_registro: Optional[str] = Query("JUGADOR"),
+    token_payload = Depends(obtener_usuario_o_sesion_temporal)
+): 
     try: 
     
         contenido = await file.read() #leer el contenido del archivo de forma asincrónica

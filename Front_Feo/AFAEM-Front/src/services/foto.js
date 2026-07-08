@@ -2,7 +2,7 @@
 import { API_BASE } from '../config/config';
 import { getErrorMessage } from '../utils/errorHandler';
 
-export const validarFotografia = async (archivo) => {
+export const validarFotografia = async (archivo, tipo_registro = "JUGADOR") => {
   const tiposPermitidos = [
     "image/jpg",
     "image/jpeg",
@@ -16,9 +16,16 @@ export const validarFotografia = async (archivo) => {
   const formData = new FormData();
   formData.append("file", archivo);
 
+  const token = localStorage.getItem('token');
+  const headers = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
   try {
-    const response = await fetch(`${API_BASE}/fotografia/`, {
+    const response = await fetch(`${API_BASE}/fotografia/?tipo_registro=${tipo_registro}`, {
       method: "POST",
+      headers,
       body: formData
     });
 

@@ -240,10 +240,10 @@ export function useRegistrarPresidente() {
     setVoucherState(file);
     procesarOCR('voucher', file, () => {
       setVoucherState(null);
-    });
+    }, "PRESIDENTE");
   };
 
-  const fotoHook = useFotografia({ setDocuments, setPreviews });
+  const fotoHook = useFotografia({ setDocuments, setPreviews, tipoRegistro: "PRESIDENTE" });
   const { procesarFoto, forzarFoto, fotoError, fotoFallida, fotoArchivo } = fotoHook;
 
   const { descargarFormato } = useGenerarPDF();
