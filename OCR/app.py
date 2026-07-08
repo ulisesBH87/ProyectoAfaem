@@ -12,7 +12,6 @@ import unicodedata
 import cv2
 import numpy as np
 
-
 try:
     from dotenv import load_dotenv
     load_dotenv()
@@ -21,8 +20,6 @@ except ImportError:
 
 credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
 if credentials_path:
-    # Repair common backslash escape sequence replacements caused by environment/dotenv parsers
-    # (e.g. \f in \faemocr becoming form-feed \x0c, or \a in \afaemocr becoming bell \x07)
     credentials_path = (
         credentials_path.replace('\x0c', '\\f')
         .replace('\x07', '\\a')
@@ -38,9 +35,10 @@ elif not os.path.isabs(credentials_path):
     credentials_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), credentials_path)
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = credentials_path
 
-app = Flask(__name__)
 
-# --- TUS FUNCIONES DE API Y CÁLCULO SE MANTIENEN INTACTAS ---
+
+
+app = Flask(__name__)
 
 VERIFIED_CURPS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "verified_curps.json")
 
@@ -62,6 +60,7 @@ def guardar_cache_curps(cache):
     except Exception as e:
         print(f"[ERROR] No se pudo guardar el cache de CURPs: {str(e)}")
 
+
 def validar_tlaloc(curp, token):
     if not curp or curp == "No detectado":
         return {"verificado": False, "mensaje": "Sin CURP para verificar"}
@@ -69,7 +68,7 @@ def validar_tlaloc(curp, token):
     curp_norm = curp.strip().upper()
     cache = cargar_cache_curps()
     if curp_norm in cache:
-        return {"verificado": True, "mensaje": "CURP Validada Oficialmente en RENAPO (Cache local)"}
+        return {"verificado": True, "mensaje": "CURP Validada Oficialmente en RENAPO (Cache local)", "curp_oficial": curp_norm}
 
     url = "https://api.tlaloc.sh/mx/v1/curp"
     headers = {
@@ -84,7 +83,7 @@ def validar_tlaloc(curp, token):
             if "curp" in datos_api and "nombres" in datos_api:
                 cache.add(curp_norm)
                 guardar_cache_curps(cache)
-                return {"verificado": True, "mensaje": "CURP Validada Oficialmente en RENAPO (Tlaloc)"}
+                return {"verificado": True, "mensaje": "CURP Validada Oficialmente en RENAPO (Tlaloc)", "curp_oficial": curp_norm}
         elif respuesta.status_code == 404:
             return {"verificado": False, "mensaje": "CURP no encontrada en RENAPO"}
         return {"verificado": False, "mensaje": f"API Tlaloc respondio con codigo {respuesta.status_code}"}
@@ -99,9 +98,9 @@ def validar_verificamex(curp):
     curp_norm = curp.strip().upper()
     cache = cargar_cache_curps()
     if curp_norm in cache:
-        return {"verificado": True, "mensaje": "CURP Validada Oficialmente en RENAPO (Cache local)"}
+        return {"verificado": True, "mensaje": "CURP Validada Oficialmente en RENAPO (Cache local)", "curp_oficial": curp_norm}
         
-    # 1. Intentar validar con Verificamex primero si esta configurado
+    # 1. Intentar validar con Verificamex si esta configurado
     token = os.getenv("VERIFICAMEX_API_TOKEN")
     if token and token != "TU_TOKEN_DE_VERIFICAMEX_AQUI":
         url = "https://api.verificamex.com/identity/v1/scraping/renapo"
@@ -110,31 +109,36 @@ def validar_verificamex(curp):
             "Content-Type": "application/json",
             "Authorization": f"Bearer {token}"
         }
-        payload = {"curp": curp_norm}
         
-        try:
-            respuesta = requests.post(url, json=payload, headers=headers)
+        # Probar la original, y si termina en 1 (confusión común con 3/I/l), también probar con terminación 3
+        curps_a_probar = [curp_norm]
+        if curp_norm.endswith("1") and len(curp_norm) == 18:
+            curps_a_probar.append(curp_norm[:-1] + "3")
             
-            if respuesta.status_code == 200:
-                datos_api = respuesta.json()
-                if "data" in datos_api and "citizen" in datos_api["data"]:
-                    cache.add(curp_norm)
-                    guardar_cache_curps(cache)
-                    return {"verificado": True, "mensaje": "CURP Validada Oficialmente en RENAPO"}
+        for c_candidata in curps_a_probar:
+            payload = {"curp": c_candidata}
+            try:
+                respuesta = requests.post(url, json=payload, headers=headers)
+                if respuesta.status_code == 200:
+                    datos_api = respuesta.json()
+                    if "data" in datos_api and "citizen" in datos_api["data"]:
+                        cache.add(c_candidata)
+                        guardar_cache_curps(cache)
+                        return {
+                            "verificado": True, 
+                            "mensaje": "CURP Validada Oficialmente en RENAPO", 
+                            "curp_oficial": c_candidata
+                        }
+            except Exception as e:
+                print(f"[ERROR] Error de conexion con la API de Verificamex: {str(e)}")
+                return {"verificado": False, "mensaje": "Error de conexion con la API"}
                 
-            return {"verificado": False, "mensaje": "CURP Rechazada o No Encontrada"}
-        except Exception as e:
-            print(f"[ERROR] Error de conexion con la API de Verificamex: {str(e)}")
-            return {"verificado": False, "mensaje": "Error de conexion con la API"}
-
-    # 2. Intentar validar con Tlaloc de respaldo si esta configurado
-    tlaloc_token = os.getenv("TLALOC_API_KEY") or os.getenv("TLALOC")
-    if tlaloc_token and tlaloc_token != "TU_TOKEN_DE_TLALOC_AQUI":
-        return validar_tlaloc(curp_norm, tlaloc_token)
-
-    # 3. Fallback a Simulacion si ninguno esta configurado
-    print("[WARNING] Ni VERIFICAMEX_API_TOKEN ni TLALOC/TLALOC_API_KEY configurados en variables de entorno. Ejecutando en modo Simulacion.")
-    return {"verificado": True, "mensaje": "CURP Validada en RENAPO (Simulacion)"}
+        return {"verificado": False, "mensaje": "CURP Rechazada o No Encontrada"}
+ 
+    # 2. Fallback a Simulacion si no esta configurado
+    print("[WARNING] VERIFICAMEX_API_TOKEN no configurado en variables de entorno. Ejecutando en modo Simulacion.")
+    # Si simulamos y termina en 1, preferimos sugerir la terminación original o la alternativa según el año
+    return {"verificado": True, "mensaje": "CURP Validada en RENAPO (Simulacion)", "curp_oficial": curp_norm}
 
 def calcular_datos_curp(curp):
     try:
@@ -143,7 +147,7 @@ def calcular_datos_curp(curp):
         fecha_nac = datetime(anio, mm, dd)
         hoy = datetime.now()
         edad = hoy.year - anio - ((hoy.month, hoy.day) < (mm, dd))
-        return edad, fecha_nac.strftime("%Y-%m-%d")
+        return edad, fecha_nac.strftime("%d/%m/%Y")
     except:
         return "No calculada", "No detectada"
 
@@ -152,7 +156,6 @@ def calcular_datos_curp(curp):
 def normalizar_texto(texto):
     """Quita acentos y caracteres raros para estandarizar el texto"""
     if not texto: return ""
-    # Remove parenthesized (S) or (s) to avoid turning into a standalone 'S'
     texto = re.sub(r'\([Ss]\)', '', texto)
     texto = unicodedata.normalize('NFKD', str(texto)).encode('ascii', 'ignore').decode('utf-8')
     texto = re.sub(r'[^A-Z0-9\s<]', ' ', texto.upper())
@@ -199,9 +202,10 @@ def letters_match_or_similar(c1, c2):
 def curp_coincide_con_nombre(curp, nombres, ap1, ap2):
     if not curp or curp == "No detectado" or len(curp) < 4:
         return False, False
-    c_n = nombres.strip().upper() if nombres else ""
-    c_ap1 = ap1.strip().upper() if ap1 else ""
-    c_ap2 = ap2.strip().upper() if ap2 else ""
+    curp = curp.strip().upper()
+    c_n = normalizar_texto(nombres) if nombres else ""
+    c_ap1 = normalizar_texto(ap1) if ap1 else ""
+    c_ap2 = normalizar_texto(ap2) if ap2 else ""
     if not c_n or not c_ap1:
         return False, False
     n_words = c_n.split()
@@ -212,33 +216,72 @@ def curp_coincide_con_nombre(curp, nombres, ap1, ap2):
         first_name = n_words[0] if n_words else ""
     if not first_name:
         return False, False
-    l_ap1 = c_ap1[0] if c_ap1 else ""
-    l_ap2 = c_ap2[0] if c_ap2 else ""
-    l_n = first_name[0] if first_name else ""
-    curp_prefix = curp[:4].upper()
-    
-    m3 = letters_match_or_similar(curp_prefix[3], l_n)
-    if not m3:
-        return False, False
+
+    def get_vocal_interna(w):
+        for char in w[1:]:
+            if char in "AEIOU":
+                return char
+        return "X"
+
+    def get_consonante_interna(w):
+        for char in w[1:]:
+            if char in "BCDFGHJKLMNPQRSTVWXYZ":
+                return char
+            elif char == "Ñ":
+                return "X"
+        return "X"
+
+    ap1_letra = c_ap1[0] if c_ap1 else "X"
+    ap1_vocal = get_vocal_interna(c_ap1)
+    ap2_letra = c_ap2[0] if c_ap2 else "X"
+    n_letra = first_name[0] if first_name else "X"
+
+    # Intentar coincidencia estándar
+    standard_match = (
+        letters_match_or_similar(curp[0], ap1_letra) and
+        (letters_match_or_similar(curp[1], ap1_vocal) or curp[1] == 'X') and
+        letters_match_or_similar(curp[2], ap2_letra) and
+        letters_match_or_similar(curp[3], n_letra)
+    )
+
+    # Intentar coincidencia con apellidos invertidos (a veces ocurre en el registro)
+    swapped_match = False
+    if c_ap2:
+        swapped_match = (
+            letters_match_or_similar(curp[0], ap2_letra) and
+            (letters_match_or_similar(curp[1], get_vocal_interna(c_ap2)) or curp[1] == 'X') and
+            letters_match_or_similar(curp[2], ap1_letra) and
+            letters_match_or_similar(curp[3], n_letra)
+        )
+
+    # Validar consonantes internas en posiciones 13, 14, 15 (si la longitud de la CURP lo permite)
+    if len(curp) >= 16:
+        ap1_cons = get_consonante_interna(c_ap1)
+        ap2_cons = get_consonante_interna(c_ap2)
+        n_cons = get_consonante_interna(first_name)
         
-    if l_ap2:
-        m0_standard = letters_match_or_similar(curp_prefix[0], l_ap1)
-        m2_standard = letters_match_or_similar(curp_prefix[2], l_ap2)
-        if m0_standard and m2_standard:
-            return True, False
-            
-        m0_swapped = letters_match_or_similar(curp_prefix[2], l_ap1)
-        m2_swapped = letters_match_or_similar(curp_prefix[0], l_ap2)
-        if m0_swapped and m2_swapped:
-            return True, True
+        if standard_match:
+            cons_match = (
+                letters_match_or_similar(curp[13], ap1_cons) or
+                letters_match_or_similar(curp[14], ap2_cons) or
+                letters_match_or_similar(curp[15], n_cons)
+            )
+            if cons_match:
+                return True, False
+        if swapped_match:
+            cons_match_swapped = (
+                letters_match_or_similar(curp[13], ap2_cons) or
+                letters_match_or_similar(curp[14], ap1_cons) or
+                letters_match_or_similar(curp[15], n_cons)
+            )
+            if cons_match_swapped:
+                return True, True
     else:
-        m0_standard = letters_match_or_similar(curp_prefix[0], l_ap1)
-        if m0_standard:
+        if standard_match:
             return True, False
-        m0_swapped = letters_match_or_similar(curp_prefix[2], l_ap1)
-        if m0_swapped:
+        if swapped_match:
             return True, True
-            
+
     return False, False
 
 def limpiar_basura_del_nombre(campo):
@@ -352,7 +395,6 @@ def extraer_por_proximidad_etiquetas(texto_crudo, curp):
                     
     return None
 
-
 def validar_candidato_nombre(nombres, ap1, ap2, discarded_list=None):
     n_val = normalizar_texto(nombres)
     a1_val = normalizar_texto(ap1)
@@ -368,7 +410,6 @@ def validar_candidato_nombre(nombres, ap1, ap2, discarded_list=None):
             discarded_list.append(f"({n_val}, {a1_val}, {a2_val}) -> Rejected: Field length > 30 characters")
         return False
         
-    # Reject fields containing digits
     for field_val, field_name in [(n_val, "Nombres"), (a1_val, "Paterno"), (a2_val, "Materno")]:
         if field_val and any(c.isdigit() for c in field_val):
             if discarded_list is not None:
@@ -385,6 +426,19 @@ def validar_candidato_nombre(nombres, ap1, ap2, discarded_list=None):
                     discarded_list.append(f"({n_val}, {a1_val}, {a2_val}) -> Rejected: Field '{field_name}' contains blacklist word '{w}'")
                 return False
                 
+    # Filtrar palabras demasiado cortas que no sean preposiciones o abreviaturas comunes
+    ALLOWED_SHORT_WORDS = {"DE", "DEL", "LA", "LAS", "LOS", "EL", "Y", "MA", "ME", "DO", "DI", "DA", "UN", "AL", "TO", "FE", "JO"}
+    for field_val, field_name in [(n_val, "Nombres"), (a1_val, "Paterno"), (a2_val, "Materno")]:
+        if not field_val:
+            continue
+        words = field_val.split()
+        for w in words:
+            if len(w) == 1:
+                if w not in ALLOWED_SHORT_WORDS and not w.endswith('.'):
+                    if discarded_list is not None:
+                        discarded_list.append(f"({n_val}, {a1_val}, {a2_val}) -> Rejected: Field '{field_name}' contains invalid short word '{w}'")
+                    return False
+
     if n_val in INVALID_SINGLE_WORDS:
         if discarded_list is not None:
             discarded_list.append(f"({n_val}, {a1_val}, {a2_val}) -> Rejected: Nombres is a single grammatical word '{n_val}'")
@@ -413,7 +467,6 @@ def buscar_nombre_por_curp(texto_crudo, curp, discarded_list=None, first_header_
         if norm and not contiene_basura(norm):
             lineas.append((idx, norm))
             
-    # Scan standard order: NOMBRES APELLIDO1 APELLIDO2
     for original_idx, line in lineas:
         partes = line.split()
         n = len(partes)
@@ -437,7 +490,6 @@ def buscar_nombre_por_curp(texto_crudo, curp, discarded_list=None, first_header_
                         if discarded_list is not None:
                             discarded_list.append(f"({nombres}, {ap1}, {ap2}) -> Discarded: Does not match CURP prefix")
                         
-    # Scan reverse order: APELLIDO1 APELLIDO2 NOMBRES
     for original_idx, line in lineas:
         partes = line.split()
         n = len(partes)
@@ -463,25 +515,354 @@ def buscar_nombre_por_curp(texto_crudo, curp, discarded_list=None, first_header_
                         
     return None
 
+def normalizar_curp_ocr(curp_raw):
+    """Corrige errores comunes de Tesseract (sustituciones de letras/números) según su posición en la CURP"""
+    digit_map = {'O': '0', 'Q': '0', 'I': '1', 'L': '1', 'T': '1', 'S': '5', 'G': '6', 'Z': '2', 'B': '8'}
+    letter_map = {'0': 'O', '1': 'I', '5': 'S', '2': 'Z', '6': 'G', '7': 'T', '8': 'B'}
+    
+    curp_chars = list(curp_raw.upper())
+    
+    # Índices que deben ser letras (0-3, 10, 11-12, 13-15)
+    letter_indices = [0, 1, 2, 3, 10, 11, 12, 13, 14, 15]
+    # Índices que deben ser números (4-9, 17) -- el 16 puede ser letra o número
+    digit_indices = [4, 5, 6, 7, 8, 9, 17]
+    
+    for idx in letter_indices:
+        if idx < len(curp_chars):
+            c = curp_chars[idx]
+            if c in letter_map:
+                curp_chars[idx] = letter_map[c]
+                
+    for idx in digit_indices:
+        if idx < len(curp_chars):
+            c = curp_chars[idx]
+            if c in digit_map:
+                curp_chars[idx] = digit_map[c]
+                
+    return "".join(curp_chars)
+
 def extraer_curp_segura(texto):
-    """Extrae la CURP usando Expresiones Regulares estrictas"""
+    """Extrae la CURP usando Expresiones Regulares tolerantes a errores de OCR y las normaliza"""
+    # 1. Intentar búsqueda anclada cerca del título del documento de arriba hacia abajo
+    lineas = [l.strip() for l in texto.split('\n')]
+    patron_tolerante = r'[A-Z0-9]{4}[0-9OQILTSGZ]{6}[HM][A-Z0-9]{5}[A-Z0-9OQILTSGZ][0-9OQILTSGZ]'
+    for idx, l in enumerate(lineas):
+        l_norm = normalizar_texto(l)
+        if "CLAVE UNICA" in l_norm or "REGISTRO DE POBLACION" in l_norm or "POBLACION" in l_norm:
+            # Buscar en la línea misma y en las siguientes 4 líneas
+            for offset in range(0, 5):
+                if idx + offset < len(lineas):
+                    line_to_check = lineas[idx + offset].replace(" ", "").upper()
+                    match = re.search(patron_tolerante, line_to_check)
+                    if match:
+                        return normalizar_curp_ocr(match.group(0))
+
+    # 2. Fallback a búsqueda global en todo el texto si falla el ancla
     texto_limpio = texto.replace(" ", "").replace("\n", "").upper()
-    # Patrón estricto de CURP Mexicana
-    match = re.search(r'[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-9]\d', texto_limpio)
-    return match.group(0) if match else "No detectado"
+    match = re.search(patron_tolerante, texto_limpio)
+    if match:
+        curp_candidata = match.group(0)
+        return normalizar_curp_ocr(curp_candidata)
+    return "No detectado"
+
+
+def detectar_estado_desde_texto(texto):
+    """Escanea el texto crudo del documento buscando nombres de estados de la república mexicana"""
+    if not texto:
+        return None
+    texto_up = normalizar_texto(texto).upper()
+    estados_ordenados = [
+        "BAJA CALIFORNIA SUR", "BAJA CALIFORNIA", "CIUDAD DE MEXICO", "DISTRITO FEDERAL",
+        "SAN LUIS POTOSI", "AGUASCALIENTES", "QUINTANA ROO", "NUEVO LEON",
+        "MICHOACAN", "GUANAJUATO", "TAMAULIPAS", "CHIHUAHUA", "QUERETARO",
+        "ZACATECAS", "COAHUILA", "GUERRERO", "CAMPECHE", "VERACRUZ",
+        "TLASCALA", "TLAXCALA", "SINALOA", "YUCATAN", "MORELOS",
+        "TABASCO", "NAYARIT", "CHIAPAS", "DURANGO", "HIDALGO",
+        "JALISCO", "OAXACA", "PUEBLA", "SONORA", "COLIMA", "MEXICO"
+    ]
+    for edo in estados_ordenados:
+        if edo in texto_up:
+            if edo == "MEXICO":
+                t_clean = texto_up.replace("ESTADOS UNIDOS MEXICANOS", "").replace("MEXICANA", "").replace("MEXICANO", "")
+                if "MEXICO" in t_clean:
+                    return "MEXICO"
+            else:
+                return edo
+    return None
+
+def obtener_codigo_estado(lugar_str):
+    if not lugar_str:
+        return "NE"
+    lugar = normalizar_texto(lugar_str).upper()
+    if "MOREL" in lugar:
+        return "MS"
+    if "MEX" in lugar:
+        return "MC"
+    if "DF" in lugar or "DISTRITO" in lugar or "CIUDAD DE" in lugar or "CDMX" in lugar:
+        return "DF"
+    
+    estados_map = {
+        "AS": "AGUASCALIENTES", "BC": "BAJA CALIFORNIA", "BS": "BAJA CALIFORNIA SUR",
+        "CC": "CAMPECHE", "CL": "COAHUILA", "CM": "COLIMA", "CS": "CHIAPAS",
+        "CH": "CHIHUAHUA", "DF": "CIUDAD DE MEXICO", "DG": "DURANGO", "GT": "GUANAJUATO",
+        "GR": "GUERRERO", "HG": "HIDALGO", "JC": "JALISCO", "MC": "MEXICO",
+        "MN": "MICHOACAN", "MS": "MORELOS", "NT": "NAYARIT", "NL": "NUEVO LEON",
+        "OC": "OAXACA", "PL": "PUEBLA", "QT": "QUERETARO", "QR": "QUINTANA ROO",
+        "SP": "SAN LUIS POTOSI", "SL": "SINALOA", "SR": "SONORA", "TC": "TABASCO",
+        "TS": "TAMAULIPAS", "TL": "TLAXCALA", "VZ": "VERACRUZ", "YN": "YUCATAN",
+        "ZS": "ZACATECAS", "NE": "NACIDO EN EL EXTRANJERO"
+    }
+    for codigo, nombre in estados_map.items():
+        if nombre in lugar or lugar in nombre:
+            return codigo
+    return "NE"
+
+PALABRAS_INCONVENIENTES = {
+    "BACA", "BAKA", "BUEI", "BUEY", "CACA", "CACO", "CAGA", "CAGO", "CAKA", "CAKO",
+    "COGE", "COGI", "COJA", "COJE", "COJI", "COJO", "COLA", "CULO", "FALO", "FETO",
+    "GETA", "GUEI", "GUEY", "JETA", "JOTO", "KACA", "KACO", "KAGA", "KAGO", "KAKA",
+    "KAKO", "KOGE", "KOGI", "KOJA", "KOJE", "KOJI", "KOJO", "KOLA", "KULO", "LILO",
+    "LOKA", "LOKO", "MAME", "MAMO", "MEAR", "MEAS", "MEON", "MIAO", "MIAR", "MION",
+    "MOCO", "MOKO", "MULA", "PEDA", "PEDO", "PENE", "PIPI", "PITO", "POPO", "PUTA",
+    "PUTO", "QULO", "RATA", "ROBA", "ROBE", "ROBO", "RUIN", "SENO", "TETA", "VACA",
+    "VAGA", "VAGO", "VAKA", "VUEI", "VUEY", "WACA", "WAGO", "BAGO", "LOCA", "LOCO"
+}
+
+def generar_curp_desde_datos(nombres, ap1, ap2, fecha_nac_str, sexo_str, lugar_nac_str):
+    """Genera programáticamente los primeros 16 caracteres deterministas de una CURP"""
+    c_n = normalizar_texto(nombres).upper() if nombres else ""
+    c_ap1 = normalizar_texto(ap1).upper() if ap1 else ""
+    c_ap2 = normalizar_texto(ap2).upper() if ap2 else ""
+    
+    if not c_n or not c_ap1:
+        return ""
+        
+    n_words = c_n.split()
+    first_name = ""
+    if len(n_words) > 1 and n_words[0] in ["MARIA", "MA", "MA.", "M.", "JOSE", "J", "J."]:
+        first_name = n_words[1]
+    else:
+        first_name = n_words[0] if n_words else ""
+        
+    if not first_name:
+        return ""
+
+    def get_vocal_interna(w):
+        for char in w[1:]:
+            if char in "AEIOU":
+                return char
+        return "X"
+
+    def get_consonante_interna(w):
+        for char in w[1:]:
+            if char in "BCDFGHJKLMNPQRSTVWXYZ":
+                return char
+            elif char == "Ñ":
+                return "X"
+        return "X"
+
+    ap1_letra = c_ap1[0] if c_ap1 else "X"
+    ap1_vocal = get_vocal_interna(c_ap1)
+    ap2_letra = c_ap2[0] if c_ap2 else "X"
+    n_letra = first_name[0] if first_name else "X"
+    
+    # 4 letras iniciales
+    letras = f"{ap1_letra}{ap1_vocal}{ap2_letra}{n_letra}"
+    if letras in PALABRAS_INCONVENIENTES:
+        letras = f"{letras[0]}X{letras[2:]}"
+    
+    # Fecha: YYMMDD
+    # Esperamos DD/MM/YYYY o similar
+    match_fecha = re.search(r'(\d{2})[\/\-](\d{2})[\/\-](\d{4})', fecha_nac_str or "")
+    if match_fecha:
+        dia, mes, anio = match_fecha.group(1), match_fecha.group(2), match_fecha.group(3)
+        fecha_part = f"{anio[2:4]}{mes}{dia}"
+    else:
+        fecha_part = "000000"
+        
+    # Sexo
+    sex_char = "H"
+    if sexo_str:
+        s_upper = sexo_str.upper()
+        if "FEM" in s_upper or "MUJ" in s_upper or s_upper == "M":
+            sex_char = "M"
+            
+    # Estado
+    cod_estado = obtener_codigo_estado(lugar_nac_str)
+    
+    # Consonantes internas
+    ap1_cons = get_consonante_interna(c_ap1)
+    ap2_cons = get_consonante_interna(c_ap2)
+    n_cons = get_consonante_interna(first_name)
+    consonantes = f"{ap1_cons}{ap2_cons}{n_cons}"
+    
+    curp16 = f"{letras}{fecha_part}{sex_char}{cod_estado}{consonantes}".upper()
+    return curp16
+
+def reconstruir_curp_danada(texto, nombres, ap1, ap2, fecha_nac, sexo, lugar_nac):
+    """Reconstruye una CURP con errores OCR usando aproximaciones y la estructura del nombre"""
+    curp16 = generar_curp_desde_datos(nombres, ap1, ap2, fecha_nac, sexo, lugar_nac)
+    if not curp16 or len(curp16) != 16:
+        return None
+        
+    # Extraer palabras de 15 a 22 caracteres
+    palabras = re.findall(r'\b[A-Z0-9]{15,22}\b', texto.upper())
+    
+    mejor_curp = None
+    mejor_score = 0.0
+    
+    for p in palabras:
+        p_norm = normalizar_curp_ocr(p)
+        if len(p_norm) < 15:
+            continue
+            
+        similitud = difflib.SequenceMatcher(None, curp16, p_norm[:16]).ratio()
+        if similitud >= 0.70 and similitud > mejor_score:
+            mejor_score = similitud
+            anio_nac = 1990
+            if fecha_nac and '/' in fecha_nac:
+                parts = fecha_nac.split('/')
+                if len(parts) == 3 and parts[2].isdigit():
+                    anio_nac = int(parts[2])
+            
+            sufijo = p_norm[-2:] if len(p_norm) >= 17 else "A9"
+            sufijo_list = list(sufijo)
+            
+            digit_map = {'O': '0', 'Q': '0', 'I': '1', 'L': '1', 'T': '1', 'S': '5', 'G': '6', 'Z': '2', 'B': '8'}
+            letter_map = {'0': 'O', '1': 'A', '5': 'S', '2': 'Z', '6': 'G', '7': 'T', '8': 'B'}
+            
+            if len(sufijo_list) == 2:
+                # El 18º caracter (último) es SIEMPRE un número (0-9)
+                last_char = sufijo_list[1]
+                if last_char in digit_map:
+                    sufijo_list[1] = digit_map[last_char]
+                elif not last_char.isdigit():
+                    sufijo_list[1] = '9'
+                
+                # El 17º caracter:
+                # - Letra (A-Z) para nacidos a partir de 2000
+                # - Número (0-9) para nacidos antes del 2000
+                char_17 = sufijo_list[0]
+                if anio_nac >= 2000:
+                    if char_17.isdigit() and char_17 in letter_map:
+                        sufijo_list[0] = letter_map[char_17]
+                    elif char_17.isdigit():
+                        sufijo_list[0] = 'A'
+                else:
+                    if not char_17.isdigit() and char_17 in digit_map:
+                        sufijo_list[0] = digit_map[char_17]
+                    elif not char_17.isdigit():
+                        sufijo_list[0] = '0'
+                        
+            sufijo_clean = "".join(sufijo_list)
+            if len(sufijo_clean) < 2:
+                sufijo_clean = sufijo_clean.ljust(2, "9")
+            mejor_curp = curp16 + sufijo_clean
+            
+    return mejor_curp
+
+def limpiar_nombre_con_curp(nombres, ap1, ap2, curp):
+    """Limpia caracteres sueltos o ruidos al inicio de nombres/apellidos cruzando con las iniciales de la CURP"""
+    if not curp or curp == "No detectado" or len(curp) < 4:
+        return nombres, ap1, ap2
+        
+    curp = curp.upper()
+    c_n = nombres.strip().upper() if nombres else ""
+    c_ap1 = ap1.strip().upper() if ap1 else ""
+    c_ap2 = ap2.strip().upper() if ap2 else ""
+    
+    # 1. Limpiar ruidos al inicio de nombres
+    if c_n:
+        n_words = c_n.split()
+        first_letter_curp = curp[3]
+        idx_valido = 0
+        while idx_valido < len(n_words):
+            w = n_words[idx_valido]
+            if letters_match_or_similar(w[0], first_letter_curp) or len(w) > 2:
+                break
+            idx_valido += 1
+            
+        if idx_valido > 0 and idx_valido < len(n_words):
+            c_n = " ".join(n_words[idx_valido:])
+            
+    # 2. Limpiar ruidos al inicio de primer apellido
+    if c_ap1:
+        ap1_words = c_ap1.split()
+        idx_valido = 0
+        while idx_valido < len(ap1_words):
+            w = ap1_words[idx_valido]
+            if letters_match_or_similar(w[0], curp[0]) or len(w) > 2:
+                break
+            idx_valido += 1
+        if idx_valido > 0 and idx_valido < len(ap1_words):
+            c_ap1 = " ".join(ap1_words[idx_valido:])
+            
+    # 3. Limpiar ruidos al inicio de segundo apellido
+    if c_ap2:
+        ap2_words = c_ap2.split()
+        idx_valido = 0
+        while idx_valido < len(ap2_words):
+            w = ap2_words[idx_valido]
+            if letters_match_or_similar(w[0], curp[2]) or len(w) > 2:
+                break
+            idx_valido += 1
+        if idx_valido > 0 and idx_valido < len(ap2_words):
+            c_ap2 = " ".join(ap2_words[idx_valido:])
+            
+    return c_n, c_ap1, c_ap2
+
+def corregir_curp_con_nombre(curp, nombres, ap1, ap2):
+    """Corrige errores de OCR comunes en las iniciales de la CURP usando los nombres extraídos (como vocales/consonantes mal leídas)"""
+    if not curp or curp == "No detectado" or len(curp) < 4:
+        return curp
+        
+    curp_list = list(curp.upper())
+    vocales = "AEIOU"
+    
+    # 1. Posición 2 (índice 1) de la CURP es estrictamente una vocal interna del primer apellido (o 'X' para evitar palabras inconvenientes)
+    if curp_list[1] not in vocales and curp_list[1] != 'X':
+        if ap1:
+            ap1_norm = normalizar_texto(ap1)
+            vocal_real = "X"
+            for char in ap1_norm[1:]:
+                if char in vocales:
+                    vocal_real = char
+                    break
+            if vocal_real != "X":
+                curp_list[1] = vocal_real
+                
+    # 2. Corregir homoglifos en iniciales si difieren del nombre
+    if ap1 and len(ap1) >= 1:
+        ap1_ini = normalizar_texto(ap1)[0]
+        if not letters_match_or_similar(curp_list[0], ap1_ini) and curp_list[0] in ['0', 'O', 'D', 'C', 'Q']:
+            curp_list[0] = ap1_ini
+            
+    if ap2 and len(ap2) >= 1:
+        ap2_ini = normalizar_texto(ap2)[0]
+        if not letters_match_or_similar(curp_list[2], ap2_ini):
+            curp_list[2] = ap2_ini
+            
+    if nombres and len(nombres) >= 1:
+        n_words = normalizar_texto(nombres).split()
+        first_name = n_words[1] if (len(n_words) > 1 and n_words[0] in ["MARIA", "MA", "MA.", "M.", "JOSE", "J", "J."]) else (n_words[0] if n_words else "")
+        if first_name:
+            n_ini = first_name[0]
+            if not letters_match_or_similar(curp_list[3], n_ini):
+                curp_list[3] = n_ini
+                
+    return "".join(curp_list)
 
 def determinar_tipo_documento(texto_up):
     if "ACTA" in texto_up and ("NACIMIENTO" in texto_up or "REGISTRO CIVIL" in texto_up):
         return "ACTA DE NACIMIENTO"
-    elif "ELECTORAL" in texto_up or "CREDENCIAL" in texto_up or "INE" in texto_up or "IDMEX" in texto_up:
+    elif "ELECTORAL" in texto_up or "CREDENCIAL" in texto_up or re.search(r'\bINE\b', texto_up) or "IDMEX" in texto_up:
         return "INE"
     elif "PASAPORTE" in texto_up or "PASSPORT" in texto_up:
         return "PASAPORTE"
-    elif "CLAVE UNICA" in texto_up or "POBLACION" in texto_up or "CURP" in texto_up:
+    elif "CLAVE UNICA" in texto_up or "POBLACION" in texto_up:
         return "CURP"
     return "DOCUMENTO NO RECONOCIDO"
 
-# --- EL CEREBRO DE EXTRACCIÓN (NUEVO) ---
 def obtener_estado_curp(curp):
     estados = {
         "AS": "AGUASCALIENTES",
@@ -518,25 +899,18 @@ def obtener_estado_curp(curp):
         "ZS": "ZACATECAS",
         "NE": "NACIDO EN EL EXTRANJERO"
     }
-
     if curp and len(curp) >= 13:
         clave_estado = curp[11:13]
         return estados.get(clave_estado, "No detectado")
-
     return "No detectado"
-
 
 def extraer_nombre_mrz(texto_crudo):
     """Busca el nombre en las líneas de código <<< (INE reverso y Pasaporte)"""
     texto_lineal = texto_crudo.replace(" ", "")
-    
-    # 1. Intentar formato INE reverso (IDMEX)
-    # Ej: IDMEX1234567891<<1234... \n 900101M2512314MEX<02<<...\n APELLIDO<PATERNO<MATERNO<<NOMBRES<
     lineas = texto_crudo.split('\n')
     for i, linea in enumerate(lineas):
         l_limpia = linea.replace(" ", "")
         if "<<" in l_limpia and not l_limpia.startswith("IDMEX") and not l_limpia[0].isdigit():
-            # Suele ser la tercera línea del MRZ
             partes = l_limpia.split("<<")
             if len(partes) >= 2:
                 apellidos = partes[0].replace("<", " ").strip()
@@ -553,7 +927,6 @@ def extraer_nombre_mrz(texto_crudo):
                         "origen": "MRZ Match"
                     }
 
-    # 2. Intentar formato Pasaporte (P<MEX)
     match_pasaporte = re.search(r'P<MEX([A-Z<]+)<<([A-Z<]+)', texto_lineal)
     if match_pasaporte:
         apellidos = match_pasaporte.group(1).replace("<", " ").strip()
@@ -579,11 +952,8 @@ def corregir_apellidos_con_evidencia_y_curp(nombres, ap1, ap2, curp, texto_crudo
             return ap
             
         ap_norm = normalizar_texto(ap)
-        
-        # Check if we can find a longer version in text that matches CURP better (e.g. ROJA -> ROJAS)
         for w in words_in_text:
             if w != ap_norm and w.startswith(ap_norm) and len(w) <= len(ap_norm) + 2:
-                # Check if this word starts with curp_char
                 if letters_match_or_similar(curp_char, w[0]):
                     if w not in BLACKLISTED_WORDS:
                         return w
@@ -595,33 +965,24 @@ def corregir_apellidos_con_evidencia_y_curp(nombres, ap1, ap2, curp, texto_crudo
     return new_ap1, new_ap2
 
 def corregir_apellidos_contaminados_s(nombres, ap1, ap2, texto_crudo):
-    # Normalize inputs
     n_norm = normalizar_texto(nombres) if nombres else ""
     ap1_norm = normalizar_texto(ap1) if ap1 else ""
     ap2_norm = normalizar_texto(ap2) if ap2 else ""
     
     lineas = [normalizar_texto(l) for l in texto_crudo.split('\n') if l.strip()]
     
-    # Function to check one surname
     def corregir_uno(apellido, resto_completo):
         if not apellido or len(apellido) <= 2 or not apellido.endswith('S'):
             return apellido
             
         sin_s = apellido[:-1]
-        
-        # Check A: Does the singular form appear in another line of the text?
-        # e.g., "GALICIA" appears as a standalone word in some line of texto_crudo
         for l in lineas:
-            # Make sure we don't look at a line that is just the current candidate name line
-            # or the line containing the exact full name we are validating.
             if l == resto_completo or l == f"{n_norm} {ap1_norm} {ap2_norm}".strip():
                 continue
             words_in_line = l.split()
             if sin_s in words_in_line and apellido not in words_in_line:
                 return sin_s
                 
-        # Check B: Is the word isolated?
-        # A word is isolated if it appears as a line of its own (or with minor noise)
         is_isolated = False
         for l in lineas:
             if l == apellido:
@@ -629,8 +990,6 @@ def corregir_apellidos_contaminados_s(nombres, ap1, ap2, texto_crudo):
                 break
                 
         if is_isolated:
-            # Is the rest of the name present in another line?
-            # The rest of the name can be just nombres, or nombres + other surname
             resto_candidates = [n_norm, f"{n_norm} {ap1_norm}".strip(), f"{n_norm} {ap2_norm}".strip()]
             resto_found = False
             for rc in resto_candidates:
@@ -660,7 +1019,6 @@ def extraer_nombre_acta_por_lineas_crudas(texto_crudo, curp="No detectado", text
     raw_lines = texto_crudo.split('\n')
     lines_norm = [normalizar_texto(l) for l in raw_lines]
     
-    # 2. Buscar líneas de etiquetas que contengan al menos dos de estas palabras: NOMBRE, PRIMER, SEGUNDO, APELLIDO
     LABEL_WORDS = {"NOMBRE", "PRIMER", "SEGUNDO", "APELLIDO"}
     
     for idx, l in enumerate(lines_norm):
@@ -669,8 +1027,6 @@ def extraer_nombre_acta_por_lineas_crudas(texto_crudo, curp="No detectado", text
         if len(matching) >= 2:
             log_lines.append(f"Label line matched at index {idx}: '{l}' (matched: {list(matching)})")
             
-            # 3. Revisar las 1 a 3 líneas anteriores
-            # Check idx-1, idx-2, idx-3
             for offset in [1, 2, 3]:
                 prev_idx = idx - offset
                 if prev_idx < 0:
@@ -681,37 +1037,30 @@ def extraer_nombre_acta_por_lineas_crudas(texto_crudo, curp="No detectado", text
                 
                 log_lines.append(f"  Evaluating candidate line at index {prev_idx}: '{candidate_raw}'")
                 
-                # Check A: Tenga entre 3 y 5 palabras
                 if not (3 <= len(candidate_words) <= 5):
                     log_lines.append(f"    -> Discarded: word count is {len(candidate_words)} (must be between 3 and 5)")
                     continue
                     
-                # Check B: No contenga números
                 if any(c.isdigit() for c in candidate_raw):
                     log_lines.append(f"    -> Discarded: contains digits")
                     continue
                     
-                # Check C: No contenga palabras basura
                 NOISE_WORDS = {"SEXO", "FECHA", "NACIMIENTO", "LUGAR", "CUAUTLA", "MORELOS", "HOMBRE", "MUJER", "MEXICANOS", "UNIDOS", "ESTADOS"}
                 found_noise = NOISE_WORDS & set(candidate_words)
                 if found_noise:
                     log_lines.append(f"    -> Discarded: contains noise/garbage words {list(found_noise)}")
                     continue
                     
-                # Check D: Esté en mayúsculas o sea normalizable a mayúsculas
                 if not any(c.isalpha() for c in candidate_norm):
                     log_lines.append(f"    -> Discarded: does not contain alphabetic characters")
                     continue
                     
-                # Found candidate!
                 log_lines.append(f"    -> SELECTED CANDIDATE: '{candidate_raw}'")
                 
-                # Split candidate:
                 ap2 = candidate_words[-1]
                 ap1 = candidate_words[-2]
                 nombres = " ".join(candidate_words[:-2])
                 
-                # S-contamination cleanup
                 ap1_clean, ap2_clean = corregir_apellidos_contaminados_s(nombres, ap1, ap2, texto_crudo)
                 if ap1_clean != ap1:
                     log_lines.append(f"    -> Cleaned S-contamination from ap1: '{ap1}' -> '{ap1_clean}'")
@@ -720,7 +1069,6 @@ def extraer_nombre_acta_por_lineas_crudas(texto_crudo, curp="No detectado", text
                     log_lines.append(f"    -> Cleaned S-contamination from ap2: '{ap2}' -> '{ap2_clean}'")
                     ap2 = ap2_clean
                     
-                # CURP / Evidence correction
                 txt_for_evidence = texto_original if texto_original else texto_crudo
                 ap1_ev, ap2_ev = corregir_apellidos_con_evidencia_y_curp(nombres, ap1, ap2, curp, txt_for_evidence)
                 if ap1_ev != ap1:
@@ -735,7 +1083,6 @@ def extraer_nombre_acta_por_lineas_crudas(texto_crudo, curp="No detectado", text
                 log_lines.append(f"    -> Result: Nombres='{nombres}', Ap1='{ap1}', Ap2='{ap2}', Completo='{nombre_completo}'")
                 log_lines.append("=== EXTRAER NOMBRE ACTA POR LINEAS CRUDAS END ===")
                 
-                # Log to ocr_output.log
                 try:
                     with open("ocr_output.log", "a", encoding="utf-8") as f_log:
                         f_log.write("\n".join(log_lines) + "\n")
@@ -753,7 +1100,6 @@ def extraer_nombre_acta_por_lineas_crudas(texto_crudo, curp="No detectado", text
     log_lines.append("  No matching candidate found in the evaluated lines before labels.")
     log_lines.append("=== EXTRAER NOMBRE ACTA POR LINEAS CRUDAS END ===")
     
-    # Log to ocr_output.log
     try:
         with open("ocr_output.log", "a", encoding="utf-8") as f_log:
             f_log.write("\n".join(log_lines) + "\n")
@@ -762,8 +1108,168 @@ def extraer_nombre_acta_por_lineas_crudas(texto_crudo, curp="No detectado", text
         
     return None
 
+def extraer_datos_por_lineas_ancla(texto_crudo, curp):
+    """
+    Intenta extraer datos basándose en el orden de arriba hacia abajo de las actas de nacimiento/CURPs.
+    Busca la sección 'Datos de la Persona Registrada' y localiza las líneas de valores
+    situadas inmediatamente arriba de las etiquetas 'Nombre(s) Primer Apellido...' y 'Sexo Fecha...'.
+    """
+    if not texto_crudo:
+        return None
+        
+    lineas = [l.strip() for l in texto_crudo.split('\n')]
+    lineas_norm = [normalizar_texto(l) for l in lineas]
+    
+    idx_datos_persona = -1
+    for idx, l_norm in enumerate(lineas_norm):
+        if any(kw in l_norm for kw in ["DATOS DE LA PERSONA REGISTRADA", "DATOS PERSONA REGISTRADA", "DATOS DEL REGISTRADO"]):
+            idx_datos_persona = idx
+            break
+            
+    # Si no se encuentra explícitamente "Datos de la Persona Registrada", podemos buscar desde el principio
+    start_idx = idx_datos_persona if idx_datos_persona != -1 else 0
+    
+    # 1. Buscar línea de etiquetas del Nombre
+    idx_label_nombre = -1
+    for idx in range(start_idx, len(lineas)):
+        l_norm = lineas_norm[idx]
+        has_nombre = any(kw in l_norm for kw in ["NOMBRE", "NOMBRES", "NOMORE", "NOMRES", "NOMRE"])
+        has_apellido = any(kw in l_norm for kw in ["APELLIDO", "APELLIDOS", "APELIDO", "APELIDOS", "PATERNO", "MATERNO"])
+        if has_nombre and has_apellido:
+            idx_label_nombre = idx
+            break
+            
+    nombres, ap1, ap2 = "No detectado", "No detectado", ""
+    found_name = False
+    
+    if idx_label_nombre > 0:
+        linea_valores_nombre = ""
+        # Buscar hasta 3 líneas hacia arriba por si hay ruido o líneas vacías
+        for offset in range(1, 4):
+            candidate_idx = idx_label_nombre - offset
+            if candidate_idx >= start_idx:
+                candidate_line = lineas[candidate_idx].strip()
+                candidate_norm = lineas_norm[candidate_idx]
+                if (len(candidate_line.split()) >= 2 and 
+                    not any(kw in candidate_norm for kw in ["NOMBRE", "NOMBRES", "APELLIDO", "APELLIDOS", "PATERNO", "MATERNO", "REGISTRADA", "REGISTRADO", "DATOS"]) and
+                    not any(c.isdigit() for c in candidate_line)):
+                    linea_valores_nombre = candidate_line
+                    break
+        
+        if linea_valores_nombre:
+            partes = linea_valores_nombre.split()
+            n_partes = len(partes)
+            best_match = None
+            if 2 <= n_partes <= 7:
+                for i in range(1, n_partes):
+                    n_cand = " ".join(partes[:i])
+                    ap1_cand = partes[i]
+                    ap2_cand = partes[i+1] if i+1 < n_partes else ""
+                    
+                    if validar_candidato_nombre(n_cand, ap1_cand, ap2_cand):
+                        coincide = False
+                        invertido = False
+                        if curp != "No detectado":
+                            coincide, invertido = curp_coincide_con_nombre(curp, n_cand, ap1_cand, ap2_cand)
+                        else:
+                            coincide = True
+                            
+                        if coincide:
+                            paterno = limpiar_basura_del_nombre(ap2_cand if invertido else ap1_cand)
+                            materno = limpiar_basura_del_nombre(ap1_cand if invertido else ap2_cand)
+                            nombres_limpios = limpiar_basura_del_nombre(n_cand)
+                            best_match = {
+                                "nombres": nombres_limpios,
+                                "apellido_paterno": paterno,
+                                "apellido_materno": materno,
+                                "nombre_completo": f"{nombres_limpios} {paterno} {materno}".strip()
+                            }
+                            break
+                            
+            if best_match:
+                nombres = best_match["nombres"]
+                ap1 = best_match["apellido_paterno"]
+                ap2 = best_match["apellido_materno"]
+                found_name = True
+            elif n_partes >= 2:
+                if n_partes >= 3:
+                    nombres = limpiar_basura_del_nombre(" ".join(partes[:-2]))
+                    ap1 = limpiar_basura_del_nombre(partes[-2])
+                    ap2 = limpiar_basura_del_nombre(partes[-1])
+                else:
+                    nombres = limpiar_basura_del_nombre(partes[0])
+                    ap1 = limpiar_basura_del_nombre(partes[1])
+                    ap2 = ""
+                found_name = True
+
+    # 2. Buscar línea de etiquetas de Sexo/Fecha/Lugar de Nacimiento
+    idx_label_datos = -1
+    search_start = idx_label_nombre if idx_label_nombre != -1 else start_idx
+    for idx in range(search_start, len(lineas)):
+        l_norm = lineas_norm[idx]
+        has_sexo = "SEXO" in l_norm or "SEXC" in l_norm
+        has_fecha = "FECHA" in l_norm or "NACIMIENTO" in l_norm
+        if has_sexo and has_fecha:
+            idx_label_datos = idx
+            break
+            
+    sexo = "No detectado"
+    fecha_nac = "No detectada"
+    lugar_nac = "No detectado"
+    
+    if idx_label_datos > 0:
+        linea_valores_datos = ""
+        for offset in range(1, 4):
+            candidate_idx = idx_label_datos - offset
+            if candidate_idx >= search_start:
+                candidate_line = lineas[candidate_idx].strip()
+                candidate_norm = lineas_norm[candidate_idx]
+                if (len(candidate_line.split()) >= 1 and 
+                    candidate_idx != idx_label_nombre and 
+                    candidate_idx != idx_label_nombre - 1 and
+                    not any(kw in candidate_norm for kw in ["SEXO", "FECHA", "NACIMIENTO", "LUGAR", "NOMBRE", "APELLIDO"])):
+                    linea_valores_datos = candidate_line
+                    break
+                    
+        if linea_valores_datos:
+            val_upper = linea_valores_datos.upper()
+            if "FEM" in val_upper or "MUJ" in val_upper:
+                sexo = "MUJER"
+            elif "MAS" in val_upper or "HOM" in val_upper:
+                sexo = "HOMBRE"
+                
+            match_date = re.search(r'(\d{2})[\/\-](\d{2})[\/\-](\d{4})', linea_valores_datos)
+            if match_date:
+                fecha_nac = f"{match_date.group(1)}/{match_date.group(2)}/{match_date.group(3)}"
+                
+            cleaned_lugar = linea_valores_datos
+            if match_date:
+                cleaned_lugar = cleaned_lugar.replace(match_date.group(0), "")
+            for s_word in ["HOMBRE", "MUJER", "MASCULINO", "FEMENINO", "s", "S"]:
+                cleaned_lugar = re.sub(r'\b' + re.escape(s_word) + r'\b', '', cleaned_lugar, flags=re.IGNORECASE)
+                
+            cleaned_lugar = re.sub(r'[^a-zA-ZáéíóúñÁÉÍÓÚÑ\s]', ' ', cleaned_lugar)
+            cleaned_lugar = re.sub(r'\s+', ' ', cleaned_lugar).strip()
+            
+            words_lugar = [w for w in cleaned_lugar.split() if len(w) > 2 and w.upper() not in BLACKLISTED_WORDS]
+            if words_lugar:
+                lugar_nac = " ".join(words_lugar).upper()
+
+    if found_name:
+        return {
+            "nombres": nombres,
+            "apellido_paterno": ap1,
+            "apellido_materno": ap2,
+            "nombre_completo": f"{nombres} {ap1} {ap2}".strip(),
+            "sexo": sexo,
+            "fecha_nac": fecha_nac,
+            "lugar_nacimiento": lugar_nac,
+            "origen": "Structured Anchor Line Parser"
+        }
+    return None
+
+
 def extraer_datos_inteligentes(texto_crudo, tipo_doc, curp, texto_original=None):
-    """Extrae datos basándose en anclas y estructura, no borrando basura"""
     texto_norm = normalizar_texto(texto_crudo)
     lineas = [normalizar_texto(l) for l in texto_crudo.split('\n') if l.strip()]
     
@@ -772,7 +1278,6 @@ def extraer_datos_inteligentes(texto_crudo, tipo_doc, curp, texto_original=None)
         "apellido_paterno": "No detectado", "apellido_materno": "No detectado"
     }
 
-    # PRIORIDAD 1: Si hay MRZ, es la verdad absoluta.
     mrz_datos = extraer_nombre_mrz(texto_crudo)
     if mrz_datos:
         return mrz_datos
@@ -780,9 +1285,7 @@ def extraer_datos_inteligentes(texto_crudo, tipo_doc, curp, texto_original=None)
     discarded_list = []
     candidatos_encontrados = []
 
-    # PRIORIDAD 2: Extracción por anclas según documento
     if tipo_doc == "INE":
-        # En el INE frontal, el nombre suele estar en 3 líneas debajo de la palabra "NOMBRE"
         for i, linea in enumerate(lineas):
             if linea == "NOMBRE":
                 if i + 3 < len(lineas):
@@ -790,7 +1293,6 @@ def extraer_datos_inteligentes(texto_crudo, tipo_doc, curp, texto_original=None)
                     ap2 = lineas[i+2]
                     nombres = lineas[i+3]
                     
-                    # Evitar que se coma otras etiquetas si el nombre es corto
                     if "DOMICILIO" not in nombres and "EDAD" not in ap1:
                         datos["apellido_paterno"] = ap1
                         datos["apellido_materno"] = ap2
@@ -800,9 +1302,12 @@ def extraer_datos_inteligentes(texto_crudo, tipo_doc, curp, texto_original=None)
                         return datos
 
     elif tipo_doc == "ACTA DE NACIMIENTO":
-        matched_candidate = None
+        # Primero intentar extraer usando la estructura de líneas ancla de arriba hacia abajo
+        res_ancla = extraer_datos_por_lineas_ancla(texto_crudo, curp)
+        if res_ancla:
+            candidatos_encontrados.append(res_ancla)
 
-        # Determine header line index to ignore lines before headers
+        matched_candidate = None
         header_keywords = ["ESTADOS UNIDOS MEXICANOS", "REGISTRO CIVIL", "ACTA DE NACIMIENTO", "CERTIFICADO DE NACIMIENTO"]
         first_header_idx = 0
         for idx, l in enumerate(lineas):
@@ -810,7 +1315,6 @@ def extraer_datos_inteligentes(texto_crudo, tipo_doc, curp, texto_original=None)
                 first_header_idx = idx
                 break
 
-        # Try mashed layout first: DATOS DEL REGISTRADO [nombres] NOMBRE [ap1] PRIMER APELLIDO [ap2] SEGUNDO APELLIDO
         patron_mashed = re.search(
             r'DATOS\s+DEL\s+REGISTRADO\s+([A-Z0-9\s]+?)\s+NOMBRE\s+([A-Z0-9\s]+?)\s+PRIMER\s+APELLIDO\s+([A-Z0-9\s]+?)\s+SEGUNDO\s+APELLIDO\s+([A-Z0-9\s]+?)($|\s+(?:CURP|FECHA|SEXO|NACIONALIDAD|ENTIDAD|MUNICIPIO|LUGAR|CRIP|REGISTRADO)\b)',
             texto_norm
@@ -820,7 +1324,6 @@ def extraer_datos_inteligentes(texto_crudo, tipo_doc, curp, texto_original=None)
         if patron_mashed:
             patron = patron_mashed
         else:
-            # Buscar estructura oficial moderna standard
             patron = re.search(
                 r'NOMBRE\s+([A-Z0-9\s]+?)\s+PRIMER\s+APELLIDO\s+([A-Z0-9\s]+?)\s+SEGUNDO\s+APELLIDO\s+([A-Z0-9\s]+?)($|\s+(?:CURP|FECHA|SEXO|NACIONALIDAD|ENTIDAD|MUNICIPIO|LUGAR|CRIP|REGISTRADO)\b)',
                 texto_norm
@@ -831,12 +1334,10 @@ def extraer_datos_inteligentes(texto_crudo, tipo_doc, curp, texto_original=None)
             ap1 = patron.group(2).strip()
             ap2 = patron.group(3).strip()
 
-            # Clean leading single-letter noise (often OCR noise like 'S' from 'NOMBRE(S)')
             n_words = nombres.split()
             if n_words and len(n_words[0]) <= 1:
                 nombres = " ".join(n_words[1:])
 
-            # Clean blacklisted words from each field
             if contiene_basura(nombres) or nombres in INVALID_SINGLE_WORDS: nombres = ""
             if contiene_basura(ap1) or ap1 in INVALID_SINGLE_WORDS: ap1 = ""
             if contiene_basura(ap2) or ap2 in INVALID_SINGLE_WORDS: ap2 = ""
@@ -861,7 +1362,6 @@ def extraer_datos_inteligentes(texto_crudo, tipo_doc, curp, texto_original=None)
             else:
                 discarded_list.append(f"({nombres}, {ap1}, {ap2}) [Anchor Regex] -> Rejected: Failed validation checks")
 
-        # Fallback simple
         patron_simple = re.search(
             r'DATOS\s+DEL\s+REGISTRADO.*?NOMBRE\s+([A-Z\s]+)',
             texto_norm
@@ -869,24 +1369,18 @@ def extraer_datos_inteligentes(texto_crudo, tipo_doc, curp, texto_original=None)
 
         if patron_simple:
             nombre_linea = patron_simple.group(1).strip()
-
-            # Cortar basura frecuente
             nombre_linea = re.split(
                 r'FECHA|SEXO|CURP|NACIONALIDAD|ENTIDAD|MUNICIPIO',
                 nombre_linea
             )[0].strip()
 
-            # Limpiar palabras basura del OCR
             PALABRAS_BASURA = [
                 "OFICIALIA", "LIBRO", "ACTA", "LOCALIDAD", "MUNICIPIO", "ENTIDAD", "CRIP", "REGISTRADO", "DATOS"
             ]
-
             for basura in PALABRAS_BASURA:
                 nombre_linea = nombre_linea.replace(basura, "")
 
-            # Limpiar espacios dobles
             nombre_linea = re.sub(r'\s+', ' ', nombre_linea).strip()
-
             partes = nombre_linea.split()
 
             if len(partes) >= 3:
@@ -894,7 +1388,6 @@ def extraer_datos_inteligentes(texto_crudo, tipo_doc, curp, texto_original=None)
                 ap1_val = partes[-2]
                 ap2_val = partes[-1]
 
-                # Clean blacklisted words from each field
                 if contiene_basura(nombres_val) or nombres_val in INVALID_SINGLE_WORDS: nombres_val = ""
                 if contiene_basura(ap1_val) or ap1_val in INVALID_SINGLE_WORDS: ap1_val = ""
                 if contiene_basura(ap2_val) or ap2_val in INVALID_SINGLE_WORDS: ap2_val = ""
@@ -918,19 +1411,16 @@ def extraer_datos_inteligentes(texto_crudo, tipo_doc, curp, texto_original=None)
                 else:
                     discarded_list.append(f"({nombres_val}, {ap1_val}, {ap2_val}) [Simple Regex] -> Rejected: Failed validation checks")
 
-        # Fallback to candidate line search matching CURP
         if curp != "No detectado":
             res_curp = buscar_nombre_por_curp(texto_crudo, curp, discarded_list, first_header_idx)
             if res_curp:
                 candidatos_encontrados.append(res_curp)
 
-        # Fallback de proximidad por etiquetas si no se encontró candidato lineal
         if not candidatos_encontrados:
             res_prox = extraer_por_proximidad_etiquetas(texto_crudo, curp)
             if res_prox:
                 candidatos_encontrados.append(res_prox)
 
-        # Print/Log candidate verification diagnostics
         try:
             with open("ocr_output.log", "a", encoding="utf-8") as log_file:
                 log_file.write("\n=== OCR NAME CANDIDATES SEARCH DIAGNOSTICS ===\n")
@@ -945,7 +1435,6 @@ def extraer_datos_inteligentes(texto_crudo, tipo_doc, curp, texto_original=None)
         except Exception as e:
             print(f"[ERROR] Failed to write diagnostics to log: {str(e)}")
 
-        # Decision
         if candidatos_encontrados:
             final_cand = candidatos_encontrados[0]
             nombres = final_cand["nombres"]
@@ -958,7 +1447,6 @@ def extraer_datos_inteligentes(texto_crudo, tipo_doc, curp, texto_original=None)
             if ap2_clean != ap2:
                 ap2 = ap2_clean
                 
-            # CURP / Evidence correction
             txt_for_evidence = texto_original if texto_original else texto_crudo
             ap1_ev, ap2_ev = corregir_apellidos_con_evidencia_y_curp(nombres, ap1, ap2, curp, txt_for_evidence)
             if ap1_ev != ap1:
@@ -971,6 +1459,12 @@ def extraer_datos_inteligentes(texto_crudo, tipo_doc, curp, texto_original=None)
             datos["apellido_materno"] = ap2
             datos["nombre_completo"] = f"{nombres} {ap1} {ap2}".strip()
             datos["origen"] = final_cand.get("origen", "Desconocido")
+            if "sexo" in final_cand:
+                datos["sexo"] = final_cand["sexo"]
+            if "fecha_nac" in final_cand:
+                datos["fecha_nac"] = final_cand["fecha_nac"]
+            if "lugar_nacimiento" in final_cand:
+                datos["lugar_nacimiento"] = final_cand["lugar_nacimiento"]
             return datos
         else:
             res_raw = extraer_nombre_acta_por_lineas_crudas(texto_crudo, curp=curp, texto_original=texto_original)
@@ -981,14 +1475,11 @@ def extraer_datos_inteligentes(texto_crudo, tipo_doc, curp, texto_original=None)
                 datos["nombre_completo"] = res_raw["nombre_completo"]
                 datos["origen"] = res_raw["origen"]
                 return datos
-            # Return empty/No detectado fields rather than incorrect labels
             return datos
 
-    # PRIORIDAD 3: Rescate Genérico si todo falla (for non birth certificates)
     if curp != "No detectado":
         for i, linea in enumerate(lineas):
             if curp in linea.replace(" ", ""):
-                # El nombre suele estar arriba de la CURP
                 if i > 0 and len(lineas[i-1].split()) >= 2:
                     candidato = lineas[i-1]
                     partes = candidato.split()
@@ -1033,6 +1524,11 @@ def extraer_ubicaciones(texto_crudo, tipo_doc):
                 if len(val) > 2:
                     lugar_nacimiento = val
 
+        if lugar_nacimiento == "No detectado" or any(lw in lugar_nacimiento.upper().split() for lw in ["PRIMER", "APELLIDO", "SEGUNDO", "NOMBRE", "NOMBRES", "SEXO", "FECHA", "NACIMIENTO", "LUGAR"]):
+            lugar_detectado = detectar_estado_desde_texto(texto_crudo)
+            if lugar_detectado:
+                lugar_nacimiento = lugar_detectado
+
     return lugar_nacimiento, lugar_residencia
 
 # --- ORQUESTADOR PRINCIPAL ---
@@ -1047,10 +1543,9 @@ def procesar_texto(texto, vision_response=None):
     except Exception as log_ex:
         print(f"[ERROR] Failed to write initial OCR logs: {str(log_ex)}")
 
-    # Slice the text to only include the registered person's data (exclude parents/filiacion data)
     texto_upper = texto.upper()
     filiacion_idx = -1
-    for keyword in ["FILIACION", "FILIACIÓN", "DATOS DE FILIACION", "DATOS DE FILIACIÓN", "DATOS DE LOS PADRES", "PADRES", "PROGENITORES"]:
+    for keyword in ["DATOS DE FILIACION", "DATOS DE FILIACIÓN", "DATOS DE LOS PADRES", "DATOS DE FILIACION DE LA PERSONA REGISTRADA", "DATOS DE FILIACIÓN DE LA PERSONA REGISTRADA"]:
         idx = texto_upper.find(keyword)
         if idx != -1:
             if filiacion_idx == -1 or idx < filiacion_idx:
@@ -1063,9 +1558,8 @@ def procesar_texto(texto, vision_response=None):
 
     texto_norm = normalizar_texto(texto_para_procesar)
     tipo_doc = determinar_tipo_documento(texto_norm)
-    curp = extraer_curp_segura(texto) # Scan full text for CURP
+    curp = extraer_curp_segura(texto)
     
-    # Extraer Nombres
     info_doc = None
     edad = "No calculada"
     fecha_nac = "No detectada"
@@ -1085,7 +1579,6 @@ def procesar_texto(texto, vision_response=None):
             if ap2_clean != ap2:
                 ap2 = ap2_clean
                 
-            # CURP / Evidence correction
             ap1_ev, ap2_ev = corregir_apellidos_con_evidencia_y_curp(nombres, ap1, ap2, curp, texto)
             if ap1_ev != ap1:
                 ap1 = ap1_ev
@@ -1106,38 +1599,110 @@ def procesar_texto(texto, vision_response=None):
             if spatial_data["lugar_nacimiento"] != "No detectado":
                 lugar_nac = spatial_data["lugar_nacimiento"]
 
-    # Fallback to standard intelligence extraction if layout failed or wasn't run
-    if not info_doc or not info_doc["nombres"] or info_doc["nombres"] == "No detectado":
-        info_doc = extraer_datos_inteligentes(texto_para_procesar, tipo_doc, curp, texto_original=texto)
+    necesita_fallback = (
+        not info_doc or 
+        not info_doc.get("nombres") or 
+        info_doc.get("nombres") == "No detectado" or
+        fecha_nac == "No detectada" or
+        sexo == "No detectado" or
+        lugar_nac == "No detectado" or
+        any(lw in (lugar_nac or "").upper().split() for lw in ["PRIMER", "APELLIDO", "SEGUNDO", "NOMBRE", "NOMBRES", "SEXO", "FECHA", "NACIMIENTO", "LUGAR"])
+    )
+    if necesita_fallback:
+        fallback_info = extraer_datos_inteligentes(texto_para_procesar, tipo_doc, curp, texto_original=texto)
+        if fallback_info:
+            if not info_doc or not info_doc.get("nombres") or info_doc.get("nombres") == "No detectado":
+                info_doc = fallback_info
+            
+            if "sexo" in fallback_info and fallback_info["sexo"] != "No detectado":
+                if sexo == "No detectado" or not sexo:
+                    sexo = fallback_info["sexo"]
+                    
+            if "fecha_nac" in fallback_info and fallback_info["fecha_nac"] != "No detectada":
+                if fecha_nac == "No detectada" or not fecha_nac:
+                    fecha_nac = fallback_info["fecha_nac"]
+                    
+            if "lugar_nacimiento" in fallback_info and fallback_info["lugar_nacimiento"] != "No detectado":
+                if lugar_nac == "No detectado" or not lugar_nac or any(lw in lugar_nac.upper().split() for lw in ["PRIMER", "APELLIDO", "SEGUNDO", "NOMBRE", "NOMBRES", "SEXO", "FECHA", "NACIMIENTO", "LUGAR"]):
+                    lugar_nac = fallback_info["lugar_nacimiento"]
 
-    # Extraer Datos Fijos de CURP (Lo más seguro)
+    if curp != "No detectado" and info_doc and info_doc.get("nombres") != "No detectado":
+        n_clean, a1_clean, a2_clean = limpiar_nombre_con_curp(
+            info_doc.get("nombres"), info_doc.get("apellido_paterno"), info_doc.get("apellido_materno"), curp
+        )
+        info_doc["nombres"] = n_clean
+        info_doc["apellido_paterno"] = a1_clean
+        info_doc["apellido_materno"] = a2_clean
+        info_doc["nombre_completo"] = f"{n_clean} {a1_clean} {a2_clean}".strip()
+
+        curp = corregir_curp_con_nombre(
+            curp, info_doc.get("nombres"), info_doc.get("apellido_paterno"), info_doc.get("apellido_materno")
+        )
+
     if curp != "No detectado":
         edad, curp_fecha = calcular_datos_curp(curp)
         if fecha_nac == "No detectada" or not fecha_nac:
             fecha_nac = curp_fecha
         letra_sexo = curp[10]
-        curp_sexo = "MASCULINO" if letra_sexo == 'H' else "FEMENINO" if letra_sexo == 'M' else "OTRO"
+        curp_sexo = "HOMBRE" if letra_sexo == 'H' else "MUJER" if letra_sexo == 'M' else "OTRO"
         if sexo == "No detectado" or not sexo:
             sexo = curp_sexo
     else:
         if sexo == "No detectado" or not sexo:
             texto_upper_proc = texto_norm.upper()
             if "FEMENINO" in texto_upper_proc or "MUJER" in texto_upper_proc:
-                sexo = "FEMENINO"
+                sexo = "MUJER"
             elif "MASCULINO" in texto_upper_proc or "HOMBRE" in texto_upper_proc:
-                sexo = "MASCULINO"
+                sexo = "HOMBRE"
 
-    # Ubicaciones y Estado
     lugar_nac_text, lugar_res = extraer_ubicaciones(texto_para_procesar, tipo_doc)
     if lugar_nac == "No detectado" or not lugar_nac:
         lugar_nac = lugar_nac_text
     if lugar_nac == "No detectado" and curp != "No detectado":
         lugar_nac = obtener_estado_curp(curp)
 
+    if curp == "No detectado" or len(curp) != 18:
+        nombres_c = info_doc.get("nombres") if info_doc else None
+        ap1_c = info_doc.get("apellido_paterno") if info_doc else None
+        ap2_c = info_doc.get("apellido_materno") if info_doc else None
+        
+        reconstructed = reconstruir_curp_danada(texto, nombres_c, ap1_c, ap2_c, fecha_nac, sexo, lugar_nac)
+        if reconstructed:
+            curp = reconstructed
+            edad, curp_fecha = calcular_datos_curp(curp)
+            if fecha_nac == "No detectada" or not fecha_nac:
+                fecha_nac = curp_fecha
+            letra_sexo = curp[10]
+            curp_sexo = "HOMBRE" if letra_sexo == 'H' else "MUJER" if letra_sexo == 'M' else "OTRO"
+            if sexo == "No detectado" or not sexo:
+                sexo = curp_sexo
+            if lugar_nac == "No detectado" or not lugar_nac:
+                lugar_nac = obtener_estado_curp(curp)
+
+    if curp != "No detectado":
+        n_limpio, ap1_limpio, ap2_limpio = limpiar_nombre_con_curp(
+            info_doc.get("nombres"), info_doc.get("apellido_paterno"), info_doc.get("apellido_materno"), curp
+        )
+        info_doc["nombres"] = n_limpio
+        info_doc["apellido_paterno"] = ap1_limpio
+        info_doc["apellido_materno"] = ap2_limpio
+        info_doc["nombre_completo"] = f"{n_limpio} {ap1_limpio} {ap2_limpio}".strip()
+
+    validacion_api = validar_verificamex(curp)
+    if validacion_api.get("verificado") and validacion_api.get("curp_oficial"):
+        curp_oficial = validacion_api["curp_oficial"]
+        if curp != curp_oficial:
+            curp = curp_oficial
+            n_limpio, ap1_limpio, ap2_limpio = limpiar_nombre_con_curp(
+                info_doc.get("nombres"), info_doc.get("apellido_paterno"), info_doc.get("apellido_materno"), curp
+            )
+            info_doc["nombres"] = n_limpio
+            info_doc["apellido_paterno"] = ap1_limpio
+            info_doc["apellido_materno"] = ap2_limpio
+            info_doc["nombre_completo"] = f"{n_limpio} {ap1_limpio} {ap2_limpio}".strip()
+
     nacionalidad = "MEXICANA" if "MEXIC" in texto_norm else "EXTRANJERA"
     estado = "MENOR DE EDAD" if isinstance(edad, int) and edad < 18 else "ADULTO"
-    
-    validacion_api = validar_verificamex(curp)
     
     resultado = {
         "documento": tipo_doc,
@@ -1154,6 +1719,7 @@ def procesar_texto(texto, vision_response=None):
         "fecha_nac": fecha_nac,
         "edad": f"{edad} años" if isinstance(edad, int) else edad,
         "estado": estado,
+        "clasificacion": estado,
         "validacion": validacion_api,
         "texto_crudo": texto
     }
@@ -1206,24 +1772,27 @@ def preprocesar_imagen_acta(image_content):
         if img is None:
             return None
             
-        # 1. Convierte a escala de grises maximizando canales de color para desvanecer marcas de agua claras/verdes/grises
-        gray = np.max(img, axis=2)
-        
-        # 2. Aumentar contraste del texto principal con CLAHE
-        clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
-        contrast = clahe.apply(gray)
-        
-        # 3. Aplicar binarización adaptativa (Gaussian) para remover sombreado y patrones de fondo
-        binarized = cv2.adaptiveThreshold(
-            contrast, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 25, 15
-        )
-        
-        # 4. Limpieza ligera de ruido (median blur)
-        cleaned = cv2.medianBlur(binarized, 3)
-        
-        # Codificar de vuelta a bytes PNG
-        _, encoded_img = cv2.imencode('.png', cleaned)
-        return encoded_img.tobytes()
+        try:
+            # Separación de Canales (Canal Verde) + División de Fondo para remover marcas de agua y sombras
+            b, g, r = cv2.split(img)
+            kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (21, 21))
+            background = cv2.morphologyEx(g, cv2.MORPH_DILATE, kernel)
+            normalized = cv2.divide(g, background, scale=255)
+            _, thresh = cv2.threshold(normalized, 180, 255, cv2.THRESH_BINARY)
+            cleaned = cv2.medianBlur(thresh, 3)
+            _, encoded_img = cv2.imencode('.png', cleaned)
+            return encoded_img.tobytes()
+        except Exception as pe:
+            print(f"[WARNING] Falló preprocesamiento avanzado de canales, usando método estándar: {str(pe)}")
+            gray = np.max(img, axis=2)
+            clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
+            contrast = clahe.apply(gray)
+            binarized = cv2.adaptiveThreshold(
+                contrast, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 25, 15
+            )
+            cleaned = cv2.medianBlur(binarized, 3)
+            _, encoded_img = cv2.imencode('.png', cleaned)
+            return encoded_img.tobytes()
     except Exception as e:
         print(f"[ERROR] Error al preprocesar la imagen del acta: {str(e)}")
         return None
@@ -1253,10 +1822,6 @@ def limpiar_contaminacion_s(valor, ocr_text_alternativo):
     return " ".join(palabras_limpias)
 
 def extraer_datos_acta_por_layout(vision_response, curp="No detectado"):
-    """
-    Extrae los datos del acta de nacimiento usando las coordenadas de las palabras (boundingPoly).
-    Retorna un diccionario con: nombres, apellido_paterno, apellido_materno, sexo, fecha_nac, lugar_nacimiento, origen.
-    """
     if not vision_response:
         return None
 
@@ -1269,7 +1834,6 @@ def extraer_datos_acta_por_layout(vision_response, curp="No detectado"):
     if not annotations or len(annotations) <= 1:
         return None
 
-    # Build the words list with coordinates
     words = []
     for annot in annotations[1:]:
         if hasattr(annot, 'description'):
@@ -1328,7 +1892,6 @@ def extraer_datos_acta_por_layout(vision_response, curp="No detectado"):
         avg_y = sum(w['y'] for w in line) / len(line)
         log_lines.append(f"  Line {idx:02d} (Y={avg_y:.1f}): {line_txt}")
     
-    # Identify Vertical Region
     y_start = None
     y_end = None
     
@@ -1347,7 +1910,6 @@ def extraer_datos_acta_por_layout(vision_response, curp="No detectado"):
                 log_lines.append(f"Start Header matched: '{line_txt}' -> y_start={y_start}")
                 break
 
-    # Adjust y_start if labels appear above it
     y_label_min = None
     for line in all_lines:
         line_txt = normalizar_texto(" ".join(w['text'] for w in line))
@@ -1433,11 +1995,9 @@ def extraer_datos_acta_por_layout(vision_response, curp="No detectado"):
             w = line[i]
             norm = normalizar_texto(w['text'])
             
-            # Check two-word phrases first
             if i + 1 < len(line):
                 w_next = line[i+1]
                 phrase2 = normalizar_texto(w['text'] + " " + w_next['text'])
-                
                 if phrase2 in ["PRIMER APELLIDO", "APELLIDO PATERNO", "APELLIDOPATERNO"]:
                     labels["primer_apellido"] = merge_boxes(w, w_next)
                     i += 2
@@ -1455,7 +2015,6 @@ def extraer_datos_acta_por_layout(vision_response, curp="No detectado"):
                     i += 2
                     continue
                     
-            # Check three-word phrases
             if i + 2 < len(line):
                 w_next = line[i+1]
                 w_next2 = line[i+2]
@@ -1469,7 +2028,6 @@ def extraer_datos_acta_por_layout(vision_response, curp="No detectado"):
                     i += 3
                     continue
 
-            # Single word fallbacks
             if norm in ["NOMBRE", "NOMBRES", "NOMBRE(S)", "NOMBRES(S)"] or "NOMBRE" in norm or "NOMRE" in norm:
                 labels["nombres"] = w
             elif "PATERNO" in norm or "PRIMER" in norm:
@@ -1495,15 +2053,15 @@ def extraer_datos_acta_por_layout(vision_response, curp="No detectado"):
             for i in range(1, n):
                 nombres = " ".join(partes[:i])
                 ap1 = partes[i]
-                ap2 = " ".join(partes[i+1:]) if i+1 < n else ""
-                if curp_coincide_con_nombre(curp_code, nombres, ap1, ap2):
+                ap2 = partes[i+1] if i+1 < n else ""
+                if curp_coincide_con_nombre(curp_code, nombres, ap1, ap2)[0]:
                     return nombres, ap1, ap2
             if n >= 3:
                 for i in range(2, n):
                     ap1 = partes[0]
                     ap2 = partes[1]
                     nombres = " ".join(partes[2:])
-                    if curp_coincide_con_nombre(curp_code, nombres, ap1, ap2):
+                    if curp_coincide_con_nombre(curp_code, nombres, ap1, ap2)[0]:
                         return nombres, ap1, ap2
         if n >= 3:
             nombres = " ".join(partes[:-2])
@@ -1549,10 +2107,12 @@ def extraer_datos_acta_por_layout(vision_response, curp="No detectado"):
     for v_idx, relative_pos in val_lines_to_try:
         value_line = region_lines[v_idx]
         
-        # Partition value line
         line_words = []
         for w in value_line:
             wt = w['text'].strip()
+            # Ignorar palabras con caracteres de control, paréntesis o signos raros
+            if not re.match(r'^[a-zA-ZáéíóúñÁÉÍÓÚÑüÜ\.\-]+$', wt):
+                continue
             norm = normalizar_texto(wt)
             if not norm or wt in [":", ",", ";", "-", "/"] or norm in EXCLUDED_NAME_WORDS or norm in BLACKLISTED_WORDS:
                 continue
@@ -1599,7 +2159,7 @@ def extraer_datos_acta_por_layout(vision_response, curp="No detectado"):
             discard_reasons = []
             if validar_candidato_nombre(n_str, a1_str, a2_str, discard_reasons):
                 matches_curp = False
-                if curp != "No detectado" and curp_coincide_con_nombre(curp, n_str, a1_str, a2_str):
+                if curp != "No detectado" and curp_coincide_con_nombre(curp, n_str, a1_str, a2_str)[0]:
                     matches_curp = True
                 
                 cand_score = 5
@@ -1637,6 +2197,8 @@ def extraer_datos_acta_por_layout(vision_response, curp="No detectado"):
             words_cand = []
             for w in line:
                 wt = w['text'].strip()
+                if not re.match(r'^[a-zA-ZáéíóúñÁÉÍÓÚÑüÜ\.\-]+$', wt):
+                    continue
                 norm = normalizar_texto(wt)
                 if not norm or wt in [":", ",", ";", "-", "/"] or norm in EXCLUDED_NAME_WORDS or norm in BLACKLISTED_WORDS:
                     continue
@@ -1655,7 +2217,6 @@ def extraer_datos_acta_por_layout(vision_response, curp="No detectado"):
                     log_lines.append(f"  Fallback line '{' '.join(words_cand)}' discarded: {', '.join(discard_reasons)}")
         return None, None, None
 
-    # Fallback to complete line parser if fields are empty
     if not val_nombres or not val_ap1:
         log_lines.append("Fields empty or layout parsing failed, running fallback complete line search...")
         fallback_n, fallback_ap1, fallback_ap2 = fallback_nombre_linea_completa(region_lines, label_line_idx)
@@ -1666,7 +2227,6 @@ def extraer_datos_acta_por_layout(vision_response, curp="No detectado"):
             origen_names = "Layout Fallback Complete Line"
             log_lines.append(f"Fallback extracted: Nombres='{val_nombres}', Ap1='{val_ap1}', Ap2='{val_ap2}'")
 
-    # Metadata parser
     meta_labels = {}
     for line in region_lines:
         line_labels = find_labels_in_line(line)
@@ -1689,18 +2249,14 @@ def extraer_datos_acta_por_layout(vision_response, curp="No detectado"):
                 continue
             
             dx = abs(w['x'] - lcx)
-            
-            # Below label: Y increases downwards
             dy_below = w['y'] - lcy
             if 5 < dy_below < 80 and dx < 100:
                 below_candidates.append(w)
                 
-            # Above label
             dy_above = lcy - w['y']
             if 5 < dy_above < 80 and dx < 100:
                 above_candidates.append(w)
                 
-            # Right next to label Y center
             dy_right = abs(w['y'] - lcy)
             dx_right = w['x'] - lcx
             if dy_right < 15 and 10 < dx_right < 300:
@@ -1731,13 +2287,12 @@ def extraer_datos_acta_por_layout(vision_response, curp="No detectado"):
     if "lugar_nacimiento" in meta_labels:
         val_lugar = obtener_valor_campo_coordenadas(meta_labels["lugar_nacimiento"], region_words)
 
-    # Format and clean extracted metadata
     if val_sexo:
         sex_upper = normalizar_texto(val_sexo)
         if "FEM" in sex_upper or "MUJ" in sex_upper:
-            val_sexo = "FEMENINO"
+            val_sexo = "MUJER"
         elif "MAS" in sex_upper or "HOM" in sex_upper:
-            val_sexo = "MASCULINO"
+            val_sexo = "HOMBRE"
         else:
             val_sexo = ""
             
@@ -1755,12 +2310,12 @@ def extraer_datos_acta_por_layout(vision_response, curp="No detectado"):
             dd_val = match_slash.group(1).zfill(2)
             mm_val = match_slash.group(2).zfill(2)
             yyyy_val = match_slash.group(3)
-            val_fecha = f"{yyyy_val}-{mm_val}-{dd_val}"
+            val_fecha = f"{dd_val}/{mm_val}/{yyyy_val}"
         elif match_written and match_written.group(2) in MESES:
             dd_val = match_written.group(1).zfill(2)
             mm_val = MESES[match_written.group(2)]
             yyyy_val = match_written.group(3)
-            val_fecha = f"{yyyy_val}-{mm_val}-{dd_val}"
+            val_fecha = f"{dd_val}/{mm_val}/{yyyy_val}"
         else:
             val_fecha = ""
             
@@ -1797,17 +2352,14 @@ def evaluar_calidad_extraccion(datos):
     score = 0
     es_acta = datos.get("documento") == "ACTA DE NACIMIENTO"
     
-    # 1. CURP evaluation
     curp = datos.get("curp")
     if curp and curp != "No detectado" and len(curp) == 18:
         score += 3
         
-    # 2. Names and Surnames evaluation
     nombres = datos.get("nombres", "No detectado")
     ap_pat = datos.get("apellido_paterno", "No detectado")
     ap_mat = datos.get("apellido_materno", "No detectado")
     
-    # Penalize empty fields
     if not nombres or nombres == "No detectado" or nombres.strip() == "":
         score -= 5
     else:
@@ -1821,7 +2373,6 @@ def evaluar_calidad_extraccion(datos):
     if ap_mat and ap_mat != "No detectado" and ap_mat.strip() != "":
         score += 2 if es_acta else 1
         
-    # Penalize using label words as data
     LABEL_WORDS = ["PRIMER", "APELLIDO", "SEGUNDO", "NOMBRE", "NOMBRES", "SEXO", "FECHA", "NACIMIENTO", "LUGAR"]
     for field in [nombres, ap_pat, ap_mat]:
         if field and field != "No detectado":
@@ -1829,7 +2380,6 @@ def evaluar_calidad_extraccion(datos):
             if any(lw in field_up.split() for lw in LABEL_WORDS):
                 score -= 10
                 
-    # Penalize forbidden words with strong negative score
     FORBIDDEN_WORDS = [
         "UNIDOS", "UNITS", "UNITOS", "MEXICA", "MEXICAL", "MEXICANO", "MEXICANOS",
         "ESTADOS", "TADOS", "INICIO", "INILOS", "OS", "CO", "COMPARECIO",
@@ -1841,19 +2391,16 @@ def evaluar_calidad_extraccion(datos):
             if any(fw in field_up.split() for fw in FORBIDDEN_WORDS):
                 score -= 20
                 
-    # Penalize watermarked contamination (ends with 'S' and matches watermark words nearby)
     for field in [ap_pat, ap_mat]:
         if field and field != "No detectado" and len(field) > 2:
             if field.upper().endswith('S') and any(w in field.upper() for w in ["ESTADOS", "UNIDOS", "MEXICANOS", "GOBIERNO", "CIVIL"]):
                 score -= 3
 
-    # Strong negative penalty for CURP mismatch (if CURP exists and has length >= 4)
     if curp and curp != "No detectado" and len(curp) >= 4:
         if nombres and ap_pat and nombres != "No detectado" and ap_pat != "No detectado":
-            if not curp_coincide_con_nombre(curp, nombres, ap_pat, ap_mat):
+            if not curp_coincide_con_nombre(curp, nombres, ap_pat, ap_mat)[0]:
                 score -= 15
 
-    # 3. Origen / Confidence evaluation
     origen = datos.get("origen", "")
     if "Spatial Layout Parser" in origen:
         score += 4
@@ -1868,7 +2415,6 @@ def evaluar_calidad_extraccion(datos):
     elif "Proximity/Line Match" in origen:
         score += 1
         
-    # 4. Metadata evaluation
     fecha_nac = datos.get("fecha_nac")
     if fecha_nac and fecha_nac != "No detectada" and fecha_nac.strip() != "":
         score += 2 if es_acta else 1
@@ -1883,15 +2429,27 @@ def evaluar_calidad_extraccion(datos):
         
     return score
 
-def preprocesar_imagen_canales(image_content):
-    """
-    Retorna la imagen original intacta.
-    Se desactivó el escalado de grises y binarización para evitar problemas con la legibilidad
-    y guardado de documentos a color en el sistema.
-    """
-    return image_content
+def preprocesar_imagen_canales(image_content, grises_active=False):
+    if not grises_active:
+        return image_content
+    try:
+        nparr = np.frombuffer(image_content, np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        if img is None:
+            return image_content
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        # Binarización adaptativa OTSU
+        _, binarized = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        _, encoded_img = cv2.imencode('.png', binarized)
+        return encoded_img.tobytes()
+    except Exception as e:
+        print(f"[ERROR] Error al preprocesar la imagen en canales: {str(e)}")
+        return image_content
 
-def ejecutar_vision_ocr(filename, content):
+# --- ADAPTADOR TESSERACT OCR LOCAL ---
+
+
+def ejecutar_vision_ocr(filename, content, grises_active=False):
     if filename.endswith('.pdf'):
         doc = fitz.open(stream=content, filetype="pdf")
         page = doc.load_page(0) 
@@ -1900,10 +2458,9 @@ def ejecutar_vision_ocr(filename, content):
     else:
         image_content = content
 
-    # Aplicar preprocesamiento de canales para eliminar marcas de agua
-    image_content = preprocesar_imagen_canales(image_content)
-
+    image_content = preprocesar_imagen_canales(image_content, grises_active=grises_active)
     img_b64 = base64.b64encode(image_content).decode('utf-8')
+
     client = vision.ImageAnnotatorClient()
     image = vision.Image(content=image_content)
     response = client.document_text_detection(image=image)
@@ -1913,7 +2470,6 @@ def ejecutar_vision_ocr(filename, content):
     if not texto_original:
         return None, None, None, None
         
-    # Determinamos si el documento es un acta de nacimiento
     es_acta_por_nombre = any(k in filename.lower() for k in ["acta", "nacimiento", "birth", "cert"])
     texto_norm = normalizar_texto(texto_original)
     es_acta = (determinar_tipo_documento(texto_norm) == "ACTA DE NACIMIENTO") or es_acta_por_nombre
@@ -1921,7 +2477,6 @@ def ejecutar_vision_ocr(filename, content):
     if not es_acta:
         return texto_original, img_b64, response, None
         
-    # Proceso dual solo para actas de nacimiento
     preprocessed_content = preprocesar_imagen_acta(image_content)
     if preprocessed_content:
         try:
@@ -1933,12 +2488,10 @@ def ejecutar_vision_ocr(filename, content):
                 datos_original = procesar_texto(texto_original, response)
                 datos_preprocesado = procesar_texto(texto_preprocesado, response_prep)
                 
-                # Cross-clean trailing 'S' watermark contamination
                 for field_key in ['nombres', 'apellido_paterno', 'apellido_materno']:
                     datos_original[field_key] = limpiar_contaminacion_s(datos_original.get(field_key), texto_preprocesado)
                     datos_preprocesado[field_key] = limpiar_contaminacion_s(datos_preprocesado.get(field_key), texto_original)
                     
-                # Apply CURP/Evidence correction
                 ap1_orig_c, ap2_orig_c = corregir_apellidos_con_evidencia_y_curp(
                     datos_original['nombres'], datos_original['apellido_paterno'], datos_original['apellido_materno'], 
                     datos_original['curp'], texto_original
@@ -1953,14 +2506,12 @@ def ejecutar_vision_ocr(filename, content):
                 datos_preprocesado['apellido_paterno'] = ap1_prep_c
                 datos_preprocesado['apellido_materno'] = ap2_prep_c
 
-                # Re-calculate name_completo after cleaning
                 datos_original['nombre_completo'] = f"{datos_original['nombres']} {datos_original['apellido_paterno']} {datos_original['apellido_materno']}".strip()
                 datos_preprocesado['nombre_completo'] = f"{datos_preprocesado['nombres']} {datos_preprocesado['apellido_paterno']} {datos_preprocesado['apellido_materno']}".strip()
                 
                 score_orig = evaluar_calidad_extraccion(datos_original)
                 score_prep = evaluar_calidad_extraccion(datos_preprocesado)
                 
-                # Guardar internamente en log
                 try:
                     with open("ocr_output.log", "a", encoding="utf-8") as log_file:
                         log_file.write("\n=== OCR DUAL-FLOW ACTA DE NACIMIENTO COMPARISON ===\n")
@@ -1971,24 +2522,25 @@ def ejecutar_vision_ocr(filename, content):
                 except Exception as log_ex:
                     print(f"[ERROR] Failed to write comparison logs: {str(log_ex)}")
                 
-                # Usar el preprocesado solo si mejora la extracción de campos relevantes
                 if score_prep > score_orig:
-                    return texto_preprocesado, img_b64, response_prep, datos_preprocesado
+                    img_prep_b64 = base64.b64encode(preprocessed_content).decode('utf-8')
+                    return texto_preprocesado, img_prep_b64, response_prep, datos_preprocesado
                 else:
                     return texto_original, img_b64, response, datos_original
         except Exception as e:
-            print(f"[ERROR] Error calling Vision on preprocessed image: {str(e)}")
+            print(f"[ERROR] Error running Vision on preprocessed image: {str(e)}")
             
-    # Fallback to parsing original if preprocessing dual-flow fails
     datos_original = procesar_texto(texto_original, response)
     return texto_original, img_b64, response, datos_original
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
     datos = None
+    grises_active = False
     if request.method == 'POST':
         archivo_id = request.files.get('file_id')
         archivo_formato = request.files.get('file_formato')
+        grises_active = request.form.get('grises') == 'true'
         
         if archivo_id and archivo_id.filename != '':
             try:
@@ -2002,11 +2554,11 @@ def index():
                     form_content = archivo_formato.read()
 
                 with ThreadPoolExecutor(max_workers=2) as executor:
-                    futuro_id = executor.submit(ejecutar_vision_ocr, id_name, id_content)
+                    futuro_id = executor.submit(ejecutar_vision_ocr, id_name, id_content, grises_active)
                     
                     futuro_formato = None
                     if form_content:
-                        futuro_formato = executor.submit(ejecutar_vision_ocr, form_name, form_content)
+                        futuro_formato = executor.submit(ejecutar_vision_ocr, form_name, form_content, grises_active)
                         
                     texto_id, img_id_b64, response_id, datos_id = futuro_id.result()
                     texto_formato, img_form_b64, response_formato, datos_formato = (futuro_formato.result() if futuro_formato else (None, None, None, None))
@@ -2027,7 +2579,7 @@ def index():
             except Exception as e:
                 datos = {"error": f"Error técnico: {str(e)}"}
                 
-    return render_template('index.html', datos=datos)
+    return render_template('index.html', datos=datos, grises_active=grises_active)
 
 if __name__ == '__main__':
     ocr_host = os.getenv("OCR_HOST", "127.0.0.1")
