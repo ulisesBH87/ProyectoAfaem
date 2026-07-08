@@ -238,6 +238,9 @@ def obtener_solicitud_detalle_repo(db:Session, solicitud_id: int):
         DocumentosEntregados.SolicitudId == solicitud_id
     ).all()
 
+    from app.modelos.catalogo_tipos_solicitud import CatalogoTiposSolicitud
+    tipo_sol_rel = db.query(CatalogoTiposSolicitud).filter(CatalogoTiposSolicitud.TipoSolicitudId == solicitud.TipoSolicitudId).first()
+    tipo_solicitud_nombre = tipo_sol_rel.Nombre if tipo_sol_rel else ""
 
     return {
         "Nombre": persona.Nombre if persona else "",
@@ -250,7 +253,7 @@ def obtener_solicitud_detalle_repo(db:Session, solicitud_id: int):
         "Email": usuario.Correo if usuario else "",
         "FechaSolicitud": solicitud.FechaSolicitud,
         "EstatusSolicitud": solicitud.CatalogoEstadosValidacion.Nombre if solicitud and solicitud.CatalogoEstadosValidacion else "",
-        "TipoSolicitud": solicitud.CatalogoTiposAfiliacionRelacion.NombreAfiliacion if solicitud and solicitud.CatalogoTiposAfiliacionRelacion else "",
+        "TipoSolicitud": tipo_solicitud_nombre,
         "SolicitudId": solicitud.SolicitudId,
         "Jugadores": jugadores,
         "DocumentosPresidente": [
