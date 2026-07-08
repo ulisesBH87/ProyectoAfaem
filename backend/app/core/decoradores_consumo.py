@@ -82,6 +82,7 @@ def track_consumption(tipo_consumo: str, proveedor: str, tipo_registro_default: 
                 }
                 
                 ConsumptionService.publicar_outbox(db, payload)
+                db.commit()
             except Exception as outbox_exc:
                 logger.error(f"[CONSUMO ERROR] No se pudo guardar outbox: {outbox_exc}")
 

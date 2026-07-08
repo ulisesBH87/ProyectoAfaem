@@ -17,6 +17,12 @@ def obtener_resumen_dashboard(
     Retorna métricas consolidadas del consumo (agrupadas por proveedor, tipo de consumo, etc.)
     para la vista del dashboard Master.
     """
+    from app.servicios.consumo_worker import procesar_outbox_pending
+    try:
+        procesar_outbox_pending()
+    except Exception:
+        pass
+
     return ConsumptionService.obtener_resumen_dashboard(
         db=db,
         fecha_inicio=fecha_inicio,
@@ -43,6 +49,12 @@ def listar_ledger(
     Retorna el listado paginado del Ledger transaccional de consumos (BitacoraConsumo)
     para auditoría y conciliación financiera.
     """
+    from app.servicios.consumo_worker import procesar_outbox_pending
+    try:
+        procesar_outbox_pending()
+    except Exception:
+        pass
+
     return ConsumptionService.listar_ledger(
         db=db,
         page=page,

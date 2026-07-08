@@ -16,9 +16,16 @@ export const validarFotografia = async (archivo) => {
   const formData = new FormData();
   formData.append("file", archivo);
 
+  const token = localStorage.getItem('token');
+  const headers = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
   try {
     const response = await fetch(`${API_BASE}/fotografia/`, {
       method: "POST",
+      headers,
       body: formData
     });
 

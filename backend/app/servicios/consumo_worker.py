@@ -10,16 +10,23 @@ from app.servicios.consumo_servicio import ConsumptionService
 logger = logging.getLogger("consumo_worker")
 logging.basicConfig(level=logging.INFO)
 
+# Filtro para silenciar consultas repetitivas de ConsumoOutbox en la consola
+class SuppressOutboxFilter(logging.Filter):
+    def filter(self, record):
+        return "ConsumoOutbox" not in record.getMessage()
+
+logging.getLogger("sqlalchemy.engine.Engine").addFilter(SuppressOutboxFilter())
+
 async def procesar_consumos_outbox_loop():
     logger.info("[WORKER] Iniciando loop de ConsumoOutbox...")
     while True:
         try:
-            await procesar_outbox_pending()
+            await asyncio.to_thread(procesar_outbox_pending)
         except Exception as e:
             logger.error(f"[WORKER ERROR] Error en ciclo de outbox: {e}")
-        await asyncio.sleep(5) # Procesar cada 5 segundos
+        await asyncio.sleep(3600) # Procesar cada hora como fallback
 
-async def procesar_outbox_pending():
+def procesar_outbox_pending():
     db: Session = SessionLocal()
     try:
         # Consultar eventos pendientes (Estado = 'PENDIENTE')
