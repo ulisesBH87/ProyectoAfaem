@@ -243,7 +243,7 @@ def procesar_ocr_seguro(
         except Exception:
             pass
             
-        respuesta = requests.post(ocr_url, files=files, timeout=60.0)
+        respuesta = requests.post(ocr_url, files=files, timeout=300.0)
         print(f"[OCR PROXY] Servicio Flask retornó status_code: {respuesta.status_code}")
         
         try:
