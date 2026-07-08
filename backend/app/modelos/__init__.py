@@ -40,3 +40,11 @@ from .catalogo_accion import CatalogoAccion
 from .auditoria import Auditoria
 
 from .catalogo_tipos_solicitud import CatalogoTiposSolicitud
+from .consumo_modelos import (
+    CatalogoTipoOperacion,
+    CatalogoTipoRegistro,
+    BitacoraConsumo,
+    ConsumoOutbox,
+    ResumenConsumoDiario,
+    CatalogoTarifas
+)

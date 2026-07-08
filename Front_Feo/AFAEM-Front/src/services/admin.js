@@ -498,6 +498,16 @@ export const getReporteDiarioMaster = async (limiteDias = 30) => {
   return response.data;
 };
 
+export const getConsumoResumen = async (params = {}) => {
+  const response = await api.get('/consumo/resumen', { params });
+  return response.data;
+};
+
+export const getConsumoLedger = async (params = {}) => {
+  const response = await api.get('/consumo/ledger', { params });
+  return response.data;
+};
+
 export default {
   getSolicitudDetalle,
   getPagosGenerales,
@@ -538,5 +548,7 @@ export default {
   getReporteMensualMaster,
   getReporteUsuarioMaster,
   getReporteEntidadMaster,
-  getReporteDiarioMaster
+  getReporteDiarioMaster,
+  getConsumoResumen,
+  getConsumoLedger
 };

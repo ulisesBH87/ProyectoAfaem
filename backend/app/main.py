@@ -16,6 +16,7 @@ from app.rutas import (
     catalogos_ruta,
     whatsapp_webhook_ruta,
     auditoria_master_ruta,
+    consumo_ruta,
 )
 from app.utilidades.context import usuario_actual_id, ip_actual
 from app.db.sesion import SessionLocal
@@ -380,6 +381,7 @@ app.include_router(auditoria_ruta.router)
 app.include_router(catalogos_ruta.router)
 app.include_router(whatsapp_webhook_ruta.router)
 app.include_router(auditoria_master_ruta.router)
+app.include_router(consumo_ruta.router)
 
 # CAPTURADOR GLOBAL DE ERRORES (PARA DIAGNÓSTICO)
 @app.exception_handler(AppError)
@@ -409,3 +411,10 @@ async def generic_exception_handler(request: Request, exc: Exception):
 @app.get("/")
 def health_check():
     return {"status":"ok"}
+
+import asyncio
+from app.servicios.consumo_worker import procesar_consumos_outbox_loop
+
+@app.on_event("startup")
+async def start_consumo_worker():
+    asyncio.create_task(procesar_consumos_outbox_loop())

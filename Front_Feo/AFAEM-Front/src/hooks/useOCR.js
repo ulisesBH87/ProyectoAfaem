@@ -181,7 +181,7 @@ export function useOCR() {
   };
 
   // ── Procesar documento vía OCR ───────────────────────────────────────────
-  const procesarOCR = async (docKey, file, onCancel) => {
+  const procesarOCR = async (docKey, file, onCancel, tipoRegistro = "JUGADOR") => {
     Swal.fire({
       title: 'Analizando documento…',
       html: 'Extrayendo información. <b>Por favor espere.</b>',
@@ -194,7 +194,7 @@ export function useOCR() {
       const fd = new FormData();
       fd.append('file_id', file);
       const token = localStorage.getItem('token') || sessionStorage.getItem('temp_token');
-      const res = await fetch(`${API_BASE}/documentos/ocr`, {
+      const res = await fetch(`${API_BASE}/documentos/ocr?tipo_registro=${tipoRegistro}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`

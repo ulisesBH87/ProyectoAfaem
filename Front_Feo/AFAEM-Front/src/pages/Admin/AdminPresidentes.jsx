@@ -436,7 +436,7 @@ export default function AdminPresidentes() {
     try {
       const fd = new FormData(); fd.append('file_id', file);
       const token = localStorage.getItem('token') || sessionStorage.getItem('temp_token');
-      const res = await fetch(`${API_BASE}/documentos/ocr`, {
+      const res = await fetch(`${API_BASE}/documentos/ocr?tipo_registro=PRESIDENTE`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -609,7 +609,7 @@ export default function AdminPresidentes() {
   const procesarFotografia = async (archivo) => {
     Swal.fire({ title: 'Validando Fotografía...', html: 'Verificando formato, rostros y calidad. <b>Por favor espere.</b>', allowOutsideClick: false, allowEscapeKey: false, didOpen: () => Swal.showLoading() });
     try {
-      const data = await validarFotografia(archivo);
+      const data = await validarFotografia(archivo, "PRESIDENTE");
       if (data.valido) {
         setDocuments(prev => ({ ...prev, fotografia: archivo }));
         Swal.fire({ title: '¡Fotografía Aceptada!', icon: 'success', timer: 1500, showConfirmButton: false });
