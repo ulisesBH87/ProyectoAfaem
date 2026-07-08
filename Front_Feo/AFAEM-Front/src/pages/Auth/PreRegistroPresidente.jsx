@@ -19,215 +19,14 @@ import Modal from '../../components/partials/Forms/Modal';
 import { useRBAC } from '../../hooks/useRBAC';
 import { openSecurePath, fetchSecureBlobUrl } from '../../utils/secureFetch';
 import { buildCaptureSourceDialog, getCameraCaptureKind } from '../../utils/cameraCapture';
-
-const convertToDDMMYYYY = (dateStr) => {
-  if (!dateStr) return '';
-  const parts = dateStr.split('-');
-  if (parts.length !== 3) return dateStr;
-  return `${parts[2]}/${parts[1]}/${parts[0]}`;
-};
-
-const convertToYYYYMMDD = (dateStr) => {
-  if (!dateStr) return '';
-  const parts = dateStr.split('/');
-  if (parts.length !== 3) return dateStr;
-  return `${parts[2]}-${parts[1]}-${parts[0]}`;
-};
-
-const normalizarNombreSeguro = (nombre) => {
-  if (!nombre) return '';
-  return nombre.toUpperCase().replace(/[\u0022\u0027]/g, '').trim();
-};
-
-const parsearTelefonoE164 = (telefonoCompleto) => {
-  if (!telefonoCompleto) return { codigoPais: '+52', telefono: '' };
-  const telClean = telefonoCompleto.trim();
-  if (telClean.startsWith('+')) {
-    if (telClean.length > 10) {
-      const local = telClean.slice(-10);
-      const codigo = telClean.slice(0, -10);
-      return { codigoPais: codigo, telefono: local };
-    }
-    return { codigoPais: '+52', telefono: telClean.replace(/\D/g, '').slice(0, 10) };
-  }
-  if (telClean.length === 10 && /^\d+$/.test(telClean)) {
-    return { codigoPais: '+52', telefono: telClean };
-  }
-  if (telClean.length > 10 && /^\d+$/.test(telClean)) {
-    const local = telClean.slice(-10);
-    const codigo = '+' + telClean.slice(0, -10);
-    return { codigoPais: codigo, telefono: local };
-  }
-  return { codigoPais: '+52', telefono: telClean.replace(/\D/g, '').slice(0, 10) };
-};
-
-
-const DETALLES_SEGUROS = {
-  'TIPO A': {
-    nombre: 'TIPO "A"',
-    precio: 240,
-    poliza: '2922500000281',
-    vigencia: 'ENERO 2026 – DICIEMBRE 2026',
-    alcance: 'Se ampara un juego por semana (máximo 2), traslados directos e ininterrumpidos de la casa al partido de fútbol (supervisado y autorizado para la realización del evento en ese día de la semana) y viceversa. Ampara exclusivamente traslados dentro del mismo estado.',
-    beneficios: [
-      'Participación en Torneos Estatales',
-      'Participación en Torneos Regionales',
-      'Participación en Torneos Nacionales',
-      'Participación en Campeonatos Nacionales',
-      'Participación en Torneos Federados',
-      'Participación en Capacitaciones',
-      'Descuentos en Material Deportivo',
-      'Expediente deportivo Oficial en la FMF',
-      'Activaciones y Experiencias con Patrocinadores',
-      'Descuentos en la Compra de Balones Oficiales del Sector Amateur',
-      'Seguro de Gastos Médicos por Accidente'
-    ],
-    coberturas: [
-      { cobertura: 'Indemnización por fallecimiento accidental', monto: '$50,000.00' },
-      { cobertura: 'Reembolso de Gastos Médicos por Accidente', monto: '$25,000.00' },
-      { cobertura: 'Tope de Rodilla', monto: '$25,000.00' },
-      { cobertura: 'Deducible', monto: '$1,500.00' }
-    ]
-  },
-  'TIPO B': {
-    nombre: 'TIPO "B"',
-    precio: 350,
-    poliza: '2922500000283',
-    vigencia: 'ENERO 2026 – DICIEMBRE 2026',
-    alcance: 'Se ampara un juego por semana (máximo 2), traslados directos e ininterrumpidos de la casa al partido de fútbol (supervisado y autorizado para la realización del evento en ese día de la semana) y viceversa. Ampara exclusivamente traslados dentro del mismo estado.',
-    beneficios: [
-      'Participación en Torneos Estatales',
-      'Participación en Torneos Regionales',
-      'Participación en Torneos Nacionales',
-      'Participación en Campeonatos Nacionales',
-      'Participación en Torneos Federados',
-      'Participación en Capacitaciones',
-      'Descuentos en Material Deportivo',
-      'Expediente deportivo Oficial en la FMF',
-      'Activaciones y Experiencias con Patrocinadores',
-      'Descuentos en la Compra de Balones Oficiales del Sector Amateur',
-      'Seguro de Gastos Médicos por Accidente'
-    ],
-    coberturas: [
-      { cobertura: 'Indemnización por fallecimiento accidental', monto: '$100,000.00' },
-      { cobertura: 'Reembolso de Gastos Médicos por Accidente', monto: '$50,000.00' },
-      { cobertura: 'Tope de Rodilla', monto: '$30,000.00' },
-      { cobertura: 'Deducible', monto: '$1,500.00' }
-    ]
-  },
-  'TIPO F': {
-    nombre: 'TIPO "F"',
-    precio: 670,
-    poliza: '2922500000282',
-    vigencia: 'ENERO 2026 – DICIEMBRE 2026',
-    alcance: 'Se ampara los entrenamientos, partidos y torneos de futbol organizados y supervisados por la FEMEXFUT, adicionalmente se amparan los traslados desde el domicilio al campo de juego y viceversa. Se amparan los traslados entre estados.',
-    beneficios: [
-      'Participación en Torneos Estatales',
-      'Participación en Torneos Regionales',
-      'Participación en Torneos Nacionales',
-      'Participación en Campeonatos Nacionales',
-      'Participación en Torneos Federados',
-      'Participación en Capacitaciones',
-      'Descuentos en Material Deportivo',
-      'Expediente deportivo Oficial en la FMF',
-      'Activaciones y Experiencias con Patrocinadores',
-      'Descuentos en la Compra de Balones Oficiales del Sector Amateur',
-      'Seguro de Gastos Médicos por Accidente'
-    ],
-    coberturas: [
-      { cobertura: 'Indemnización por fallecimiento accidental', monto: '$200,000.00' },
-      { cobertura: 'Reembolso de Gastos Médicos por Accidente', monto: '$100,000.00' },
-      { cobertura: 'Tope de Rodilla', monto: '$30,000.00' },
-      { cobertura: 'Deducible', monto: '$1,500.00' }
-    ]
-  },
-  'TIPO H': {
-    nombre: 'TIPO "H"',
-    precio: 475,
-    poliza: '2922500000286',
-    vigencia: 'ENERO 2026 – DICIEMBRE 2026',
-    alcance: 'Se ampara los entrenamientos, partidos y torneos de futbol organizados y supervisados por la FEMEXFUT, adicionalmente se amparan los traslados desde el domicilio al campo de juego y viceversa. Se amparan los traslados entre estados.',
-    beneficios: [
-      'Participación en Torneos Estatales',
-      'Participación en Torneos Regionales',
-      'Participación en Torneos Nacionales',
-      'Participación en Campeonatos Nacionales',
-      'Participación en Torneos Federados',
-      'Participación en Capacitaciones',
-      'Descuentos en Material Deportivo',
-      'Expediente deportivo Oficial en la FMF',
-      'Activaciones y Experiencias con Patrocinadores',
-      'Descuentos en la Compra de Balones Oficiales del Sector Amateur',
-      'Seguro de Gastos Médicos por Accidente'
-    ],
-    coberturas: [
-      { cobertura: 'Indemnización por fallecimiento accidental', monto: '$100,000.00' },
-      { cobertura: 'Reembolso de Gastos Médicos por Accidente', monto: '$50,000.00' },
-      { cobertura: 'Tope de Rodilla', monto: '$30,000.00' },
-      { cobertura: 'Deducible', monto: '$1,500.00' }
-    ]
-  },
-  'TIPO G': {
-    nombre: 'TIPO "G"',
-    precio: 350,
-    poliza: '2922500000280',
-    vigencia: 'ENERO 2026 – DICIEMBRE 2026',
-    alcance: 'Se amparan los traslados de su casa a las ligas, asociaciones y viceversa, y traslados a otras ligas, se cubre dentro de las instalaciones de sus ligas y asociaciones. Se amparan traslados de estado a estado.',
-    beneficios: [
-      'Participación en Torneos Estatales',
-      'Participación en Torneos Regionales',
-      'Participación en Torneos Nacionales',
-      'Participación en Campeonatos Nacionales',
-      'Participación en Torneos Federados',
-      'Participación en Capacitaciones',
-      'Descuentos en Material Deportivo',
-      'Expediente deportivo Oficial en la FMF',
-      'Activaciones y Experiencias con Patrocinadores',
-      'Descuentos en la Compra de Balones Oficiales del Sector Amateur',
-      'Seguro de Gastos Médicos por Accidente'
-    ],
-    coberturas: [
-      { cobertura: 'Indemnización por fallecimiento accidental', monto: '$200,000.00' },
-      { cobertura: 'Reembolso de Gastos Médicos por Accidente', monto: '$100,000.00' },
-      { cobertura: 'Tope de Rodilla', monto: '$25,000.00' },
-      { cobertura: 'Deducible', monto: '$1,500.00' }
-    ]
-  },
-  'BASICA': {
-    nombre: 'TIPO "BASICA"',
-    precio: 155,
-    poliza: 'N/A',
-    vigencia: 'ENERO 2026 – DICIEMBRE 2026',
-    alcance: 'Esta afiliación no incluye póliza de seguro de gastos médicos por accidente. Solo cubre derechos de participación básica.',
-    beneficios: [
-      'Participación en Torneos Estatales (Es necesario Afiliación con cobertura de Seguro)',
-      'Participación en Torneos Regionales (Es necesario Afiliación con cobertura de Seguro)',
-      'Participación en Torneos Nacionales (Es necesario Afiliación con cobertura de Seguro)',
-      'Participación en Campeonatos Nacionales (Es necesario Afiliación con cobertura de Seguro)',
-      'Participación en Torneos Federados (Es necesario Afiliación con cobertura de Seguro)',
-      'Participación en Capacitaciones',
-      'Descuentos en Material Deportivo',
-      'Expediente deportivo Oficial en la FMF',
-      'Activaciones y Experiencias con Patrocinadores',
-      'Descuentos en la Compra de Balones Oficiales del Sector Amateur'
-    ],
-    coberturas: []
-  },
-  'TIPO J': {
-    nombre: 'TIPO J',
-    precio: 0,
-    poliza: 'N/A',
-    vigencia: 'N/A',
-    alcance: 'El presidente no cuenta con cobertura médica federada.',
-    beneficios: [
-      'Sin costo adicional',
-      'Registro básico en la plataforma',
-      'No incluye seguro de gastos médicos',
-      'No incluye derechos de participación deportiva federada activa'
-    ],
-    coberturas: []
-  }
-};
+import { DETALLES_SEGUROS, CATALOGO_ROLES, DOC_AFILIACION_IDS } from './preRegistroConstants';
+import { convertToDDMMYYYY, convertToYYYYMMDD, normalizarNombreSeguro, parsearTelefonoE164 } from './preRegistroUtils';
+import { generarPDFCuota as generarPDFCuotaHelper, handleDownloadFormato as handleDownloadFormatoHelper, handleEmbedNewPhotoInFormat as handleEmbedNewPhotoInFormatHelper } from './preRegistroPdfHelper';
+import { procesarOCRReal as procesarOCRRealHelper } from './preRegistroOcrHelper';
+import SeguroDetallesModal from './components/SeguroDetallesModal';
+import StepBienvenida from './components/StepBienvenida';
+import StepRevisionSolicitud from './components/StepRevisionSolicitud';
+import StepValidacionPago from './components/StepValidacionPago';
 
 function PreRegistroPresidente() {
   const navigate = useNavigate();
@@ -472,12 +271,7 @@ function PreRegistroPresidente() {
 
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [cameraTargetKey, setCameraTargetKey] = useState(null);
-  const DOC_AFILIACION_IDS = {
-    actaNacimiento: 8,
-    identificacion: 38,
-    fotografia: 37,
-    formatoAfiliacion: 10,
-  };
+
 
   const triggerDocUpload = (docKey, isValidationFlow = false) => {
     if (docKey === 'formatoAfiliacion' && !isValidationFlow && formatAfiliacionLocked) {
@@ -772,10 +566,7 @@ function PreRegistroPresidente() {
   }, [asignacionSeguros, catalogoSeguros, segurosPresidente, ordenPendienteId]);
 
   /* ─── Catálogos para Selectores ─── */
-  const CATALOGO_ROLES = [
-    { valor: 'TIPO G', etiqueta: 'TIPO G' },
-    { valor: 'TIPO J', etiqueta: 'TIPO J' }
-  ];
+
 
   const bankInfo = DEFAULT_BANK_INFO;
 
@@ -1063,116 +854,7 @@ function PreRegistroPresidente() {
 
   // ================== FUNCIÓN PARA GENERAR PDF DE CUOTA ==================
   const generarPDFCuota = (ordenId, refDirecta = null) => {
-    try {
-      const doc = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'letter'
-      });
-
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-      let yPosition = 15;
-      const margin = 15;
-      const contentWidth = pageWidth - 2 * margin;
-
-      // Encabezado
-      doc.setFontSize(16);
-      doc.setTextColor(11, 78, 166);
-      doc.text('FICHA DE PAGO - AFAEM', pageWidth / 2, yPosition, { align: 'center' });
-      yPosition += 10;
-
-      doc.setFontSize(10);
-      doc.setTextColor(100, 100, 100);
-      doc.text(`Número de Orden: ${ordenId}`, pageWidth / 2, yPosition, { align: 'center' });
-      yPosition += 10;
-      const today = new Date().toLocaleDateString('es-MX');
-      doc.text(`Fecha: ${today}`, pageWidth / 2, yPosition, { align: 'center' });
-      yPosition += 12;
-
-      // Datos del Usuario
-      doc.setFontSize(12);
-      doc.setTextColor(11, 78, 166);
-      doc.text('DATOS DEL SOLICITANTE', margin, yPosition);
-      yPosition += 8;
-      doc.setFontSize(10);
-      doc.setTextColor(0, 0, 0);
-      const userName = (user.usuario?.nombre || user.usuario?.Nombre || user.Nombre || user.NombreUsuario || 'N/A').toUpperCase();
-      doc.text(`Nombre: ${userName}`, margin, yPosition);
-      yPosition += 6;
-      doc.text(`Correo: ${user.Correo || user.email || 'N/A'}`, margin, yPosition);
-      yPosition += 10;
-
-      // Datos Bancarios
-      doc.setFontSize(12);
-      doc.setTextColor(11, 78, 166);
-      doc.text('INSTRUCCIONES DE PAGO', margin, yPosition);
-      yPosition += 8;
-      doc.setFontSize(10);
-      doc.setTextColor(0, 0, 0);
-      doc.text(`Banco: ${bankInfo.banco}`, margin, yPosition);
-      yPosition += 6;
-      doc.text(`Titular: ${bankInfo.titular}`, margin, yPosition);
-      yPosition += 6;
-      doc.text(`Cuenta: ${bankInfo.cuenta}`, margin, yPosition);
-      yPosition += 6;
-      doc.text(`CLABE: ${bankInfo.clabe}`, margin, yPosition);
-      yPosition += 6;
-      const refFinal = refDirecta || referenciaPago || 'N/A';
-      doc.text(`Referencia Obligatoria: ${refFinal}`, margin, yPosition);
-      yPosition += 12;
-
-      // Desglose de Cuota
-      doc.setFontSize(12);
-      doc.setTextColor(11, 78, 166);
-      doc.text('DESGLOSE DE CUOTA', margin, yPosition);
-      yPosition += 8;
-      doc.setFontSize(9);
-      doc.setTextColor(0, 0, 0);
-
-      // Afiliaciones (Omitidas del PDF según requerimiento)
-
-      // Seguros
-      let tieneSeguros = false;
-      catalogoSeguros.forEach(seg => {
-        if (asignacionSeguros[seg.id] > 0) {
-          tieneSeguros = true;
-          const subtotal = seg.precio * asignacionSeguros[seg.id];
-          doc.text(`${seg.nombre} (x${asignacionSeguros[seg.id]})`, margin, yPosition);
-          doc.text(`$${subtotal.toFixed(2)}`, pageWidth - margin - 30, yPosition);
-          yPosition += 6;
-        }
-      });
-
-      // Línea divisoria
-      yPosition += 2;
-      doc.setDrawColor(11, 78, 166);
-      doc.line(margin, yPosition, pageWidth - margin, yPosition);
-      yPosition += 6;
-
-      // Total
-      doc.setFontSize(12);
-      doc.setTextColor(11, 78, 166);
-      doc.setFont(undefined, 'bold');
-      doc.text('TOTAL A PAGAR:', margin, yPosition);
-      doc.text(`$${totalMostrado.toFixed(2)}`, pageWidth - margin - 30, yPosition);
-      yPosition += 10;
-
-      // Nota final
-      doc.setFontSize(9);
-      doc.setTextColor(100, 100, 100);
-      doc.setFont(undefined, 'normal');
-      doc.text('Por favor, incluye la referencia obligatoria en tu transferencia bancaria.', margin, yPosition, { maxWidth: contentWidth });
-      yPosition += 6;
-      doc.text('Una vez realizado el pago, sube el comprobante en la plataforma para procesar tu registro. Recuerda que el comprobante de pago debe tener la referencia obligatoria impresa para que sea aceptado.', margin, yPosition, { maxWidth: contentWidth });
-
-      // Descargar PDF
-      const nombreArchivo = `Cuota_AFAEM_${ordenId}_${today.split('/').join('-')}.pdf`;
-      doc.save(nombreArchivo);
-    } catch (err) {
-      console.error('Error al generar PDF:', err);
-      Swal.fire({ title: 'Error', text: 'No se pudo generar el PDF de la cuota', icon: 'error' });
-    }
+    generarPDFCuotaHelper(ordenId, refDirecta, { jsPDF, Swal, bankInfo, user, totalMostrado, catalogoSeguros, asignacionSeguros, referenciaPago });
   };
 
   // ================== METODOS DE NAVEGACIÓN ==================
@@ -1429,337 +1111,8 @@ function PreRegistroPresidente() {
     }
   };
 
-  const mejorarExtraccionActa = (rawText, currentData) => {
-    if (!rawText) return currentData;
-    const data = { ...currentData };
-
-    // Intentar emparejar layout cruzado/macho en una sola línea
-    const cleanText = rawText.replace(/\s+/g, ' ').toUpperCase();
-    const mashedMatch = cleanText.match(/DATOS\s+DEL\s+REGISTRADO\s+([A-Z0-9\s]+?)\s+NOMBRE\s+([A-Z0-9\s]+?)\s+PRIMER\s+APELLIDO\s+([A-Z0-9\s]+?)\s+SEGUNDO\s+APELLIDO\s+([A-Z0-9\s]+?)(?:$|\s+(?:CURP|FECHA|SEXO|NACIONALIDAD|ENTIDAD|MUNICIPIO|LUGAR|CRIP|REGISTRADO))/i);
-    if (mashedMatch) {
-      const nombresVal = mashedMatch[1].trim();
-      const ap1Val = mashedMatch[2].trim();
-      const ap2Val = mashedMatch[3].trim();
-
-      data.nombre = `${nombresVal} ${ap1Val} ${ap2Val}`.replace(/\s+/g, ' ').toUpperCase();
-      data.nombres = nombresVal.toUpperCase();
-      data.apellido_paterno = ap1Val.toUpperCase();
-      data.apellido_materno = ap2Val.toUpperCase();
-      data.nombreSolo = nombresVal.toUpperCase();
-      data.primerApellido = ap1Val.toUpperCase();
-      data.segundoApellido = ap2Val.toUpperCase();
-
-      const rest = mashedMatch[4].trim();
-      if (rest && !rest.includes('NACIONALIDAD') && rest.length > 2) {
-        data.nacionalidad = rest.toUpperCase();
-      } else if (cleanText.includes('NACIONALIDAD')) {
-        const nacMatch = cleanText.match(/(?:NACIONALIDAD|PAIS)\s+([A-Z\s]+)/i);
-        if (nacMatch) data.nacionalidad = nacMatch[1].trim().toUpperCase();
-      }
-      return data;
-    }
-
-    // 1. RESCATE DE NOMBRE (Especialmente para actas digitales mexicanas)
-    // Buscamos patrones de etiquetas seguidas de valores en líneas subsecuentes
-    const firstWord = data.nombre ? data.nombre.split(' ')[0] : '';
-    if (!data.nombre || data.nombre === 'No detectado' || data.nombre.split(' ').length < 2 || firstWord.length <= 1) {
-      // Intento 1: Formato "Nombre(s) \n VALOR \n Primer Apellido \n VALOR ..."
-      const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean);
-      let nombres = '', ap1 = '', ap2 = '';
-
-      for (let i = 0; i < lines.length; i++) {
-        const l = lines[i].toUpperCase();
-        if (l.includes('NOMBRE(S)') && i + 1 < lines.length) {
-          const nextVal = lines[i + 1].toUpperCase();
-          if ((nextVal === 'S' || nextVal === '(S)' || nextVal.length <= 1) && i + 2 < lines.length) {
-            nombres = lines[i + 2];
-          } else {
-            nombres = lines[i + 1];
-          }
-        }
-        if (l.includes('PRIMER APELLIDO') && i + 1 < lines.length) {
-          const val = lines[i + 1];
-          if (!val.toUpperCase().includes('APELLIDO') && !val.toUpperCase().includes('NOMBRE')) {
-            ap1 = val;
-          }
-        }
-        if (l.includes('SEGUNDO APELLIDO') && i + 1 < lines.length) {
-          const val = lines[i + 1];
-          if (!val.toUpperCase().includes('APELLIDO') && !val.toUpperCase().includes('NOMBRE')) {
-            ap2 = val;
-          }
-        }
-      }
-
-      if (nombres && ap1) {
-        data.nombre = `${nombres} ${ap1} ${ap2}`.replace(/\s+/g, ' ').toUpperCase();
-        data.nombres = nombres.toUpperCase();
-        data.apellido_paterno = ap1.toUpperCase();
-        data.apellido_materno = ap2.toUpperCase();
-        data.nombreSolo = nombres.toUpperCase();
-        data.primerApellido = ap1.toUpperCase();
-        data.segundoApellido = ap2.toUpperCase();
-      }
-    }
-
-    // 2. RESCATE DE FECHA DE NACIMIENTO (Soporte para formatos de texto: "15 de Mayo de 1990")
-    if (!data.fecha_nac || data.fecha_nac === 'No detectada') {
-      const meses = {
-        'ENERO': '01', 'FEBRERO': '02', 'MARZO': '03', 'ABRIL': '04', 'MAYO': '05', 'JUNIO': '06',
-        'JULIO': '07', 'AGOSTO': '08', 'SEPTIEMBRE': '09', 'OCTUBRE': '10', 'NOVIEMBRE': '11', 'DICIEMBRE': '12'
-      };
-
-      const regexFechaTexto = /(\d{1,2})\s*DE\s*([A-Z]+)\s*DE\s*(\d{4})/i;
-      const matchFecha = rawText.match(regexFechaTexto);
-
-      if (matchFecha) {
-        const dia = matchFecha[1].padStart(2, '0');
-        const mesNombre = matchFecha[2].toUpperCase();
-        const anio = matchFecha[3];
-
-        if (meses[mesNombre]) {
-          data.fecha_nac = `${dia}/${meses[mesNombre]}/${anio}`;
-
-          // Intentar recalcular edad
-          try {
-            const hoy = new Date();
-            const d = parseInt(dia), m = parseInt(meses[mesNombre]), a = parseInt(anio);
-            let edad = hoy.getFullYear() - a;
-            if (hoy.getMonth() + 1 < m || (hoy.getMonth() + 1 === m && hoy.getDate() < d)) edad--;
-            data.edad = `${edad} años`;
-          } catch (e) { }
-        }
-      }
-    }
-
-    return data;
-  };
-
   const procesarOCRReal = async (docKey, file, prevDoc) => {
-    Swal.fire({
-      title: 'Analizando Documento...',
-      html: 'Extrayendo información. <b>Por favor espere.</b>',
-      allowOutsideClick: false,
-      allowEscapeKey: false,
-      didOpen: () => {
-        Swal.showLoading();
-      }
-    });
-
-    try {
-      const formData = new FormData();
-      formData.append('file_id', file);
-      const token = localStorage.getItem('token') || sessionStorage.getItem('temp_token');
-      const response = await fetch(`${API_BASE}/documentos/ocr`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formData
-      });
-
-      if (!response.ok) throw new Error('Ocurrió un error al cargar el documento');
-
-      // Parsea el HTML del OCR para extraer los datos
-      const htmlText = await response.text();
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(htmlText, "text/html");
-
-      const cleanVal = (val) => {
-        if (!val) return '';
-        const cleaned = val.trim();
-        const lower = cleaned.toLowerCase();
-        if (lower === 'no detectado' || lower === 'no detectada' || lower === 'sin anotaciones' || lower === 'vacio') {
-          return '';
-        }
-        return cleaned;
-      };
-
-      let nombreEncontrado = '';
-      let nombresEncontrados = '';
-      let apellidoPaternoEncontrado = '';
-      let apellidoMaternoEncontrado = '';
-      let curpEncontrada = '';
-      let fechaNacEncontrada = '';
-      let nacionalidadEncontrada = '';
-      let edadEncontrada = '';
-      let sexoEncontrado = '';
-      let documentoEncontrado = '';
-
-      const rows = doc.querySelectorAll('.dato-fila');
-      rows.forEach(row => {
-        const label = row.querySelector('.etiqueta')?.textContent?.toLowerCase() || '';
-        const value = cleanVal(row.querySelector('.valor')?.textContent);
-
-        if (!value) return;
-
-        if (label.includes('nombres')) {
-          nombresEncontrados = value;
-        } else if (label.includes('nombre completo') || label === 'nombre') {
-          nombreEncontrado = value;
-        } else if (label.includes('nombre')) {
-          if (!nombresEncontrados) nombresEncontrados = value;
-        }
-
-        if (label.includes('apellido paterno') || label.includes('paterno')) {
-          apellidoPaternoEncontrado = value;
-        }
-        if (label.includes('apellido materno') || label.includes('materno')) {
-          apellidoMaternoEncontrado = value;
-        }
-
-        if (label.includes('curp')) curpEncontrada = value;
-        if (label.includes('nacionalidad')) nacionalidadEncontrada = value;
-
-        if (label.includes('fecha de nacimiento') || label.includes('fecha nac') || (label.includes('nacimiento') && !label.includes('lugar'))) {
-          let dateVal = value;
-          if (dateVal.includes('-')) {
-            const p = dateVal.split('-');
-            if (p.length === 3 && p[0].length === 4) {
-              dateVal = `${p[2]}/${p[1]}/${p[0]}`;
-            }
-          }
-          fechaNacEncontrada = dateVal;
-        }
-
-        if (label.includes('edad')) edadEncontrada = value;
-        if (label.includes('sexo')) sexoEncontrado = value;
-        if (label.includes('documento')) documentoEncontrado = value;
-      });
-
-      let firstName = '', lastNamePaterno = '', lastNameMaterno = '';
-
-      if (nombresEncontrados || apellidoPaternoEncontrado || apellidoMaternoEncontrado) {
-        firstName = nombresEncontrados;
-        lastNamePaterno = apellidoPaternoEncontrado;
-        lastNameMaterno = apellidoMaternoEncontrado;
-      } else if (nombreEncontrado) {
-        const parts = nombreEncontrado.split(' ');
-        if (parts.length === 4) {
-          firstName = parts.slice(0, 2).join(' ');
-          lastNamePaterno = parts[2];
-          lastNameMaterno = parts[3];
-        } else if (parts.length === 3) {
-          firstName = parts[0];
-          lastNamePaterno = parts[1];
-          lastNameMaterno = parts[2];
-        } else if (parts.length === 2) {
-          firstName = parts[0];
-          lastNamePaterno = parts[1];
-        } else {
-          firstName = nombreEncontrado;
-        }
-      }
-
-      const fullNombre = [firstName, lastNamePaterno, lastNameMaterno].filter(Boolean).join(' ') || nombreEncontrado;
-
-      let detectedSexo = sexoEncontrado;
-      if (curpEncontrada && curpEncontrada.length >= 11) {
-        const char = curpEncontrada.charAt(10).toUpperCase();
-        if (char === 'M') detectedSexo = 'FEMENINO';
-        else if (char === 'H') detectedSexo = 'MASCULINO';
-      }
-
-      let extractedData = {
-        curp: curpEncontrada || '',
-        nombre: fullNombre || '',
-        nombres: firstName || '',
-        apellido_paterno: lastNamePaterno || '',
-        apellido_materno: lastNameMaterno || '',
-        nombreSolo: firstName || '',
-        primerApellido: lastNamePaterno || '',
-        segundoApellido: lastNameMaterno || '',
-        nacionalidad: nacionalidadEncontrada || '',
-        fecha_nac: fechaNacEncontrada || '',
-        edad: edadEncontrada || '',
-        sexo: detectedSexo || '',
-        documento: documentoEncontrado || ''
-      };
-
-      // --- REFUERZO DESDE EL FRONTEND (RESCATE DE TEXTO CRUDO) ---
-      const rawText = doc.querySelector('pre')?.textContent;
-      if (rawText && (docKey === 'actaNacimiento' || extractedData.documento?.includes('ACTA'))) {
-        extractedData = mejorarExtraccionActa(rawText, extractedData);
-      }
-
-      // VALIDACIÓN DE COINCIDENCIA DE TIPO DE DOCUMENTO
-      const isActaField = ['acta', 'actaNacimiento'].includes(docKey);
-      const isIneField = ['ine', 'ineTutor', 'identificacion'].includes(docKey);
-      const isOcrActa = (extractedData.documento || '').toUpperCase() === 'ACTA DE NACIMIENTO';
-      const isOcrIne = (extractedData.documento || '').toUpperCase() === 'INE';
-
-      if ((isActaField && isOcrIne) || (isIneField && isOcrActa)) {
-        Swal.close();
-        const result = await Swal.fire({
-          title: 'Este documento no parece ser el que se solicita. ¿Deseas cargarlo de todos modos?',
-          text: 'Si el documento no es el correcto, podría ser rechazado durante la validación.',
-          icon: 'warning',
-          showCancelButton: true,
-          confirmButtonText: 'Cargar de todos modos',
-          cancelButtonText: 'Cancelar',
-          confirmButtonColor: '#1a3b5c',
-          cancelButtonColor: '#cbd5e1'
-        });
-
-        if (!result.isConfirmed) {
-          setDocuments(prev => {
-            const updated = { ...prev };
-            if (prevDoc) {
-              updated[docKey] = prevDoc;
-            } else {
-              delete updated[docKey];
-            }
-            return updated;
-          });
-          return;
-        }
-      }
-
-      setOcrResults(prev => {
-        const u = JSON.parse(localStorage.getItem('user') || '{}');
-        const uInfo = u.usuario || {};
-        const regNombre = (uInfo.nombre || u.Nombre || u.NombreUsuario || '').toUpperCase();
-        const regTelefono = uInfo.telefono || u.telefono || u.NumeroTelefono || '';
-        const { codigoPais: parsedCodigo, telefono: parsedLocal } = parsearTelefonoE164(regTelefono || extractedData.telefono);
-
-        if (parsedCodigo && parsedCodigo !== '+52') {
-          setCodigoPais(parsedCodigo);
-        }
-
-        return {
-          ...prev,
-          ...extractedData,
-          nombre: regNombre || prev.nombre || (extractedData.nombre || '').toUpperCase(),
-          telefono: parsedLocal || prev.telefono || '',
-          [docKey]: `OCR Procesado: ${extractedData.nombre}`
-        };
-      });
-
-      if (extractedData.nombre) {
-        Swal.fire({
-          title: '¡Lectura Exitosa!',
-          text: `Se detectó a: ${extractedData.nombre}`,
-          icon: 'success',
-          timer: 2000,
-          showConfirmButton: false
-        });
-      } else {
-        Swal.fire({
-          title: '¡Lectura Exitosa!',
-          text: 'Algunos campos no pudieron ser detectados, ingrésalos manualmente',
-          icon: 'warning',
-          timer: 3500,
-          showConfirmButton: true
-        });
-      }
-
-    } catch (err) {
-      Swal.fire({
-        title: 'Error',
-        text: 'No se pudo leer el documento de forma automática pero podrás continuar de forma manual.',
-        icon: 'warning'
-      });
-    }
+    await procesarOCRRealHelper(docKey, file, prevDoc, { API_BASE, Swal, setOcrResults, setCodigoPais, setDocuments });
   };
 
   const safeSetField = (form, fieldName, value, fontSize) => {
@@ -1778,251 +1131,11 @@ function PreRegistroPresidente() {
   };
 
   const handleDownloadFormato = async () => {
-    try {
-      Swal.fire({
-        title: 'Generando PDF...',
-        text: 'Preparando tu formato de afiliación pre-llenado.',
-        allowOutsideClick: false,
-        didOpen: () => { Swal.showLoading(); }
-      });
-
-      // Cargar la plantilla real con campos de formulario
-      const templateUrl = '/formato_afiliacion_directivo.pdf';
-      const existingPdfBytes = await fetch(templateUrl).then(res => res.arrayBuffer());
-      const pdfDoc = await PDFDocument.load(existingPdfBytes);
-      const form = pdfDoc.getForm();
-      const firstPage = pdfDoc.getPages()[0];
-
-      // INCRUSTAR FOTOGRAFÍA SI EXISTE
-      if (documents.fotografia) {
-        try {
-          const photoBytes = await documents.fotografia.arrayBuffer();
-          let photoImage;
-          const nameLower = documents.fotografia.name.toLowerCase();
-
-          if (nameLower.endsWith('.png')) {
-            photoImage = await pdfDoc.embedPng(photoBytes);
-          } else {
-            photoImage = await pdfDoc.embedJpg(photoBytes);
-          }
-
-          firstPage.drawImage(photoImage, {
-            x: 479,
-            y: 676,
-            width: 76,
-            height: 90,
-          });
-        } catch (photoErr) {
-          console.warn("Error al incrustar foto:", photoErr);
-        }
-      }
-
-      const { nombreSolo, primerApellido, segundoApellido, nombre, curp, fecha_nac, nacionalidad } = ocrResults;
-
-      let nombresVal = '';
-      let apPaternoVal = '';
-      let apMaternoVal = '';
-
-      if (nombreSolo || primerApellido || segundoApellido) {
-        if (nombreSolo) nombresVal = nombreSolo.toUpperCase();
-        if (primerApellido) apPaternoVal = primerApellido.toUpperCase();
-        if (segundoApellido) apMaternoVal = segundoApellido.toUpperCase();
-      } else if (nombre && nombre !== "No detectado") {
-        const parts = nombre.split(' ');
-        if (parts.length === 4) {
-          nombresVal = parts.slice(0, 2).join(' ').toUpperCase();
-          apPaternoVal = parts[2].toUpperCase();
-          apMaternoVal = parts[3].toUpperCase();
-        } else if (parts.length === 3) {
-          nombresVal = parts[0].toUpperCase();
-          apPaternoVal = parts[1].toUpperCase();
-          apMaternoVal = parts[2].toUpperCase();
-        } else if (parts.length === 2) {
-          nombresVal = parts[0].toUpperCase();
-          apPaternoVal = parts[1].toUpperCase();
-        } else {
-          nombresVal = nombre.toUpperCase();
-        }
-      }
-
-      const getFs = (val) => val.length > 35 ? 6 : val.length > 25 ? 7 : val.length > 18 ? 8 : 10;
-
-      if (nombresVal) safeSetField(form, 'Nombres', nombresVal, getFs(nombresVal));
-      if (apPaternoVal) safeSetField(form, 'Apellido Paterno', apPaternoVal, getFs(apPaternoVal));
-      if (apMaternoVal) safeSetField(form, 'Apellido Materno', apMaternoVal, getFs(apMaternoVal));
-
-      // CURP
-      if (curp && curp !== "No detectado") {
-        safeSetField(form, 'CURP o Clave Única de Registro de Población', curp);
-      }
-
-      // Fecha de Nacimiento
-      if (fecha_nac && fecha_nac !== "No detectada") {
-        safeSetField(form, 'Fecha de Nacimiento', fecha_nac);
-      }
-
-      // Correo electrónico
-      const email = user.Correo || user.correo || user.email;
-      const emailVal = email || '';
-      const emailFontSize = emailVal.length > 35 ? 6 : emailVal.length > 25 ? 7 : emailVal.length > 18 ? 8 : 10;
-      safeSetField(form, 'Correo electrónico', emailVal, emailFontSize);
-
-      // Sexo
-      let sexoTexto = ocrResults.sexo || '';
-      if (!sexoTexto && curp && curp.length >= 11) {
-        const sexoChar = curp.charAt(10).toUpperCase();
-        sexoTexto = sexoChar === 'H' ? 'MASCULINO' : sexoChar === 'M' ? 'FEMENINO' : '';
-      }
-      if (sexoTexto) {
-        safeSetField(form, 'Sexo', sexoTexto);
-      }
-
-      // Nacionalidad / Lugar de Nacimiento
-      safeSetField(form, 'Lugar de Nacimiento', nacionalidad);
-
-      // Teléfono (fill_24 en la plantilla directivo — puede no existir)
-      safeSetField(form, 'fill_24', asociacion.toUpperCase());
-      const telLocalPdf = (ocrResults.telefono || '').replace(/\D/g, '');
-      safeSetField(form, 'Teléfono', telLocalPdf ? (codigoPais + telLocalPdf) : '');
-
-      // Tipo de afiliación
-      safeSetField(form, 'fill_20', tipoAfiliacion);
-      safeSetField(form, 'Tipo', tipoAfiliacion);
-
-      // Asociación, Liga, Equipo
-      if (asociacion) safeSetField(form, 'Asociación', asociacion.toUpperCase());
-      if (liga) {
-        const selectedLigaObj = ligasCatalogo.find(l => String(l.id) === String(liga));
-        if (selectedLigaObj) {
-          const nameStr = selectedLigaObj.nombre.split('(')[0].trim().toUpperCase();
-          const fontSize = nameStr.length > 35 ? 6 : nameStr.length > 25 ? 7 : nameStr.length > 18 ? 8 : 10;
-          safeSetField(form, 'Liga', nameStr, fontSize);
-        }
-      }
-      const equipoVal = (ocrResults.equipo || '').toUpperCase();
-      const equipoFs = equipoVal.length > 35 ? 6 : equipoVal.length > 25 ? 7 : equipoVal.length > 18 ? 8 : 10;
-      safeSetField(form, 'Equipo', equipoVal, equipoFs);
-
-      // Fecha automática (A __ de __ del 20__)
-      const hoy = new Date();
-      const dia = String(hoy.getDate()).padStart(2, '0');
-      const meses = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
-      const mes = meses[hoy.getMonth()];
-      const anio = String(hoy.getFullYear()).slice(-2);
-
-      safeSetField(form, 'A', dia);
-      safeSetField(form, 'de', mes);
-      safeSetField(form, 'del 20', anio);
-
-      // Cargo: dinámico de acuerdo a la selección y tamaño de letra ajustado
-      const cargoValor = (cargoSeleccionado || 'Presidente Equipo').toUpperCase();
-      const cargoFontSize = cargoValor.length > 10 ? 8 : 10;
-      safeSetField(form, 'Cargo', cargoValor, cargoFontSize);
-
-      // Generar bytes del PDF
-      const pdfBytes = await pdfDoc.save();
-      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
-
-      const safeNombre = (nombre || 'Presidente').toString().replace(/[^a-zA-Z0-9_\s]/g, '').trim();
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `Formato_Afiliacion_${safeNombre}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-
-      Swal.fire('¡Listo!', 'El formato se ha descargado correctamente.', 'success');
-    } catch (err) {
-      console.error("Error generando PDF:", err);
-      Swal.fire('Error', 'No se pudo generar el PDF. ' + err.message, 'error');
-    }
+    await handleDownloadFormatoHelper({ Swal, PDFDocument, documents, ocrResults, user, asociacion, codigoPais, tipoAfiliacion, liga, ligasCatalogo, cargoSeleccionado });
   };
 
   const handleEmbedNewPhotoInFormat = async () => {
-    try {
-      Swal.fire({
-        title: 'Procesando formato...',
-        text: 'Incrustando la nueva fotografía en tu formato de afiliación ya subido.',
-        allowOutsideClick: false,
-        didOpen: () => { Swal.showLoading(); }
-      });
-
-      if (!previews.formatoAfiliacion) {
-        throw new Error('No se encontró el formato de afiliación cargado.');
-      }
-      const pdfBytes = await fetch(previews.formatoAfiliacion).then(res => res.arrayBuffer());
-      const pdfDoc = await PDFDocument.load(pdfBytes);
-      const firstPage = pdfDoc.getPages()[0];
-
-      let photoBytes;
-      let isPng = false;
-
-      if (documents.fotografia) {
-        photoBytes = await documents.fotografia.arrayBuffer();
-        isPng = documents.fotografia.name.toLowerCase().endsWith('.png');
-      } else if (previews.fotografia) {
-        const photoRes = await fetch(previews.fotografia);
-        photoBytes = await photoRes.arrayBuffer();
-        const contentType = photoRes.headers.get('content-type') || '';
-        isPng = contentType.includes('png') || previews.fotografia.startsWith('data:image/png');
-      } else {
-        throw new Error('No se encontró la nueva fotografía para incrustar.');
-      }
-
-      let photoImage;
-      if (isPng) {
-        photoImage = await pdfDoc.embedPng(photoBytes);
-      } else {
-        photoImage = await pdfDoc.embedJpg(photoBytes);
-      }
-
-      firstPage.drawImage(photoImage, {
-        x: 479,
-        y: 676,
-        width: 76,
-        height: 90,
-      });
-
-      const modifiedPdfBytes = await pdfDoc.save();
-      const modifiedBlob = new Blob([modifiedPdfBytes], { type: 'application/pdf' });
-      const modifiedFile = new File([modifiedBlob], `Formato_Afiliacion_Firmado_Con_Foto.pdf`, { type: 'application/pdf' });
-
-      const token = localStorage.getItem('token');
-      const formData = new FormData();
-      formData.append('documento_afiliacion_ids', '10');
-      formData.append('archivo', modifiedFile);
-      formData.append('solicitud_id', solicitudActualId);
-
-      const res = await fetch(`${API_BASE}/documentos/`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
-        body: formData
-      });
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.detail || 'Error al actualizar el formato en el servidor.');
-      }
-
-      Swal.close();
-      await Swal.fire({
-        title: '¡Fotografía Incrustada!',
-        text: 'La nueva fotografía ha sido colocada exitosamente en el formato de afiliación firmado ya subido.',
-        icon: 'success',
-        confirmButtonColor: COLORS.primary
-      });
-
-      await cargarDocumentosSolicitud(solicitudActualId);
-    } catch (err) {
-      console.error("Error al incrustar fotografía en formato:", err);
-      Swal.fire({
-        title: 'Error',
-        text: err.message || 'No se pudo incrustar la fotografía en el formato.',
-        icon: 'error'
-      });
-    }
+    await handleEmbedNewPhotoInFormatHelper({ Swal, PDFDocument, previews, documents, API_BASE, solicitudActualId, cargarDocumentosSolicitud, COLORS });
   };
 
 
@@ -3176,25 +2289,13 @@ function PreRegistroPresidente() {
         }
       `}</style>
 
-      <div className="card glass" style={{
-        width: '95%',
-        maxWidth: (pasoActual === 0 || pasoActual === 2 || pasoActual === 4) ? '550px' : '1400px',
-        padding: 0,
-        overflow: 'hidden',
-        transition: 'max-width 0.3s ease-in-out'
-      }}>
-        {/* PASO 0: BIENVENIDA */}
+      <div className="card glass" style={{ width: '95%', maxWidth: '1400px', padding: 0, overflow: 'hidden' }}>
         {pasoActual === 0 && (
-          <div style={{ padding: '60px 40px', textAlign: 'center' }}>
-            <h1 style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '10px' }}>Bienvenido, {nombreUsuarioCompleto}</h1>
-            <p style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-muted)', marginBottom: '30px' }}>Comencemos con tu registro inicial</p>
-            <p style={{ fontSize: '16px', color: 'var(--text-muted)', lineHeight: '1.6', margin: '30px 0', borderTop: '1px solid var(--border-light)', paddingTop: '30px' }}>
-              Para activar tu cuenta y comenzar a gestionar tu equipo, necesitamos completar dos pasos.
-            </p>
-            <button className="btn-premium" onClick={irSiguientePaso} style={{ padding: '14px 60px' }}>Continuar</button>
-            <br />
-            <a href="#" style={{ color: 'var(--text-muted)', textDecoration: 'none', fontSize: '14px', marginTop: '20px', display: 'inline-block' }} onClick={(e) => { e.preventDefault(); handleLogout(); }}>Cerrar sesión</a>
-          </div>
+          <StepBienvenida
+            nombreUsuarioCompleto={nombreUsuarioCompleto}
+            irSiguientePaso={irSiguientePaso}
+            handleLogout={handleLogout}
+          />
         )}
 
         {/* ===== GLASS STEPPER HEADER (PASO 1, 2 Y 3) ===== */}
@@ -3432,7 +2533,7 @@ function PreRegistroPresidente() {
                                       alignItems: 'center',
                                       justifyContent: 'center',
                                       boxShadow: `0 4px 10px ${COLORS.successBgTranslucent40}`,
-                                      border: `2px solid ${COLORS.slate800}`,
+                                      border: `2px solid white`,
                                       zIndex: 10
                                     }}>
                                       {cantAsignada}
@@ -3441,11 +2542,11 @@ function PreRegistroPresidente() {
                                   <div style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: '8px', marginBottom: '12px', textAlign: 'left' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: '10px' }}>
                                       <p className="insurance-player-name" style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: 'var(--color-text)' }}>{seg.nombre}</p>
-                                      <span className="insurance-player-price" style={{ fontSize: '13px', color: cantAsignada > 0 ? 'var(--color-primary)' : 'var(--color-text-secondary)', fontWeight: '700', whiteSpace: 'nowrap' }}>${seg.precio} c/u</span>
+                                      <span className="insurance-player-price" style={{ fontSize: '13px', color: 'var(--color-text-secondary)', fontWeight: '700', whiteSpace: 'nowrap' }}>${seg.precio} c/u</span>
                                     </div>
 
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }} onClick={(e) => e.stopPropagation()}>
-                                      <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)', fontWeight: '600' }}>Cantidad:</span>
+                                      <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: '600' }}>Cantidad:</span>
                                       <input
                                         type="text"
                                         inputMode="numeric"
@@ -3459,7 +2560,7 @@ function PreRegistroPresidente() {
                                           setAsignacionSeguros(prev => ({ ...prev, [seg.id]: val === '' ? '' : parseInt(val, 10) }));
                                           setError(null);
                                         }}
-                                        style={{ width: '40px', height: '32px', textAlign: 'center', borderRadius: '8px', border: `1px solid var(--color-border)`, backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', fontWeight: 'bold' }}
+                                        style={{ width: '40px', height: '32px', textAlign: 'center', borderRadius: '8px', border: `1px solid var(--color-border)`, backgroundColor: '#f8fafc', color: 'var(--color-text)', fontWeight: 'bold' }}
                                       />
                                     </div>
                                   </div>
@@ -3471,9 +2572,9 @@ function PreRegistroPresidente() {
                                       width: '100%',
                                       padding: '6px 12px',
                                       borderRadius: '10px',
-                                      border: cantAsignada > 0 ? `1px solid var(--color-border-active)` : `1px solid var(--color-border)`,
-                                      backgroundColor: cantAsignada > 0 ? 'var(--color-card-selected)' : 'var(--color-bg)',
-                                      color: cantAsignada > 0 ? 'var(--color-primary)' : 'var(--color-text-secondary)',
+                                      border: cantAsignada > 0 ? `1px solid ${COLORS.secondaryLight}` : `1px solid var(--color-border)`,
+                                      backgroundColor: cantAsignada > 0 ? COLORS.brandBlueLight10 : 'var(--bg-main)',
+                                      color: cantAsignada > 0 ? COLORS.secondaryLight : 'var(--color-text-secondary)',
                                       fontWeight: '700',
                                       fontSize: '11px',
                                       cursor: 'pointer',
@@ -3482,10 +2583,10 @@ function PreRegistroPresidente() {
                                       letterSpacing: '0.5px'
                                     }}
                                     onMouseOver={(e) => {
-                                      e.currentTarget.style.backgroundColor = cantAsignada > 0 ? 'rgba(11, 78, 166, 0.15)' : 'var(--color-border)';
+                                      e.currentTarget.style.backgroundColor = cantAsignada > 0 ? COLORS.brandBlueLight20 : 'var(--color-card-hover)';
                                     }}
                                     onMouseOut={(e) => {
-                                      e.currentTarget.style.backgroundColor = cantAsignada > 0 ? 'var(--color-card-selected)' : 'var(--color-bg)';
+                                      e.currentTarget.style.backgroundColor = cantAsignada > 0 ? COLORS.brandBlueLight10 : 'var(--bg-main)';
                                     }}
                                   >
                                     Ver Beneficios
@@ -3528,7 +2629,7 @@ function PreRegistroPresidente() {
                                       alignItems: 'center',
                                       justifyContent: 'center',
                                       boxShadow: `0 4px 10px ${COLORS.brandBlueLight50}`,
-                                      border: `2px solid ${COLORS.slate800}`,
+                                      border: `2px solid white`,
                                       zIndex: 10
                                     }}>
                                       ✓
@@ -3549,7 +2650,7 @@ function PreRegistroPresidente() {
                                   >
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: '10px' }}>
                                       <p className="insurance-player-name" style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: 'var(--color-text)' }}>{seg.nombre}</p>
-                                      <span className="insurance-player-price" style={{ fontSize: '13px', color: checked ? 'var(--color-primary)' : 'var(--color-text-secondary)', fontWeight: '700', whiteSpace: 'nowrap' }}>${seg.precio} c/u</span>
+                                      <span className="insurance-player-price" style={{ fontSize: '13px', color: 'var(--color-text-secondary)', fontWeight: '700', whiteSpace: 'nowrap' }}>${seg.precio} c/u</span>
                                     </div>
 
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
@@ -3560,7 +2661,7 @@ function PreRegistroPresidente() {
                                         onChange={() => { }} // click en fila maneja el cambio
                                         style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: COLORS.secondary, margin: 0 }}
                                       />
-                                      <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)', fontWeight: '600' }}>Seleccionar</span>
+                                      <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontWeight: '600' }}>Seleccionar</span>
                                     </div>
                                   </div>
 
@@ -3571,9 +2672,9 @@ function PreRegistroPresidente() {
                                       width: '100%',
                                       padding: '6px 12px',
                                       borderRadius: '10px',
-                                      border: checked ? `1px solid var(--color-border-active)` : `1px solid var(--color-border)`,
-                                      backgroundColor: checked ? 'var(--color-card-selected)' : 'var(--color-bg)',
-                                      color: checked ? 'var(--color-primary)' : 'var(--color-text-secondary)',
+                                      border: checked ? `1px solid ${COLORS.secondaryLight}` : `1px solid var(--color-border)`,
+                                      backgroundColor: checked ? COLORS.brandBlueLight10 : 'var(--bg-main)',
+                                      color: checked ? COLORS.secondaryLight : 'var(--color-text-secondary)',
                                       fontWeight: '700',
                                       fontSize: '11px',
                                       cursor: 'pointer',
@@ -3582,10 +2683,10 @@ function PreRegistroPresidente() {
                                       letterSpacing: '0.5px'
                                     }}
                                     onMouseOver={(e) => {
-                                      e.currentTarget.style.backgroundColor = checked ? 'rgba(11, 78, 166, 0.15)' : 'var(--color-border)';
+                                      e.currentTarget.style.backgroundColor = checked ? COLORS.brandBlueLight20 : 'var(--color-card-hover)';
                                     }}
                                     onMouseOut={(e) => {
-                                      e.currentTarget.style.backgroundColor = checked ? 'var(--color-card-selected)' : 'var(--color-bg)';
+                                      e.currentTarget.style.backgroundColor = checked ? COLORS.brandBlueLight10 : 'var(--bg-main)';
                                     }}
                                   >
                                     Ver Beneficios / Seleccionar
@@ -3617,8 +2718,8 @@ function PreRegistroPresidente() {
                 <div className="summary-stack">
                   {/* Resumen de cuotas */}
                   <div style={{
-                    background: COLORS.overlayWhite04,
-                    border: `1px solid ${COLORS.overlayWhite08}`,
+                    background: 'white',
+                    border: `1px solid var(--color-border)`,
                     borderRadius: '16px', padding: '16px',
                     position: 'relative', overflow: 'hidden',
                   }}>
@@ -3650,7 +2751,7 @@ function PreRegistroPresidente() {
                     )}
                     <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0 0', fontSize: '14px', fontWeight: '800' }}>
                       <span style={{ color: 'var(--color-text-secondary)' }}>Total {ordenPendienteId ? 'a pagar' : 'estimado'}:</span>
-                      <span style={{ color: 'var(--color-primary)' }}>${totalMostrado}</span>
+                      <span style={{ color: 'var(--primary)' }}>${totalMostrado}</span>
                     </div>
                     <button
                       className="btn-nav-blue"
@@ -3775,207 +2876,14 @@ function PreRegistroPresidente() {
 
         {/* PASO 2: ESPERANDO VALIDACIÓN / PAGO VALIDADO */}
         {pasoActual === 2 && (
-          <div className="welcome-content">
-            {estadoPago === 3 ? (
-              /* PAGO VALIDADO */
-              <div className="fade-in" style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '40px 20px',
-                textAlign: 'center',
-                minHeight: '400px'
-              }}>
-                <div style={{
-                  width: '80px',
-                  height: '80px',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '32px',
-                  background: COLORS.successBgTranslucent10,
-                  color: 'var(--secondary)',
-                  marginBottom: '25px',
-                  border: `2px solid ${COLORS.successBgTranslucent18}`
-                }}>
-                  <FaCheckCircle />
-                </div>
-
-                <h1 style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '15px' }}>
-                  ¡Bienvenido, {nombreUsuarioCompleto}!
-                </h1>
-
-                <div style={{ maxWidth: '500px' }}>
-                  <div style={{
-                    display: 'inline-block',
-                    background: COLORS.successBgTranslucent10,
-                    color: 'var(--secondary)',
-                    padding: '8px 20px',
-                    borderRadius: '20px',
-                    fontSize: '13px',
-                    fontWeight: '800',
-                    marginBottom: '20px',
-                    border: `1px solid ${COLORS.successBgTranslucent18}`
-                  }}>
-                    PAGO VALIDADO
-                  </div>
-                  <p style={{ fontSize: '16px', color: 'var(--text-muted)', lineHeight: '1.6', marginBottom: '30px' }}>
-                    Tu comprobante de pago ha sido verificado correctamente. Ahora puedes continuar con la carga de los documentos.
-                  </p>
-                  <button className="btn-premium" style={{ padding: '16px 60px' }} onClick={() => setPasoActual(3)}>
-                    Continuar con documentos
-                  </button>
-                  <br />
-                  <button style={{
-                    marginTop: '20px',
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--text-muted)',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: '600'
-                  }} onClick={handleLogout}>Cerrar sesión</button>
-                </div>
-              </div>
-            ) : estadoPago === 4 ? (
-              /* PAGO RECHAZADO */
-              <div className="fade-in" style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '40px 20px',
-                textAlign: 'center',
-                minHeight: '400px'
-              }}>
-                <div style={{
-                  width: '80px',
-                  height: '80px',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '32px',
-                  background: COLORS.dangerBgTranslucent10,
-                  color: 'var(--danger)',
-                  marginBottom: '25px',
-                  border: `2px solid ${COLORS.dangerBgTranslucent}`
-                }}>
-                  <FaTimesCircle />
-                </div>
-
-                <h1 style={{ fontSize: '30px', fontWeight: '800', color: 'var(--danger)', marginBottom: '15px' }}>
-                  Un administrador ha revisado el pago y haz sido rechazado
-                </h1>
-
-                <div style={{ maxWidth: '500px' }}>
-                  <div style={{
-                    display: 'inline-block',
-                    background: COLORS.dangerBgTranslucent10,
-                    color: 'var(--danger)',
-                    padding: '8px 20px',
-                    borderRadius: '20px',
-                    fontSize: '13px',
-                    fontWeight: '800',
-                    marginBottom: '20px',
-                    border: `1px solid ${COLORS.dangerBgTranslucent}`
-                  }}>
-                    PAGO DENEGADO
-                  </div>
-                  <div style={{ background: COLORS.dangerBgTranslucent05, border: `1px solid ${COLORS.dangerBgTranslucent}`, borderRadius: '16px', padding: '20px', marginBottom: '30px', textAlign: 'left' }}>
-                    <h4 style={{ margin: '0 0 10px', fontSize: '14px', fontWeight: '800', color: 'var(--danger)' }}>Administrador: haz sido rechazado por este motivo:</h4>
-                    <p style={{ fontSize: '14px', color: 'var(--text-main)', fontStyle: 'italic', margin: 0 }}>
-                      "{mensajeRechazoPago || 'El comprobante de pago no fue aceptado. Por favor, revisa tus datos y sube un comprobante válido.'}"
-                    </p>
-                  </div>
-
-                  <button className="btn-premium" style={{ padding: '16px 60px' }} onClick={() => {
-                    setEstadoPago(null);
-                    setPasoActual(1);
-                  }}>
-                    Subir nuevo comprobante
-                  </button>
-                  <br />
-                  <button style={{
-                    marginTop: '20px',
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--text-muted)',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: '600'
-                  }} onClick={handleLogout}>Cerrar sesión</button>
-                </div>
-              </div>
-            ) : (
-              /* ESPERANDO VALIDACIÓN */
-              <div className="fade-in" style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '40px 20px',
-                textAlign: 'center',
-                minHeight: '400px'
-              }}>
-                <div style={{
-                  width: '80px',
-                  height: '80px',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '32px',
-                  background: COLORS.warningBgTranslucent10,
-                  color: 'var(--warning)',
-                  marginBottom: '25px',
-                  border: `2px solid ${COLORS.warningBgTranslucent20}`
-                }}>
-                  <FaClock />
-                </div>
-
-                <h1 style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '15px' }}>
-                  Tu orden será aprobada pronto
-                </h1>
-
-                <div style={{ maxWidth: '500px' }}>
-                  <div style={{
-                    display: 'inline-block',
-                    background: COLORS.warningBgTranslucent10,
-                    color: 'var(--warning)',
-                    padding: '8px 20px',
-                    borderRadius: '20px',
-                    fontSize: '13px',
-                    fontWeight: '800',
-                    marginBottom: '20px',
-                    border: `1px solid ${COLORS.warningBgTranslucent20}`
-                  }}>
-                    ORDEN EN ESPERA
-                  </div>
-                  <p style={{ fontSize: '16px', color: 'var(--text-muted)', lineHeight: '1.6', marginBottom: '30px' }}>
-                    Hemos recibido tu comprobante de pago. Tu orden será aprobada pronto y, cuando eso ocurra,
-                    podrás continuar con la carga de documentos necesarios para tu afiliación oficial.
-                  </p>
-
-                  <div style={{ background: 'var(--bg-main)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '20px', marginBottom: '30px', textAlign: 'left' }}>
-                    <h4 style={{ margin: '0 0 10px', fontSize: '13px', fontWeight: '800', color: 'var(--primary)' }}>Documentos a preparar:</h4>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '12px', color: 'var(--text-muted)' }}>
-                      <span>• Acta de nacimiento</span>
-                      <span>• Fotografía reciente</span>
-                      <span>• Identificación oficial</span>
-                    </div>
-                  </div>
-
-                  <button className="btn-premium" style={{ padding: '14px 40px', background: 'var(--text-muted)', boxShadow: 'none' }} onClick={handleLogout}>
-                    Cerrar sesión
-                  </button>
-                  <br />
-                </div>
-              </div>
-            )}
-          </div>
+          <StepValidacionPago
+            estadoPago={estadoPago}
+            nombreUsuarioCompleto={nombreUsuarioCompleto}
+            setPasoActual={setPasoActual}
+            mensajeRechazoPago={mensajeRechazoPago}
+            setEstadoPago={setEstadoPago}
+            handleLogout={handleLogout}
+          />
         )}
 
         {/* PASO 3: DOCUMENTOS */}
@@ -5728,300 +4636,22 @@ function PreRegistroPresidente() {
           </div>
         )}
 
-        {/* PASO 4: DOCUMENTOS EN REVISION */}
         {pasoActual === 4 && (
-          <div className="pre-registro-section">
-            <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-              <h2 style={{ color: 'var(--text-main)', fontSize: '28px', fontWeight: '800', marginBottom: '15px' }}>
-                Tu solicitud será aprobada pronto
-              </h2>
-              <p style={{ color: 'var(--text-muted)', fontSize: '16px', maxWidth: '500px', margin: '0 auto 40px', lineHeight: '1.6' }}>
-                Tus documentos fueron enviados correctamente. El administrador está revisando tu solicitud y su aprobación llegará pronto.
-              </p>
-              <div style={{ background: COLORS.overlayWhite03, border: `1px solid ${COLORS.overlayWhite06}`, borderRadius: '16px', padding: '25px', display: 'inline-block', textAlign: 'left' }}>
-                <p style={{ margin: '0 0 10px', fontSize: '14px', color: COLORS.successLight, fontWeight: '700' }}>✓ Pago Validado</p>
-                <p style={{ margin: '0 0 10px', fontSize: '14px', color: COLORS.warning, fontWeight: '700' }}>Solicitud: EN ESPERA</p>
-                <p style={{ margin: '0', fontSize: '14px', color: COLORS.overlayWhite30, fontWeight: '700' }}>○ Acceso: PENDIENTE</p>
-              </div>
-              <div style={{ marginTop: '40px' }}>
-                <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Puedes cerrar sesión y volver más tarde para revisar tu estado.</p>
-              </div>
-              <a href="#" style={{ color: 'var(--text-muted)', textDecoration: 'none', fontSize: '14px', marginTop: '20px', display: 'inline-block' }} onClick={(e) => { e.preventDefault(); handleLogout(); }}>Cerrar sesión</a>
-            </div>
-          </div>
+          <StepRevisionSolicitud handleLogout={handleLogout} />
         )}
       </div>
 
       {/* MODAL DE DETALLE DE SEGUROS */}
-      {seguroDetalle && (() => {
-        const segNombreNormalizado = normalizarNombreSeguro(seguroDetalle.nombre);
-        const info = DETALLES_SEGUROS[segNombreNormalizado] || {
-          nombre: seguroDetalle.nombre,
-          precio: seguroDetalle.precio,
-          poliza: 'N/A',
-          vigencia: 'N/A',
-          alcance: seguroDetalle.descripcion || 'Información general de cobertura y beneficios.',
-          beneficios: [seguroDetalle.descripcion || 'Sin descripción adicional.'],
-          coberturas: []
-        };
-        const esPresidente = ['TIPO G', 'TIPO J'].includes(segNombreNormalizado);
-
-        return createPortal(
-          <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            backgroundColor: COLORS.overlaySlateDeep,
-            backdropFilter: 'blur(10px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 9999,
-            padding: '20px',
-            animation: 'fadeIn 0.2s ease-out'
-          }}>
-            <div style={{
-              backgroundColor: COLORS.slate800,
-              border: `1px solid ${COLORS.overlayWhite10}`,
-              borderRadius: '24px',
-              width: '100%',
-              maxWidth: '850px',
-              maxHeight: '90vh',
-              overflowY: 'auto',
-              boxShadow: `0 25px 50px -12px ${COLORS.overlayBlack}`,
-              display: 'flex',
-              flexDirection: 'column',
-              color: 'var(--text-main)'
-            }}>
-              {/* Header */}
-              <div style={{
-                padding: '25px 30px',
-                borderBottom: `1px solid ${COLORS.overlayWhite08}`,
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                flexWrap: 'wrap',
-                gap: '15px',
-                background: `linear-gradient(90deg, ${COLORS.slate800}, ${COLORS.slate900})`
-              }}>
-                <div>
-                  <h3 style={{ margin: 0, fontSize: '12px', fontWeight: '900', color: COLORS.secondaryLight, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    {esPresidente ? 'Seguro Presidente' : 'Seguro Jugador'}
-                  </h3>
-                  <h2 style={{ margin: '5px 0 0', fontSize: '22px', fontWeight: '900', color: COLORS.white }}>
-                    {info.nombre}
-                  </h2>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '10px', color: COLORS.overlayWhite50, fontWeight: '700', textTransform: 'uppercase' }}>Costo Unitario</div>
-                  <div style={{ fontSize: '26px', fontWeight: '900', color: COLORS.successLight }}>
-                    ${Number(info.precio).toFixed(2)} <span style={{ fontSize: '12px', fontWeight: '700', color: COLORS.overlayWhite60 }}>M.N.</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Content */}
-              <div style={{ padding: '30px', display: 'flex', flexDirection: 'column', gap: '25px' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '30px' }}>
-                  {/* Left Column - Benefits */}
-                  <div>
-                    <h4 style={{ fontSize: '14px', fontWeight: '900', color: COLORS.slate400, marginBottom: '15px', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: `1px solid ${COLORS.overlayWhite06}`, paddingBottom: '6px' }}>
-                      Beneficios Incluidos
-                    </h4>
-                    <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      {info.beneficios.map((ben, idx) => (
-                        <li key={idx} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', fontSize: '13px', lineHeight: '1.5', color: COLORS.overlayWhite85 }}>
-                          <span style={{ color: COLORS.successLight, fontWeight: '900', fontSize: '15px' }}>✓</span>
-                          <span>{ben}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  {/* Right Column - Policy & Scope */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    <div>
-                      <h4 style={{ fontSize: '14px', fontWeight: '900', color: COLORS.slate400, marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: `1px solid ${COLORS.overlayWhite06}`, paddingBottom: '6px' }}>
-                        Detalles de la Póliza
-                      </h4>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px' }}>
-                        <div style={{ background: COLORS.overlayWhite03, border: `1px solid ${COLORS.overlayWhite06}`, borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
-                          <div style={{ fontSize: '10px', color: COLORS.overlayWhite40, fontWeight: '700', textTransform: 'uppercase' }}>No. de Póliza</div>
-                          <div style={{ fontSize: '13px', fontWeight: '800', color: COLORS.white, marginTop: '4px' }}>{info.poliza}</div>
-                        </div>
-                        <div style={{ background: COLORS.overlayWhite03, border: `1px solid ${COLORS.overlayWhite06}`, borderRadius: '12px', padding: '12px', textAlign: 'center' }}>
-                          <div style={{ fontSize: '10px', color: COLORS.overlayWhite40, fontWeight: '700', textTransform: 'uppercase' }}>Vigencia</div>
-                          <div style={{ fontSize: '13px', fontWeight: '800', color: COLORS.white, marginTop: '4px' }}>{info.vigencia}</div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <h4 style={{ fontSize: '14px', fontWeight: '900', color: COLORS.slate400, marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: `1px solid ${COLORS.overlayWhite06}`, paddingBottom: '6px' }}>
-                        Alcance y Cobertura
-                      </h4>
-                      <p style={{ margin: 0, fontSize: '12px', lineHeight: '1.6', color: COLORS.overlayWhite70, background: COLORS.dangerBgTranslucent05, border: `1px solid ${COLORS.dangerBgTranslucent}`, borderRadius: '12px', padding: '14px' }}>
-                        {info.alcance.includes('traslados dentro del mismo estado') ? (
-                          <>
-                            {info.alcance.replace('traslados dentro del mismo estado.', '')}
-                            <strong style={{ color: COLORS.danger }}>traslados dentro del mismo estado.</strong>
-                          </>
-                        ) : info.alcance.includes('traslados de estado a estado') ? (
-                          <>
-                            {info.alcance.replace('traslados de estado a estado.', '')}
-                            <strong style={{ color: COLORS.danger }}>traslados de estado a estado.</strong>
-                          </>
-                        ) : info.alcance.includes('traslados entre estados') ? (
-                          <>
-                            {info.alcance.replace('traslados entre estados.', '')}
-                            <strong style={{ color: COLORS.danger }}>traslados entre estados.</strong>
-                          </>
-                        ) : (
-                          info.alcance
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Coverages Table (if applicable) */}
-                {info.coberturas.length > 0 && (
-                  <div>
-                    <h4 style={{ fontSize: '14px', fontWeight: '900', color: COLORS.slate400, marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: `1px solid ${COLORS.overlayWhite06}`, paddingBottom: '6px' }}>
-                      Montos de Cobertura
-                    </h4>
-                    <div style={{ borderRadius: '16px', border: `1px solid ${COLORS.overlayWhite08}`, overflowX: 'auto' }}>
-                      <table style={{ width: '100%', minWidth: '300px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
-                        <thead>
-                          <tr style={{ backgroundColor: COLORS.overlayWhite04, borderBottom: `1px solid ${COLORS.overlayWhite08}` }}>
-                            <th style={{ padding: '12px 20px', fontWeight: '800', color: COLORS.overlayWhite60 }}>Cobertura / Concepto</th>
-                            <th style={{ padding: '12px 20px', fontWeight: '800', color: COLORS.overlayWhite60, textAlign: 'right' }}>Monto Máximo Amparado</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {info.coberturas.map((cob, idx) => (
-                            <tr key={idx} style={{ borderBottom: idx === info.coberturas.length - 1 ? 'none' : `1px solid ${COLORS.overlayWhite05}`, backgroundColor: idx % 2 === 0 ? COLORS.overlayWhite01 : 'transparent' }}>
-                              <td style={{ padding: '12px 20px', fontWeight: '700', color: COLORS.white }}>{cob.cobertura}</td>
-                              <td style={{ padding: '12px 20px', fontWeight: '900', color: cob.cobertura.toLowerCase().includes('deducible') ? COLORS.danger : COLORS.successLight, textAlign: 'right' }}>{cob.monto}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Action Footer */}
-              <div style={{
-                padding: '20px 30px',
-                borderTop: `1px solid ${COLORS.overlayWhite08}`,
-                backgroundColor: COLORS.overlaySlateLight,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '20px',
-                borderBottomLeftRadius: '24px',
-                borderBottomRightRadius: '24px'
-              }}>
-                <div>
-                  {esPresidente ? (
-                    <div style={{ fontSize: '13px', color: COLORS.overlayWhite60 }}>
-                      Este seguro se asignará a tu cuenta de Presidente de Equipo.
-                    </div>
-                  ) : (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: '13px', color: COLORS.overlayWhite60, fontWeight: '600' }}>
-                        Selecciona la cantidad:
-                      </span>
-                      <div style={{ display: 'flex', alignItems: 'center', background: COLORS.overlayWhite04, border: `1px solid ${COLORS.overlayWhite10}`, borderRadius: '12px', padding: '3px' }}>
-                        <button
-                          type="button"
-                          onClick={() => setCantidadModal(prev => Math.max(0, prev - 1))}
-                          style={{ width: '32px', height: '32px', borderRadius: '10px', border: 'none', background: COLORS.overlayWhite06, color: 'white', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        >-</button>
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          pattern="[0-9]*"
-                          maxLength="2"
-                          value={cantidadModal}
-                          onChange={(e) => {
-                            const val = e.target.value.replace(/\D/g, '');
-                            setCantidadModal(val === '' ? 0 : parseInt(val, 10));
-                          }}
-                          style={{ width: '60px', border: 'none', background: 'transparent', color: COLORS.white, textAlign: 'center', fontWeight: '900', fontSize: '16px' }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setCantidadModal(prev => prev + 1)}
-                          style={{ width: '32px', height: '32px', borderRadius: '10px', border: 'none', background: COLORS.overlayWhite06, color: 'white', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        >+</button>
-                      </div>
-                      <span style={{ fontSize: '12px', color: COLORS.overlayWhite40, fontWeight: '700' }}>
-                        (Faltan {jugadoresRestantes} por asignar)
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                <div style={{ display: 'flex', gap: '12px' }}>
-                  <button
-                    type="button"
-                    onClick={() => setSeguroDetalle(null)}
-                    style={{
-                      background: COLORS.overlayWhite05,
-                      border: `1px solid ${COLORS.overlayWhite10}`,
-                      color: COLORS.overlayWhite70,
-                      padding: '10px 24px',
-                      borderRadius: '12px',
-                      fontWeight: '800',
-                      cursor: 'pointer',
-                      fontSize: '14px',
-                      transition: 'all 0.2s'
-                    }}
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (esPresidente) {
-                        const next = { ...asignacionSeguros };
-                        segurosPresidente.forEach(item => {
-                          next[item.id] = item.id === seguroDetalle.id ? 1 : 0;
-                        });
-                        setAsignacionSeguros(next);
-                      } else {
-                        setAsignacionSeguros({ ...asignacionSeguros, [seguroDetalle.id]: cantidadModal });
-                      }
-                      setSeguroDetalle(null);
-                    }}
-                    style={{
-                      background: `linear-gradient(135deg, ${COLORS.brandBlueLight} 0%, ${COLORS.secondaryDark} 100%)`,
-                      border: 'none',
-                      color: COLORS.white,
-                      padding: '10px 28px',
-                      borderRadius: '12px',
-                      fontWeight: '900',
-                      cursor: 'pointer',
-                      fontSize: '14px',
-                      boxShadow: `0 4px 12px ${COLORS.brandBlueLight30}`,
-                      transition: 'all 0.2s'
-                    }}
-                  >
-                    {esPresidente ? 'Seleccionar Seguro' : 'Confirmar Cantidad'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>,
-          document.body
-        );
-      })()}
+      <SeguroDetallesModal
+        seguroDetalle={seguroDetalle}
+        setSeguroDetalle={setSeguroDetalle}
+        cantidadModal={cantidadModal}
+        setCantidadModal={setCantidadModal}
+        jugadoresRestantes={jugadoresRestantes}
+        asignacionSeguros={asignacionSeguros}
+        setAsignacionSeguros={setAsignacionSeguros}
+        segurosPresidente={segurosPresidente}
+      />
       {previewDoc && (
         <Modal
           estaAbierto={!!previewDoc}
@@ -6098,7 +4728,3 @@ function PreRegistroPresidente() {
 }
 
 export default PreRegistroPresidente;
-
-
-
-
