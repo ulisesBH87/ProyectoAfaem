@@ -243,6 +243,23 @@ export default function AdminSolicitudes() {
         });
 
         if (result.isConfirmed) {
+          const row = solicitudes.find(s => s.SolicitudId === id);
+          const yaAprobado = row && Number(row.EstatusValidacion || row.estatusValidacion) === 2;
+
+          if (yaAprobado) {
+            const confirmRechazo = await Swal.fire({
+              title: 'Confirmar acción',
+              text: 'El presidente estaba aprobado, perderá acceso a su panel, ¿rechazar documentos?',
+              icon: 'warning',
+              showCancelButton: true,
+              confirmButtonText: 'Sí, rechazar',
+              cancelButtonText: 'Cancelar',
+              confirmButtonColor: COLORS.danger,
+              cancelButtonColor: COLORS.slate400
+            });
+            if (!confirmRechazo.isConfirmed) return;
+          }
+
           try {
             setLoading(true);
             await updateSolicitudEstatus(id, 3, JSON.stringify(reporteValidacion));
@@ -485,7 +502,7 @@ export default function AdminSolicitudes() {
           <button
             onClick={() => handleVerDetalles(row.SolicitudId)}
             style={{
-              padding: '7px 14px', background: COLORS.blue, color: 'white',
+              padding: '7px 14px', background: COLORS.primary, color: 'white',
               border: 'none', borderRadius: '8px', cursor: 'pointer',
               fontSize: '12px', fontWeight: '700'
             }}
@@ -501,7 +518,7 @@ export default function AdminSolicitudes() {
                 fontSize: '12px', fontWeight: '700'
               }}
             >
-              Docs
+              Ver/rechazar documentos
             </button>
           )}
 
@@ -533,16 +550,6 @@ export default function AdminSolicitudes() {
                 }}
               >
                 Aprobar
-              </button>
-              <button
-                onClick={() => handleRechazarSolicitud(row.SolicitudId)}
-                style={{
-                  padding: '7px 14px', background: COLORS.danger, color: 'white',
-                  border: 'none', borderRadius: '8px', cursor: 'pointer',
-                  fontSize: '12px', fontWeight: '700'
-                }}
-              >
-                Rechazar
               </button>
             </>
           )}
