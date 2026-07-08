@@ -246,23 +246,69 @@ class ConsumptionService:
             
         resumenes = query.all()
         
-        total_operaciones = sum(r.CantidadOperaciones for r in resumenes)
-        costo_total = sum(float(r.CostoAcumulado) for r in resumenes)
+        # Obtener tarifas activas de la base de datos
+        tarifas_db = db.query(CatalogoTarifas).filter(CatalogoTarifas.Estatus == True).all()
+        tarifas_map = {
+            f"{t.TipoConsumo}_{t.Proveedor}": {
+                "costo_unitario": float(t.CostoUnitario),
+                "divisa": t.Divisa
+            }
+            for t in tarifas_db
+        }
         
-        por_proveedor = {}
+        total_operaciones = sum(r.CantidadOperaciones for r in resumenes)
+        costo_total_usd = 0.0
+        costo_total_mxn = 0.0
+        
+        por_proveedor_usd = {}
+        por_proveedor_mxn = {}
+        
         por_operacion = {}
         por_registro = {}
         
         for r in resumenes:
-            por_proveedor[r.Proveedor] = por_proveedor.get(r.Proveedor, 0.0) + float(r.CostoAcumulado)
-            por_operacion[r.TipoConsumo] = por_operacion.get(r.TipoConsumo, 0.0) + float(r.CostoAcumulado)
+            # Determinar divisa
+            tarifa = tarifas_map.get(f"{r.TipoConsumo}_{r.Proveedor}")
+            divisa = "MXN"
+            if tarifa:
+                divisa = tarifa["divisa"]
+            else:
+                # Fallback local
+                from app.servicios.consumo_servicio import TARIFAS_DEFAULT
+                operacion = TARIFAS_DEFAULT.get(r.TipoConsumo, {})
+                t_fallback = operacion.get(r.Proveedor, operacion.get("DEFAULT", {"divisa": "MXN"}))
+                divisa = t_fallback["divisa"]
+            
+            costo_val = float(r.CostoAcumulado)
+            if divisa == "USD":
+                costo_total_usd += costo_val
+                por_proveedor_usd[r.Proveedor] = por_proveedor_usd.get(r.Proveedor, 0.0) + costo_val
+            else:
+                costo_total_mxn += costo_val
+                por_proveedor_mxn[r.Proveedor] = por_proveedor_mxn.get(r.Proveedor, 0.0) + costo_val
+                
+            por_operacion[r.TipoConsumo] = por_operacion.get(r.TipoConsumo, 0.0) + costo_val
             por_registro[r.TipoRegistro] = por_registro.get(r.TipoRegistro, 0) + r.CantidadOperaciones
+            
+        tarifas_list = [
+            {
+                "tipo_consumo": t.TipoConsumo,
+                "proveedor": t.Proveedor,
+                "costo_unitario": float(t.CostoUnitario),
+                "divisa": t.Divisa,
+                "descripcion": t.Descripcion
+            }
+            for t in tarifas_db
+        ]
             
         return {
             "total_operaciones": total_operaciones,
-            "costo_total": costo_total,
-            "costo_por_proveedor": por_proveedor,
+            "costo_total_usd": costo_total_usd,
+            "costo_total_mxn": costo_total_mxn,
+            "costo_por_proveedor_usd": por_proveedor_usd,
+            "costo_por_proveedor_mxn": por_proveedor_mxn,
             "costo_por_operacion": por_operacion,
             "operaciones_por_registro": por_registro,
+            "tarifas": tarifas_list,
             "data": resumenes
         }

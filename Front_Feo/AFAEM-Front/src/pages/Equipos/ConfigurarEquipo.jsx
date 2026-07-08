@@ -2482,7 +2482,7 @@ export default function ConfigurarEquipo() {
             if (tieneDatos) {
               Swal.fire({
                 title: '¿Abandonar registro?',
-                text: "Se perderán los documentos subidos y el progreso actual (excepto los campos guardados en la BD).",
+                text: "Se perderán los documentos subidos y el progreso actual.",
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: COLORS.danger,

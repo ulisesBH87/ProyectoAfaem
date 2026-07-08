@@ -1497,7 +1497,7 @@ export default function RegistroJugadores() {
         triggerToast();
       }
     } catch (err) {
-      console.warn('No se pudo guardar el borrador en la BD:', err);
+      console.warn('No se pudo guardar el borrador: ', err);
     }
   };
 

@@ -1,23 +1,23 @@
 import COLORS from '../../styles/colors';
 import React, { useEffect, useState } from 'react';
-import { 
-  getMetricasMaster, 
-  getReporteMensualMaster, 
-  getReporteUsuarioMaster, 
-  getReporteEntidadMaster, 
+import {
+  getMetricasMaster,
+  getReporteMensualMaster,
+  getReporteUsuarioMaster,
+  getReporteEntidadMaster,
   getReporteDiarioMaster,
   getConsumoResumen,
   getConsumoLedger
 } from '../../services/admin';
 import Loader from '../../components/Loader';
-import { 
-  FaChartPie, 
-  FaUsers, 
-  FaUserTie, 
-  FaFutbol, 
-  FaCalendarAlt, 
-  FaUserCheck, 
-  FaDatabase, 
+import {
+  FaChartPie,
+  FaUsers,
+  FaUserTie,
+  FaFutbol,
+  FaCalendarAlt,
+  FaUserCheck,
+  FaDatabase,
   FaClock,
   FaFileAlt,
   FaCoins,
@@ -49,6 +49,7 @@ export default function ResumenesMaster() {
   const [filtroTipoConsumo, setFiltroTipoConsumo] = useState('');
   const [filtroTipoRegistro, setFiltroTipoRegistro] = useState('');
   const [filtroEsCobrable, setFiltroEsCobrable] = useState('todos');
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const MESES = [
     { value: 1, label: "Enero" },
@@ -67,7 +68,7 @@ export default function ResumenesMaster() {
 
   const ANIOS = Array.from({ length: 6 }, (_, i) => 2024 + i); // 2024 a 2029
 
-  // Carga de reportes e históricos (Una sola vez)
+  // Carga de reportes e históricos (Una sola vez o en recarga)
   useEffect(() => {
     async function cargarDatosGenerales() {
       setLoading(true);
@@ -91,7 +92,7 @@ export default function ResumenesMaster() {
       }
     }
     cargarDatosGenerales();
-  }, []);
+  }, [refreshTrigger]);
 
   // Carga de métricas KPI cada vez que cambia el mes o año seleccionado
   useEffect(() => {
@@ -109,7 +110,7 @@ export default function ResumenesMaster() {
     if (mesSeleccionado && anioSeleccionado) {
       cargarMetricasFiltradas();
     }
-  }, [mesSeleccionado, anioSeleccionado]);
+  }, [mesSeleccionado, anioSeleccionado, refreshTrigger]);
 
   useEffect(() => {
     async function cargarConsumo() {
@@ -119,10 +120,10 @@ export default function ResumenesMaster() {
         const fechaInicio = `${anioSeleccionado}-${String(mesSeleccionado).padStart(2, '0')}-01`;
         const ultimoDia = new Date(anioSeleccionado, mesSeleccionado, 0).getDate();
         const fechaFin = `${anioSeleccionado}-${String(mesSeleccionado).padStart(2, '0')}-${ultimoDia}`;
-        
+
         const resumenResp = await getConsumoResumen({ fecha_inicio: fechaInicio, fecha_fin: fechaFin });
         setConsumoResumen(resumenResp);
-        
+
         const paramsLedger = {
           page: ledgerPage,
           size: ledgerSize,
@@ -133,7 +134,7 @@ export default function ResumenesMaster() {
         if (filtroTipoRegistro) paramsLedger.tipo_registro = filtroTipoRegistro;
         if (filtroEsCobrable === 'si') paramsLedger.es_cobrable = true;
         if (filtroEsCobrable === 'no') paramsLedger.es_cobrable = false;
-        
+
         const ledgerResp = await getConsumoLedger(paramsLedger);
         setConsumoLedger(ledgerResp.data || []);
         setLedgerTotal(ledgerResp.total || 0);
@@ -144,7 +145,11 @@ export default function ResumenesMaster() {
       }
     }
     cargarConsumo();
-  }, [activeTab, mesSeleccionado, anioSeleccionado, ledgerPage, filtroTipoConsumo, filtroTipoRegistro, filtroEsCobrable]);
+  }, [activeTab, mesSeleccionado, anioSeleccionado, ledgerPage, filtroTipoConsumo, filtroTipoRegistro, filtroEsCobrable, refreshTrigger]);
+
+  const handleRecargar = () => {
+    setRefreshTrigger(prev => prev + 1);
+  };
 
   if (loading) return <Loader text="Cargando análisis y resúmenes..." />;
 
@@ -184,8 +189,8 @@ export default function ResumenesMaster() {
 
       {/* TABS SELECTOR */}
       <div style={{ display: 'flex', gap: '12px', borderBottom: `2px solid ${COLORS.slate200}`, paddingBottom: '12px', marginBottom: '24px' }}>
-        <button 
-          onClick={() => setActiveTab('sistema')} 
+        <button
+          onClick={() => setActiveTab('sistema')}
           style={{
             padding: '10px 20px',
             borderRadius: '10px',
@@ -204,8 +209,8 @@ export default function ResumenesMaster() {
         >
           <FaChartPie /> Métricas del Sistema
         </button>
-        <button 
-          onClick={() => setActiveTab('consumo')} 
+        <button
+          onClick={() => setActiveTab('consumo')}
           style={{
             padding: '10px 20px',
             borderRadius: '10px',
@@ -290,6 +295,32 @@ export default function ResumenesMaster() {
               </option>
             ))}
           </select>
+
+          <button
+            onClick={handleRecargar}
+            title="Recargar datos del período"
+            disabled={loadingMetricas || loadingConsumo}
+            style={{
+              background: COLORS.white,
+              border: `1.5px solid ${COLORS.slate300}`,
+              borderRadius: '10px',
+              padding: '8px 12px',
+              color: COLORS.slate700,
+              fontSize: '13px',
+              fontWeight: '700',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              boxShadow: 'var(--shadow-sm)',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = colorPrimary; e.currentTarget.style.color = colorPrimary; }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = COLORS.slate300; e.currentTarget.style.color = COLORS.slate700; }}
+          >
+            <FaRedo size={12} style={{ transition: 'transform 0.5s ease', transform: (loadingMetricas || loadingConsumo) ? 'rotate(360deg)' : 'none' }} /> Recargar
+          </button>
         </div>
       </div>
 
@@ -525,17 +556,31 @@ export default function ResumenesMaster() {
               </div>
             </div>
 
-            {/* Costo Total */}
+            {/* Costo Total USD */}
             <div style={{ background: COLORS.white, border: `1px solid ${COLORS.shadow10}`, borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: `0 8px 32px 0 ${COLORS.shadow05}` }}>
               <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: COLORS.successBgTranslucent, color: colorSuccess, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>
                 <FaCoins />
               </div>
               <div>
-                <div style={{ fontSize: '10px', fontWeight: '700', color: COLORS.slate600, textTransform: 'uppercase', letterSpacing: '1px' }}>Costo Acumulado</div>
+                <div style={{ fontSize: '10px', fontWeight: '700', color: COLORS.slate600, textTransform: 'uppercase', letterSpacing: '1px' }}>Costo USD Acumulado</div>
                 <div style={{ fontSize: '24px', fontWeight: '900', color: COLORS.slate900, marginTop: '2px' }}>
-                  {loadingConsumo ? '...' : (consumoResumen?.costo_total ?? 0).toFixed(4)}
+                  {loadingConsumo ? '...' : (consumoResumen?.costo_total_usd ?? 0).toFixed(4)}
                 </div>
-                <div style={{ fontSize: '11px', color: COLORS.slate500, marginTop: '2px' }}>Valor Mixto (USD + MXN)</div>
+                <div style={{ fontSize: '11px', color: COLORS.slate500, marginTop: '2px' }}>Dólares Americanos (USD)</div>
+              </div>
+            </div>
+
+            {/* Costo Total MXN */}
+            <div style={{ background: COLORS.white, border: `1px solid ${COLORS.shadow10}`, borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: `0 8px 32px 0 ${COLORS.shadow05}` }}>
+              <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: COLORS.brandBlueLight16, color: colorPrimary, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>
+                <FaCoins />
+              </div>
+              <div>
+                <div style={{ fontSize: '10px', fontWeight: '700', color: COLORS.slate600, textTransform: 'uppercase', letterSpacing: '1px' }}>Costo MXN Acumulado</div>
+                <div style={{ fontSize: '24px', fontWeight: '900', color: COLORS.slate900, marginTop: '2px' }}>
+                  {loadingConsumo ? '...' : (consumoResumen?.costo_total_mxn ?? 0).toFixed(2)}
+                </div>
+                <div style={{ fontSize: '11px', color: COLORS.slate500, marginTop: '2px' }}>Pesos Mexicanos (MXN)</div>
               </div>
             </div>
 
@@ -582,14 +627,37 @@ export default function ResumenesMaster() {
             </div>
           </div>
 
+          {/* TARIFAS DE SERVICIOS ACTIVO */}
+          <div style={{ background: COLORS.white, border: `1px solid ${COLORS.slate200}`, borderRadius: '16px', padding: '18px 24px', marginBottom: '24px', boxShadow: 'var(--shadow-sm)' }}>
+            <h4 style={{ fontSize: '13px', fontWeight: '800', color: COLORS.slate700, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <FaCoins style={{ color: colorInfo }} /> Tarifas Unitarias Vigentes (Costo por Unidad)
+            </h4>
+            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+              {consumoResumen?.tarifas && consumoResumen.tarifas.length > 0 ? (
+                consumoResumen.tarifas.map((tar, idx) => (
+                  <div key={idx} style={{ background: COLORS.slate50, border: `1px solid ${COLORS.slate200}`, borderRadius: '12px', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontSize: '11px', fontWeight: '800', color: COLORS.slate500, textTransform: 'uppercase' }}>
+                      {tar.tipo_consumo} ({tar.proveedor})
+                    </span>
+                    <span style={{ fontSize: '14px', fontWeight: '900', color: COLORS.slate900 }}>
+                      {tar.costo_unitario.toFixed(4)} <span style={{ fontSize: '11px', color: COLORS.slate500, fontWeight: '700' }}>{tar.divisa}</span>
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <div style={{ fontSize: '12px', color: COLORS.slate500, fontStyle: 'italic' }}>Cargando tarifas...</div>
+              )}
+            </div>
+          </div>
+
           {/* FILTERS BAR FOR LEDGER */}
           <div style={{ background: COLORS.white, border: `1px solid ${COLORS.slate200}`, borderRadius: '16px', padding: '20px', marginBottom: '24px', display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap', boxShadow: 'var(--shadow-sm)' }}>
             <span style={{ fontSize: '12px', fontWeight: '800', color: COLORS.slate700, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <FaFilter /> Filtrar Ledger:
             </span>
-            
-            <select 
-              value={filtroTipoConsumo} 
+
+            <select
+              value={filtroTipoConsumo}
               onChange={(e) => { setFiltroTipoConsumo(e.target.value); setLedgerPage(1); }}
               style={{ background: COLORS.white, border: `1px solid ${COLORS.slate300}`, borderRadius: '8px', padding: '6px 12px', fontSize: '13px', fontWeight: '600', outline: 'none' }}
             >
@@ -599,8 +667,8 @@ export default function ResumenesMaster() {
               <option value="VERIFICAMEX">VerificaMex</option>
             </select>
 
-            <select 
-              value={filtroTipoRegistro} 
+            <select
+              value={filtroTipoRegistro}
               onChange={(e) => { setFiltroTipoRegistro(e.target.value); setLedgerPage(1); }}
               style={{ background: COLORS.white, border: `1px solid ${COLORS.slate300}`, borderRadius: '8px', padding: '6px 12px', fontSize: '13px', fontWeight: '600', outline: 'none' }}
             >
@@ -611,8 +679,8 @@ export default function ResumenesMaster() {
               <option value="OTRO">Otro</option>
             </select>
 
-            <select 
-              value={filtroEsCobrable} 
+            <select
+              value={filtroEsCobrable}
               onChange={(e) => { setFiltroEsCobrable(e.target.value); setLedgerPage(1); }}
               style={{ background: COLORS.white, border: `1px solid ${COLORS.slate300}`, borderRadius: '8px', padding: '6px 12px', fontSize: '13px', fontWeight: '600', outline: 'none' }}
             >
@@ -651,7 +719,7 @@ export default function ResumenesMaster() {
             <h4 style={{ fontSize: '16px', fontWeight: '800', color: COLORS.slate900, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
               <FaReceipt style={{ color: colorSuccess }} /> Transacciones Ledger de Consumos (BitacoraConsumo)
             </h4>
-            
+
             {loadingConsumo ? (
               <div style={{ padding: '40px', textAlign: 'center', color: COLORS.slate500, fontWeight: '600' }}>Cargando transacciones de consumo...</div>
             ) : (
@@ -719,13 +787,13 @@ export default function ResumenesMaster() {
                     </tbody>
                   </table>
                 </div>
-                
+
                 {/* PAGINATION CONTROLS */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px' }}>
                   <span style={{ fontSize: '12px', color: COLORS.slate500, fontWeight: '600' }}>
                     Mostrando {consumoLedger.length} de {ledgerTotal} transacciones
                   </span>
-                  
+
                   <div style={{ display: 'flex', gap: '8px' }}>
                     <button
                       onClick={() => setLedgerPage(prev => Math.max(prev - 1, 1))}
@@ -744,11 +812,11 @@ export default function ResumenesMaster() {
                     >
                       Anterior
                     </button>
-                    
+
                     <span style={{ padding: '6px 12px', fontSize: '12px', fontWeight: '700', color: COLORS.slate900 }}>
                       Pág. {ledgerPage}
                     </span>
-                    
+
                     <button
                       onClick={() => setLedgerPage(prev => prev + 1)}
                       disabled={ledgerPage * ledgerSize >= ledgerTotal}
@@ -779,26 +847,55 @@ export default function ResumenesMaster() {
               <h4 style={{ fontSize: '16px', fontWeight: '800', color: COLORS.slate900, marginBottom: '16px' }}>
                 Costo por Proveedor
               </h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                {consumoResumen?.costo_por_proveedor && Object.keys(consumoResumen.costo_por_proveedor).length > 0 ? (
-                  Object.entries(consumoResumen.costo_por_proveedor).map(([prov, costo], idx) => {
-                    const maxVal = Math.max(...Object.values(consumoResumen.costo_por_proveedor), 1);
-                    const porcentaje = (costo / maxVal) * 100;
-                    return (
-                      <div key={idx}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
-                          <span style={{ fontWeight: '700', color: COLORS.slate900 }}>{prov}</span>
-                          <span style={{ fontWeight: '800', color: colorSuccess }}>{parseFloat(costo).toFixed(4)}</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {/* Gastos en USD */}
+                {consumoResumen?.costo_por_proveedor_usd && Object.keys(consumoResumen.costo_por_proveedor_usd).length > 0 && (
+                  <div>
+                    <h5 style={{ fontSize: '11px', fontWeight: '800', color: COLORS.slate500, textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.5px' }}>Gastos en USD</h5>
+                    {Object.entries(consumoResumen.costo_por_proveedor_usd).map(([prov, costo], idx) => {
+                      const maxVal = Math.max(...Object.values(consumoResumen.costo_por_proveedor_usd), 1);
+                      const porcentaje = (costo / maxVal) * 100;
+                      return (
+                        <div key={idx} style={{ marginBottom: '10px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
+                            <span style={{ fontWeight: '700', color: COLORS.slate900 }}>{prov}</span>
+                            <span style={{ fontWeight: '800', color: colorSuccess }}>{parseFloat(costo).toFixed(4)} USD</span>
+                          </div>
+                          <div style={{ height: '6px', background: COLORS.slate100, borderRadius: '3px', overflow: 'hidden' }}>
+                            <div style={{ width: `${porcentaje}%`, height: '100%', background: colorSuccess, borderRadius: '3px' }}></div>
+                          </div>
                         </div>
-                        <div style={{ height: '6px', background: COLORS.slate100, borderRadius: '3px', overflow: 'hidden' }}>
-                          <div style={{ width: `${porcentaje}%`, height: '100%', background: colorSuccess, borderRadius: '3px' }}></div>
-                        </div>
-                      </div>
-                    );
-                  })
-                ) : (
-                  <div style={{ color: COLORS.slate500, fontStyle: 'italic', fontSize: '13px' }}>No hay registros para este período.</div>
+                      );
+                    })}
+                  </div>
                 )}
+
+                {/* Gastos en MXN */}
+                {consumoResumen?.costo_por_proveedor_mxn && Object.keys(consumoResumen.costo_por_proveedor_mxn).length > 0 && (
+                  <div>
+                    <h5 style={{ fontSize: '11px', fontWeight: '800', color: COLORS.slate500, textTransform: 'uppercase', marginBottom: '8px', marginTop: '8px', letterSpacing: '0.5px' }}>Gastos en MXN</h5>
+                    {Object.entries(consumoResumen.costo_por_proveedor_mxn).map(([prov, costo], idx) => {
+                      const maxVal = Math.max(...Object.values(consumoResumen.costo_por_proveedor_mxn), 1);
+                      const porcentaje = (costo / maxVal) * 100;
+                      return (
+                        <div key={idx} style={{ marginBottom: '10px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
+                            <span style={{ fontWeight: '700', color: COLORS.slate900 }}>{prov}</span>
+                            <span style={{ fontWeight: '800', color: colorPrimary }}>{parseFloat(costo).toFixed(2)} MXN</span>
+                          </div>
+                          <div style={{ height: '6px', background: COLORS.slate100, borderRadius: '3px', overflow: 'hidden' }}>
+                            <div style={{ width: `${porcentaje}%`, height: '100%', background: colorPrimary, borderRadius: '3px' }}></div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {(!consumoResumen?.costo_por_proveedor_usd || Object.keys(consumoResumen.costo_por_proveedor_usd).length === 0) &&
+                  (!consumoResumen?.costo_por_proveedor_mxn || Object.keys(consumoResumen.costo_por_proveedor_mxn).length === 0) && (
+                    <div style={{ color: COLORS.slate500, fontStyle: 'italic', fontSize: '13px' }}>No hay registros para este período.</div>
+                  )}
               </div>
             </div>
 
