@@ -678,7 +678,7 @@ function PreRegistroPresidente() {
       } else if (estatusId === 4) {
         // Documentos personales en revisión por el admin
         setEstadoPago(3); // Para que sepa que el pago ya fue validado
-        setPasoActual(5); // Nuevo paso: Validación de documentos
+        setPasoActual(4); // Pantalla de "en espera de aprobación"
       } else if (estatusId === 3) {
         // Ya pagó, falta subir los documentos personales (INE, Acta, etc)
         setEstadoPago(3); // Asegurar estado aprobado en UI local
@@ -884,7 +884,7 @@ function PreRegistroPresidente() {
       }
 
       if (estatusSolicitud === 1) {
-        setPasoActual(5); // PASO 3: VALIDACIÓN
+        setPasoActual(4); // Pantalla de "en espera de aprobación"
         return;
       }
 
@@ -5516,7 +5516,7 @@ function PreRegistroPresidente() {
               </p>
               <div style={{ background: COLORS.overlayWhite03, border: `1px solid ${COLORS.overlayWhite06}`, borderRadius: '16px', padding: '25px', display: 'inline-block', textAlign: 'left' }}>
                 <p style={{ margin: '0 0 10px', fontSize: '14px', color: COLORS.successLight, fontWeight: '700' }}>✓ Pago Validado</p>
-                <p style={{ margin: '0 0 10px', fontSize: '14px', color: COLORS.warning, fontWeight: '700' }}>⏳ Solicitud: EN ESPERA</p>
+                <p style={{ margin: '0 0 10px', fontSize: '14px', color: COLORS.warning, fontWeight: '700' }}>Solicitud: EN ESPERA</p>
                 <p style={{ margin: '0', fontSize: '14px', color: COLORS.overlayWhite30, fontWeight: '700' }}>○ Acceso: PENDIENTE</p>
               </div>
               <div style={{ marginTop: '40px' }}>
