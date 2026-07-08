@@ -440,7 +440,7 @@ function PreRegistroPresidente() {
   };
 
   const triggerDocUpload = (docKey, isValidationFlow = false) => {
-    if (docKey === 'formatoAfiliacion' && formatAfiliacionLocked) {
+    if (docKey === 'formatoAfiliacion' && !isValidationFlow && formatAfiliacionLocked) {
       return Swal.fire('Acción requerida', 'Debes completar todos los datos de identidad y documentos anteriores antes de subir el formato de afiliación.', 'warning');
     }
     const inputId = isValidationFlow ? `file-val-${docKey}` : `file-${docKey}`;
