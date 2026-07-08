@@ -5,7 +5,7 @@ import requests
 import difflib
 from concurrent.futures import ThreadPoolExecutor
 from flask import Flask, render_template, request
-import pytesseract
+from google.cloud import vision
 from datetime import datetime
 import fitz
 import unicodedata
@@ -18,15 +18,25 @@ try:
 except ImportError:
     pass
 
-# Configuración de ruta para ejecutable de Tesseract
-tesseract_cmd = os.getenv("TESSERACT_CMD")
-if not tesseract_cmd:
-    typical_win_path = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
-    if os.path.exists(typical_win_path):
-        tesseract_cmd = typical_win_path
+credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+if credentials_path:
+    credentials_path = (
+        credentials_path.replace('\x0c', '\\f')
+        .replace('\x07', '\\a')
+        .replace('\x08', '\\b')
+        .replace('\x09', '\\t')
+        .replace('\x0a', '\\n')
+        .replace('\x0d', '\\r')
+    )
 
-if tesseract_cmd:
-    pytesseract.pytesseract.tesseract_cmd = tesseract_cmd
+if not credentials_path:
+    credentials_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "afaemocr-e6153e55388c.json")
+elif not os.path.isabs(credentials_path):
+    credentials_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), credentials_path)
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = credentials_path
+
+
+
 
 app = Flask(__name__)
 
@@ -49,6 +59,37 @@ def guardar_cache_curps(cache):
             json.dump(list(cache), f, indent=4)
     except Exception as e:
         print(f"[ERROR] No se pudo guardar el cache de CURPs: {str(e)}")
+
+
+def validar_tlaloc(curp, token):
+    if not curp or curp == "No detectado":
+        return {"verificado": False, "mensaje": "Sin CURP para verificar"}
+        
+    curp_norm = curp.strip().upper()
+    cache = cargar_cache_curps()
+    if curp_norm in cache:
+        return {"verificado": True, "mensaje": "CURP Validada Oficialmente en RENAPO (Cache local)", "curp_oficial": curp_norm}
+
+    url = "https://api.tlaloc.sh/mx/v1/curp"
+    headers = {
+        "Accept": "application/json",
+        "Authorization": f"Bearer {token}"
+    }
+    params = {"curp": curp_norm}
+    try:
+        respuesta = requests.get(url, params=params, headers=headers)
+        if respuesta.status_code == 200:
+            datos_api = respuesta.json()
+            if "curp" in datos_api and "nombres" in datos_api:
+                cache.add(curp_norm)
+                guardar_cache_curps(cache)
+                return {"verificado": True, "mensaje": "CURP Validada Oficialmente en RENAPO (Tlaloc)", "curp_oficial": curp_norm}
+        elif respuesta.status_code == 404:
+            return {"verificado": False, "mensaje": "CURP no encontrada en RENAPO"}
+        return {"verificado": False, "mensaje": f"API Tlaloc respondio con codigo {respuesta.status_code}"}
+    except Exception as e:
+        print(f"[ERROR] Error de conexion con la API de Tlaloc: {str(e)}")
+        return {"verificado": False, "mensaje": "Error de conexion con la API de Tlaloc"}
 
 def validar_verificamex(curp):
     if not curp or curp == "No detectado":
@@ -2397,6 +2438,7 @@ def preprocesar_imagen_canales(image_content, grises_active=False):
         if img is None:
             return image_content
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        # Binarización adaptativa OTSU
         _, binarized = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         _, encoded_img = cv2.imencode('.png', binarized)
         return encoded_img.tobytes()
@@ -2406,73 +2448,8 @@ def preprocesar_imagen_canales(image_content, grises_active=False):
 
 # --- ADAPTADOR TESSERACT OCR LOCAL ---
 
-def run_tesseract_on_bytes(image_content):
-    try:
-        nparr = np.frombuffer(image_content, np.uint8)
-        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        if img is None:
-            return None, None
 
-        # Configurar carpeta local de tessdata
-        tessdata_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tessdata").replace('\\', '/')
-        config = f'--tessdata-dir {tessdata_dir}'
-
-        # Ejecutar Tesseract
-        texto_original = pytesseract.image_to_string(img, lang='spa+eng', config=config)
-        data = pytesseract.image_to_data(img, lang='spa+eng', output_type=pytesseract.Output.DICT, config=config)
-
-        annotations = []
-
-        # El primer elemento representa todo el texto
-        class MockAnnotationPrincipal:
-            def __init__(self, desc):
-                self.description = desc
-
-        annotations.append(MockAnnotationPrincipal(texto_original))
-
-        # Los siguientes elementos representan cada palabra individual con sus coordenadas
-        n_words = len(data['text'])
-        for i in range(n_words):
-            word_text = data['text'][i].strip()
-            if not word_text:
-                continue
-            
-            left = data['left'][i]
-            top = data['top'][i]
-            width = data['width'][i]
-            height = data['height'][i]
-
-            class MockVertex:
-                def __init__(self, x, y):
-                    self.x = x
-                    self.y = y
-
-            class MockPoly:
-                def __init__(self, left, top, width, height):
-                    self.vertices = [
-                        MockVertex(left, top),
-                        MockVertex(left + width, top),
-                        MockVertex(left + width, top + height),
-                        MockVertex(left, top + height)
-                    ]
-
-            class MockWordAnnotation:
-                def __init__(self, text, left, top, width, height):
-                    self.description = text
-                    self.bounding_poly = MockPoly(left, top, width, height)
-
-            annotations.append(MockWordAnnotation(word_text, left, top, width, height))
-
-        class MockVisionResponse:
-            def __init__(self, annots):
-                self.text_annotations = annots
-
-        return texto_original, MockVisionResponse(annotations)
-    except Exception as e:
-        print(f"[ERROR TESSERACT RUN] {e}")
-        return None, None
-
-def ejecutar_tesseract_ocr(filename, content, grises_active=False):
+def ejecutar_vision_ocr(filename, content, grises_active=False):
     if filename.endswith('.pdf'):
         doc = fitz.open(stream=content, filetype="pdf")
         page = doc.load_page(0) 
@@ -2484,7 +2461,11 @@ def ejecutar_tesseract_ocr(filename, content, grises_active=False):
     image_content = preprocesar_imagen_canales(image_content, grises_active=grises_active)
     img_b64 = base64.b64encode(image_content).decode('utf-8')
 
-    texto_original, response = run_tesseract_on_bytes(image_content)
+    client = vision.ImageAnnotatorClient()
+    image = vision.Image(content=image_content)
+    response = client.document_text_detection(image=image)
+    
+    texto_original = response.text_annotations[0].description if response.text_annotations else None
     
     if not texto_original:
         return None, None, None, None
@@ -2499,7 +2480,9 @@ def ejecutar_tesseract_ocr(filename, content, grises_active=False):
     preprocessed_content = preprocesar_imagen_acta(image_content)
     if preprocessed_content:
         try:
-            texto_preprocesado, response_prep = run_tesseract_on_bytes(preprocessed_content)
+            image_prep = vision.Image(content=preprocessed_content)
+            response_prep = client.document_text_detection(image=image_prep)
+            texto_preprocesado = response_prep.text_annotations[0].description if response_prep.text_annotations else None
             
             if texto_preprocesado:
                 datos_original = procesar_texto(texto_original, response)
@@ -2545,7 +2528,7 @@ def ejecutar_tesseract_ocr(filename, content, grises_active=False):
                 else:
                     return texto_original, img_b64, response, datos_original
         except Exception as e:
-            print(f"[ERROR] Error running Tesseract on preprocessed image: {str(e)}")
+            print(f"[ERROR] Error running Vision on preprocessed image: {str(e)}")
             
     datos_original = procesar_texto(texto_original, response)
     return texto_original, img_b64, response, datos_original
@@ -2555,9 +2538,9 @@ def index():
     datos = None
     grises_active = False
     if request.method == 'POST':
-        grises_active = request.form.get('grises') == 'true'
         archivo_id = request.files.get('file_id')
         archivo_formato = request.files.get('file_formato')
+        grises_active = request.form.get('grises') == 'true'
         
         if archivo_id and archivo_id.filename != '':
             try:
@@ -2571,11 +2554,11 @@ def index():
                     form_content = archivo_formato.read()
 
                 with ThreadPoolExecutor(max_workers=2) as executor:
-                    futuro_id = executor.submit(ejecutar_tesseract_ocr, id_name, id_content, grises_active)
+                    futuro_id = executor.submit(ejecutar_vision_ocr, id_name, id_content, grises_active)
                     
                     futuro_formato = None
                     if form_content:
-                        futuro_formato = executor.submit(ejecutar_tesseract_ocr, form_name, form_content, grises_active)
+                        futuro_formato = executor.submit(ejecutar_vision_ocr, form_name, form_content, grises_active)
                         
                     texto_id, img_id_b64, response_id, datos_id = futuro_id.result()
                     texto_formato, img_form_b64, response_formato, datos_formato = (futuro_formato.result() if futuro_formato else (None, None, None, None))
