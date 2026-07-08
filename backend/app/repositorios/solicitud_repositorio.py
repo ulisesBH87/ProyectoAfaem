@@ -192,9 +192,11 @@ def obtener_solicitud_detalle_repo(db:Session, solicitud_id: int):
         EquipoTemporal.SolicitudId == solicitud_id
     ).first()
 
-    slots = db.query(EquipoTemporalJugador).filter(
-        EquipoTemporalJugador.EquipoTemporalId == equipo.EquipoTemporalId
-    ).all()
+    slots = []
+    if equipo:
+        slots = db.query(EquipoTemporalJugador).filter(
+            EquipoTemporalJugador.EquipoTemporalId == equipo.EquipoTemporalId
+        ).all()
 
     jugadores = []
 

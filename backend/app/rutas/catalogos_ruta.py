@@ -37,22 +37,26 @@ CATALOGO_MAP = {
 }
 
 @router.get("/{tipo}", response_model=List[CatalogoResponse])
-def listar_catalogos(tipo: str, db: Session = Depends(get_db)):
+def listar_catalogos(tipo: str, solo_activos: bool = False, db: Session = Depends(get_db)):
     if tipo not in CATALOGO_MAP:
         raise HTTPException(status_code=404, detail="Tipo de catálogo no válido")
     
     config = CATALOGO_MAP[tipo]
     model = config["model"]
     
+    query = db.query(model)
+    if solo_activos:
+        query = query.filter(model.Estatus == True)
+        
     if tipo == "ligas":
         from sqlalchemy.orm import joinedload
-        items = db.query(model).options(
+        items = query.options(
             joinedload(model.ModalidadRelacion),
             joinedload(model.CategoriaRelacion),
             joinedload(model.RamaRelacion)
         ).all()
     else:
-        items = db.query(model).all()
+        items = query.all()
     
     # Transformamos para que coincida con el esquema CatalogoResponse (id, nombre, descripcion)
     resultado = []
@@ -60,7 +64,8 @@ def listar_catalogos(tipo: str, db: Session = Depends(get_db)):
         res = {
             "id": getattr(item, config["id_field"]),
             "nombre": getattr(item, config["name_field"]),
-            "descripcion": getattr(item, config["description_field"]) if config["description_field"] else None
+            "descripcion": getattr(item, config["description_field"]) if config["description_field"] else None,
+            "estatus": getattr(item, "Estatus", True)
         }
         if tipo == "ligas":
             cat = item.CategoriaRelacion.NombreCategoria if item.CategoriaRelacion else ""
@@ -97,6 +102,9 @@ def crear_catalogo(tipo: str, data: CatalogoCreate, db: Session = Depends(get_db
         # Si tiene campo de descripción, lo asignamos
         if config["description_field"]:
             setattr(nuevo_item, config["description_field"], data.descripcion or data.nombre)
+            
+        if hasattr(nuevo_item, "Estatus"):
+            nuevo_item.Estatus = True
         
         if tipo == "ligas":
             nuevo_item.ModalidadId = data.modalidadId
@@ -110,7 +118,8 @@ def crear_catalogo(tipo: str, data: CatalogoCreate, db: Session = Depends(get_db
         res = {
             "id": getattr(nuevo_item, config["id_field"]), 
             "nombre": getattr(nuevo_item, config["name_field"]),
-            "descripcion": getattr(nuevo_item, config["description_field"]) if config["description_field"] else None
+            "descripcion": getattr(nuevo_item, config["description_field"]) if config["description_field"] else None,
+            "estatus": getattr(nuevo_item, "Estatus", True)
         }
         if tipo == "ligas":
             db.refresh(nuevo_item)
@@ -153,6 +162,9 @@ def actualizar_catalogo(tipo: str, item_id: int, data: CatalogoUpdate, db: Sessi
         if config["description_field"]:
             setattr(item, config["description_field"], data.descripcion or data.nombre)
             
+        if hasattr(item, "Estatus") and data.estatus is not None:
+            item.Estatus = data.estatus
+            
         if tipo == "ligas":
             item.ModalidadId = data.modalidadId
             item.CategoriaId = data.categoriaId
@@ -164,7 +176,8 @@ def actualizar_catalogo(tipo: str, item_id: int, data: CatalogoUpdate, db: Sessi
         res = {
             "id": getattr(item, config["id_field"]), 
             "nombre": getattr(item, config["name_field"]),
-            "descripcion": getattr(item, config["description_field"]) if config["description_field"] else None
+            "descripcion": getattr(item, config["description_field"]) if config["description_field"] else None,
+            "estatus": getattr(item, "Estatus", True)
         }
         if tipo == "ligas":
             db.refresh(item)
@@ -203,9 +216,15 @@ def eliminar_catalogo(tipo: str, item_id: int, db: Session = Depends(get_db), us
         if not item:
             raise HTTPException(status_code=404, detail="Registro no encontrado")
         
-        db.delete(item)
-        db.commit()
-        return {"message": "Registro eliminado correctamente"}
+        # En lugar de eliminar físicamente, desactivamos (Estatus = False)
+        if hasattr(item, "Estatus"):
+            item.Estatus = False
+            db.commit()
+            return {"message": "Registro desactivado correctamente"}
+        else:
+            db.delete(item)
+            db.commit()
+            return {"message": "Registro eliminado correctamente"}
     except Exception as e:
         db.rollback()
         error_str = str(e)
