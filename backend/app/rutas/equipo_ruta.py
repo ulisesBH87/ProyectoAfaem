@@ -198,12 +198,22 @@ def validar_nombre_equipo(
     usuario = Depends(obtener_usuario_actual)
 ):
     from app.modelos.equipo_modelo import Equipos, EquiposJugando
+    from app.modelos.presidente_equipo_modelo import PresidenteEquipo
     from sqlalchemy import func
     
-    existe = db.query(EquiposJugando).join(Equipos).filter(
+    presidente = None
+    if usuario and hasattr(usuario, "PersonaId") and usuario.PersonaId:
+        presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == usuario.PersonaId).first()
+    
+    query = db.query(EquiposJugando).join(Equipos).filter(
         func.lower(Equipos.NombreEquipo) == func.lower(nombre_equipo.strip()),
         EquiposJugando.LigaId == liga_id
-    ).first()
+    )
+    
+    if presidente:
+        query = query.filter(EquiposJugando.PresidenteEquipoId != presidente.PresidenteEquipoId)
+        
+    existe = query.first()
     
     return {"disponible": existe is None}
 
