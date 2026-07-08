@@ -2523,6 +2523,7 @@ function PreRegistroPresidente() {
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
+      justifyContent: (pasoActual === 0 || pasoActual === 2 || pasoActual === 4) ? 'center' : 'flex-start',
       padding: '20px 20px',
       position: 'relative',
     }}>
@@ -3175,7 +3176,13 @@ function PreRegistroPresidente() {
         }
       `}</style>
 
-      <div className="card glass" style={{ width: '95%', maxWidth: '1400px', padding: 0, overflow: 'hidden' }}>
+      <div className="card glass" style={{
+        width: '95%',
+        maxWidth: (pasoActual === 0 || pasoActual === 2 || pasoActual === 4) ? '550px' : '1400px',
+        padding: 0,
+        overflow: 'hidden',
+        transition: 'max-width 0.3s ease-in-out'
+      }}>
         {/* PASO 0: BIENVENIDA */}
         {pasoActual === 0 && (
           <div style={{ padding: '60px 40px', textAlign: 'center' }}>
@@ -3433,12 +3440,12 @@ function PreRegistroPresidente() {
                                   )}
                                   <div style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: '8px', marginBottom: '12px', textAlign: 'left' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: '10px' }}>
-                                      <p className="insurance-player-name" style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: 'white' }}>{seg.nombre}</p>
-                                      <span className="insurance-player-price" style={{ fontSize: '13px', color: 'white', fontWeight: '700', whiteSpace: 'nowrap' }}>${seg.precio} c/u</span>
+                                      <p className="insurance-player-name" style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: 'var(--color-text)' }}>{seg.nombre}</p>
+                                      <span className="insurance-player-price" style={{ fontSize: '13px', color: cantAsignada > 0 ? 'var(--color-primary)' : 'var(--color-text-secondary)', fontWeight: '700', whiteSpace: 'nowrap' }}>${seg.precio} c/u</span>
                                     </div>
 
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }} onClick={(e) => e.stopPropagation()}>
-                                      <span style={{ fontSize: '11px', color: COLORS.overlayWhite70, fontWeight: '600' }}>Cantidad:</span>
+                                      <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)', fontWeight: '600' }}>Cantidad:</span>
                                       <input
                                         type="text"
                                         inputMode="numeric"
@@ -3452,7 +3459,7 @@ function PreRegistroPresidente() {
                                           setAsignacionSeguros(prev => ({ ...prev, [seg.id]: val === '' ? '' : parseInt(val, 10) }));
                                           setError(null);
                                         }}
-                                        style={{ width: '40px', height: '32px', textAlign: 'center', borderRadius: '8px', border: `1px solid ${COLORS.overlayWhite15}`, backgroundColor: COLORS.overlayWhite05, color: 'white', fontWeight: 'bold' }}
+                                        style={{ width: '40px', height: '32px', textAlign: 'center', borderRadius: '8px', border: `1px solid var(--color-border)`, backgroundColor: 'var(--color-bg)', color: 'var(--color-text)', fontWeight: 'bold' }}
                                       />
                                     </div>
                                   </div>
@@ -3464,9 +3471,9 @@ function PreRegistroPresidente() {
                                       width: '100%',
                                       padding: '6px 12px',
                                       borderRadius: '10px',
-                                      border: cantAsignada > 0 ? `1px solid ${COLORS.secondaryLight}` : `1px solid ${COLORS.overlayWhite10}`,
-                                      backgroundColor: cantAsignada > 0 ? COLORS.brandBlueLight10 : COLORS.overlayWhite04,
-                                      color: cantAsignada > 0 ? COLORS.secondaryLight : COLORS.overlayWhite70,
+                                      border: cantAsignada > 0 ? `1px solid var(--color-border-active)` : `1px solid var(--color-border)`,
+                                      backgroundColor: cantAsignada > 0 ? 'var(--color-card-selected)' : 'var(--color-bg)',
+                                      color: cantAsignada > 0 ? 'var(--color-primary)' : 'var(--color-text-secondary)',
                                       fontWeight: '700',
                                       fontSize: '11px',
                                       cursor: 'pointer',
@@ -3475,10 +3482,10 @@ function PreRegistroPresidente() {
                                       letterSpacing: '0.5px'
                                     }}
                                     onMouseOver={(e) => {
-                                      e.currentTarget.style.backgroundColor = cantAsignada > 0 ? COLORS.brandBlueLight20 : COLORS.overlayWhite08;
+                                      e.currentTarget.style.backgroundColor = cantAsignada > 0 ? 'rgba(11, 78, 166, 0.15)' : 'var(--color-border)';
                                     }}
                                     onMouseOut={(e) => {
-                                      e.currentTarget.style.backgroundColor = cantAsignada > 0 ? COLORS.brandBlueLight10 : COLORS.overlayWhite04;
+                                      e.currentTarget.style.backgroundColor = cantAsignada > 0 ? 'var(--color-card-selected)' : 'var(--color-bg)';
                                     }}
                                   >
                                     Ver Beneficios
@@ -3541,8 +3548,8 @@ function PreRegistroPresidente() {
                                     style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: '8px', marginBottom: '12px', cursor: 'pointer', textAlign: 'left' }}
                                   >
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', gap: '10px' }}>
-                                      <p className="insurance-player-name" style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: 'white' }}>{seg.nombre}</p>
-                                      <span className="insurance-player-price" style={{ fontSize: '13px', color: 'white', fontWeight: '700', whiteSpace: 'nowrap' }}>${seg.precio} c/u</span>
+                                      <p className="insurance-player-name" style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: 'var(--color-text)' }}>{seg.nombre}</p>
+                                      <span className="insurance-player-price" style={{ fontSize: '13px', color: checked ? 'var(--color-primary)' : 'var(--color-text-secondary)', fontWeight: '700', whiteSpace: 'nowrap' }}>${seg.precio} c/u</span>
                                     </div>
 
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
@@ -3553,7 +3560,7 @@ function PreRegistroPresidente() {
                                         onChange={() => { }} // click en fila maneja el cambio
                                         style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: COLORS.secondary, margin: 0 }}
                                       />
-                                      <span style={{ fontSize: '11px', color: COLORS.overlayWhite70, fontWeight: '600' }}>Seleccionar</span>
+                                      <span style={{ fontSize: '11px', color: 'var(--color-text-secondary)', fontWeight: '600' }}>Seleccionar</span>
                                     </div>
                                   </div>
 
@@ -3564,9 +3571,9 @@ function PreRegistroPresidente() {
                                       width: '100%',
                                       padding: '6px 12px',
                                       borderRadius: '10px',
-                                      border: checked ? `1px solid ${COLORS.secondaryLight}` : `1px solid ${COLORS.overlayWhite10}`,
-                                      backgroundColor: checked ? COLORS.brandBlueLight10 : COLORS.overlayWhite04,
-                                      color: checked ? COLORS.secondaryLight : COLORS.overlayWhite70,
+                                      border: checked ? `1px solid var(--color-border-active)` : `1px solid var(--color-border)`,
+                                      backgroundColor: checked ? 'var(--color-card-selected)' : 'var(--color-bg)',
+                                      color: checked ? 'var(--color-primary)' : 'var(--color-text-secondary)',
                                       fontWeight: '700',
                                       fontSize: '11px',
                                       cursor: 'pointer',
@@ -3575,10 +3582,10 @@ function PreRegistroPresidente() {
                                       letterSpacing: '0.5px'
                                     }}
                                     onMouseOver={(e) => {
-                                      e.currentTarget.style.backgroundColor = checked ? COLORS.brandBlueLight20 : COLORS.overlayWhite08;
+                                      e.currentTarget.style.backgroundColor = checked ? 'rgba(11, 78, 166, 0.15)' : 'var(--color-border)';
                                     }}
                                     onMouseOut={(e) => {
-                                      e.currentTarget.style.backgroundColor = checked ? COLORS.brandBlueLight10 : COLORS.overlayWhite04;
+                                      e.currentTarget.style.backgroundColor = checked ? 'var(--color-card-selected)' : 'var(--color-bg)';
                                     }}
                                   >
                                     Ver Beneficios / Seleccionar
@@ -3618,7 +3625,7 @@ function PreRegistroPresidente() {
                     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: `linear-gradient(90deg,transparent,${COLORS.brandBlueLight50},transparent)` }} />
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
                       <div style={{ width: '4px', height: '18px', background: `linear-gradient(180deg,${COLORS.brandBlueLight},${COLORS.primary})`, borderRadius: '4px' }} />
-                      <h5 style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: COLORS.overlayWhite85 }}>
+                      <h5 style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: 'var(--color-text)' }}>
                         {ordenPendienteId ? 'Detalles de la Orden' : 'Resumen de pago'}
                       </h5>
                     </div>
@@ -3628,22 +3635,22 @@ function PreRegistroPresidente() {
                         return tafId !== 2 && tafId !== 4;
                       })
                       .map(detalle => (
-                        <div key={detalle.OrdenPagoDetalleId || `${detalle.TipoAfiliacionId}-${detalle.Cantidad}`} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: `1px solid ${COLORS.overlayWhite05}`, fontSize: '12px' }}>
-                          <span style={{ color: COLORS.overlayWhite60 }}>{nombreAfiliacion(detalle.TipoAfiliacionId || detalle.tipo_afiliacion_id)} (x{detalle.Cantidad || detalle.cantidad})</span>
-                          <span style={{ color: COLORS.overlayWhite85, fontWeight: '700' }}>${Number(detalle.Subtotal || detalle.subtotal || 0)}</span>
+                        <div key={detalle.OrdenPagoDetalleId || `${detalle.TipoAfiliacionId}-${detalle.Cantidad}`} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: `1px solid var(--color-border)`, fontSize: '12px' }}>
+                          <span style={{ color: 'var(--color-text-secondary)' }}>{nombreAfiliacion(detalle.TipoAfiliacionId || detalle.tipo_afiliacion_id)} (x{detalle.Cantidad || detalle.cantidad})</span>
+                          <span style={{ color: 'var(--color-text)', fontWeight: '700' }}>${Number(detalle.Subtotal || detalle.subtotal || 0)}</span>
                         </div>
                       ))}
                     {catalogoSeguros.map(seg =>
                       asignacionSeguros[seg.id] > 0 && (
-                        <div key={seg.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: `1px solid ${COLORS.overlayWhite05}`, fontSize: '12px' }}>
-                          <span style={{ color: COLORS.overlayWhite60 }}>{seg.nombre} (x{asignacionSeguros[seg.id]})</span>
-                          <span style={{ color: COLORS.overlayWhite85, fontWeight: '700' }}>${seg.precio * asignacionSeguros[seg.id]}</span>
+                        <div key={seg.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: `1px solid var(--color-border)`, fontSize: '12px' }}>
+                          <span style={{ color: 'var(--color-text-secondary)' }}>{seg.nombre} (x{asignacionSeguros[seg.id]})</span>
+                          <span style={{ color: 'var(--color-text)', fontWeight: '700' }}>${seg.precio * asignacionSeguros[seg.id]}</span>
                         </div>
                       )
                     )}
                     <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0 0', fontSize: '14px', fontWeight: '800' }}>
-                      <span style={{ color: COLORS.overlayWhite70 }}>Total {ordenPendienteId ? 'a pagar' : 'estimado'}:</span>
-                      <span style={{ color: COLORS.brandBlueLight }}>${totalMostrado}</span>
+                      <span style={{ color: 'var(--color-text-secondary)' }}>Total {ordenPendienteId ? 'a pagar' : 'estimado'}:</span>
+                      <span style={{ color: 'var(--color-primary)' }}>${totalMostrado}</span>
                     </div>
                     <button
                       className="btn-nav-blue"
@@ -3744,7 +3751,7 @@ function PreRegistroPresidente() {
                       type="button"
                       className="btn-outline"
                       onClick={() => generarPDFCuota(ordenPendienteId)}
-                      style={{ padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '6px', color: COLORS.secondaryLight, borderColor: COLORS.brandBlueLight50 }}
+                      style={{ padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-primary)', borderColor: 'var(--color-border-active)' }}
                     >
                       <FaFileAlt /> Descargar Orden de Pago
                     </button>
