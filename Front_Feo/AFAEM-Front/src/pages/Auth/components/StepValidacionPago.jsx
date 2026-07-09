@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { FaCheckCircle, FaTimesCircle, FaClock } from 'react-icons/fa';
 import COLORS from '../../../styles/colors';
 
@@ -10,6 +10,21 @@ function StepValidacionPago({
   setEstadoPago,
   handleLogout
 }) {
+  const [secondsLeft, setSecondsLeft] = useState(20);
+
+  useEffect(() => {
+    if (estadoPago === 3 || estadoPago === 4) return;
+
+    if (secondsLeft <= 0) {
+      handleLogout();
+      return;
+    }
+    const timer = setTimeout(() => {
+      setSecondsLeft(prev => prev - 1);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [secondsLeft, estadoPago, handleLogout]);
+
   return (
     <div className="welcome-content">
       {estadoPago === 3 ? (
@@ -207,6 +222,9 @@ function StepValidacionPago({
             <button className="btn-premium" style={{ padding: '14px 40px', background: 'var(--text-muted)', boxShadow: 'none' }} onClick={handleLogout}>
               Cerrar sesión
             </button>
+            <p style={{ color: 'var(--secondary)', fontSize: '13px', fontWeight: '700', marginTop: '15px' }}>
+              🔄 Redirigiendo al inicio de sesión en {secondsLeft} segundos...
+            </p>
             <br />
           </div>
         </div>

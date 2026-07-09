@@ -1,7 +1,20 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import COLORS from '../../../styles/colors';
 
 function StepRevisionSolicitud({ handleLogout }) {
+  const [secondsLeft, setSecondsLeft] = useState(20);
+
+  useEffect(() => {
+    if (secondsLeft <= 0) {
+      handleLogout();
+      return;
+    }
+    const timer = setTimeout(() => {
+      setSecondsLeft(prev => prev - 1);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [secondsLeft, handleLogout]);
+
   return (
     <div className="pre-registro-section">
       <div style={{ textAlign: 'center', padding: '60px 20px' }}>
@@ -18,6 +31,9 @@ function StepRevisionSolicitud({ handleLogout }) {
         </div>
         <div style={{ marginTop: '40px' }}>
           <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Puedes cerrar sesión y volver más tarde para revisar tu estado.</p>
+          <p style={{ color: 'var(--secondary)', fontSize: '14px', fontWeight: '700', marginTop: '10px' }}>
+            🔄 Redirigiendo al inicio de sesión en {secondsLeft} segundos...
+          </p>
         </div>
         <a
           href="#"
