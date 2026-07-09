@@ -7,7 +7,8 @@ import {
   getReporteEntidadMaster,
   getReporteDiarioMaster,
   getConsumoResumen,
-  getConsumoLedger
+  getConsumoLedger,
+  getConsumoAuditoria
 } from '../../services/admin';
 import Loader from '../../components/Loader';
 import {
@@ -23,7 +24,8 @@ import {
   FaCoins,
   FaReceipt,
   FaFilter,
-  FaRedo
+  FaRedo,
+  FaSearch
 } from 'react-icons/fa';
 
 export default function ResumenesMaster() {
@@ -50,6 +52,17 @@ export default function ResumenesMaster() {
   const [filtroTipoRegistro, setFiltroTipoRegistro] = useState('');
   const [filtroEsCobrable, setFiltroEsCobrable] = useState('todos');
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // Estados para Auditoría y Desgloses
+  const [loadingAuditoria, setLoadingAuditoria] = useState(false);
+  const [auditoriaData, setAuditoriaData] = useState({
+    desglose_jugadores: [],
+    desglose_equipos: [],
+    desglose_ligas: []
+  });
+  const [searchJugador, setSearchJugador] = useState('');
+  const [searchEquipo, setSearchEquipo] = useState('');
+  const [searchLiga, setSearchLiga] = useState('');
 
   const MESES = [
     { value: 1, label: "Enero" },
@@ -146,6 +159,26 @@ export default function ResumenesMaster() {
     }
     cargarConsumo();
   }, [activeTab, mesSeleccionado, anioSeleccionado, ledgerPage, filtroTipoConsumo, filtroTipoRegistro, filtroEsCobrable, refreshTrigger]);
+
+  useEffect(() => {
+    async function cargarAuditoria() {
+      if (activeTab !== 'auditoria') return;
+      setLoadingAuditoria(true);
+      try {
+        const fechaInicio = `${anioSeleccionado}-${String(mesSeleccionado).padStart(2, '0')}-01`;
+        const ultimoDia = new Date(anioSeleccionado, mesSeleccionado, 0).getDate();
+        const fechaFin = `${anioSeleccionado}-${String(mesSeleccionado).padStart(2, '0')}-${ultimoDia}`;
+
+        const data = await getConsumoAuditoria({ fecha_inicio: fechaInicio, fecha_fin: fechaFin });
+        setAuditoriaData(data || { desglose_jugadores: [], desglose_equipos: [], desglose_ligas: [] });
+      } catch (err) {
+        console.error("Error al cargar datos de auditoría:", err);
+      } finally {
+        setLoadingAuditoria(false);
+      }
+    }
+    cargarAuditoria();
+  }, [activeTab, mesSeleccionado, anioSeleccionado, refreshTrigger]);
 
   const handleRecargar = () => {
     setRefreshTrigger(prev => prev + 1);
@@ -268,12 +301,32 @@ export default function ResumenesMaster() {
         >
           <FaCoins /> Contabilización de Consumo
         </button>
+        <button
+          onClick={() => setActiveTab('auditoria')}
+          style={{
+            padding: '10px 20px',
+            borderRadius: '10px',
+            border: 'none',
+            background: activeTab === 'auditoria' ? colorInfo : 'transparent',
+            color: activeTab === 'auditoria' ? COLORS.white : COLORS.slate600,
+            fontSize: '14px',
+            fontWeight: '700',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            boxShadow: activeTab === 'auditoria' ? `0 4px 12px ${COLORS.brandBlueLight20}` : 'none'
+          }}
+        >
+          <FaUsers /> Auditoría de Escaneos
+        </button>
       </div>
 
-      {/* PERIODO FILTER (SHARED FOR BOTH TABS) */}
+      {/* PERIODO FILTER (SHARED FOR ALL TABS) */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', flexWrap: 'wrap', gap: '16px' }}>
         <h3 style={{ fontSize: '18px', fontWeight: '800', color: COLORS.black, margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-          {activeTab === 'sistema' ? 'Métricas del Período' : 'Consumo y Cobros'}
+          {activeTab === 'sistema' ? 'Métricas del Período' : activeTab === 'consumo' ? 'Consumo y Cobros' : 'Auditoría y Desglose de Escaneos'}
         </h3>
 
         {/* Filtro de Mes y Año en Español */}
@@ -1000,6 +1053,255 @@ export default function ResumenesMaster() {
               </div>
             </div>
           </div>
+        </>
+      )}
+
+      {activeTab === 'auditoria' && (
+        <>
+          {loadingAuditoria ? (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '100px 0' }}>
+              <Loader text="Generando auditoría de consumos..." />
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '30px', marginBottom: '40px' }}>
+              
+              {/* SECCIÓN JUGADORES */}
+              <div className="card" style={{ background: COLORS.white, border: `1px solid ${COLORS.slate200}`, borderRadius: '20px', padding: '24px', boxShadow: 'var(--shadow-md)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '18px' }}>
+                  <h4 style={{ fontSize: '16px', fontWeight: '800', color: COLORS.slate900, margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <FaUsers style={{ color: colorInfo }} /> Auditoría de Escaneos por Jugador
+                  </h4>
+                  <div style={{ position: 'relative', width: '300px' }}>
+                    <FaSearch style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: COLORS.slate400, fontSize: '13px' }} />
+                    <input
+                      type="text"
+                      placeholder="Buscar por jugador o ejecutor..."
+                      value={searchJugador}
+                      onChange={(e) => setSearchJugador(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px 8px 36px',
+                        background: COLORS.slate50,
+                        border: `1.5px solid ${COLORS.slate200}`,
+                        borderRadius: '10px',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        color: COLORS.slate900,
+                        outline: 'none',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ overflowX: 'auto', borderRadius: '12px', border: `1px solid ${COLORS.slate200}` }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                    <thead>
+                      <tr style={{ background: COLORS.slate100, borderBottom: `2px solid ${COLORS.slate200}` }}>
+                        <th style={{ padding: '12px 16px', fontWeight: '800', color: COLORS.slate700, textTransform: 'uppercase', fontSize: '11px' }}>Ejecutor</th>
+                        <th style={{ padding: '12px 16px', fontWeight: '800', color: COLORS.slate700, textTransform: 'uppercase', fontSize: '11px' }}>Jugador Objetivo</th>
+                        <th style={{ padding: '12px 16px', fontWeight: '800', color: COLORS.slate700, textTransform: 'uppercase', fontSize: '11px' }}>Equipo / Liga</th>
+                        <th style={{ padding: '12px 16px', fontWeight: '800', color: COLORS.slate700, textTransform: 'uppercase', fontSize: '11px', textAlign: 'center' }}>OCR</th>
+                        <th style={{ padding: '12px 16px', fontWeight: '800', color: COLORS.slate700, textTransform: 'uppercase', fontSize: '11px', textAlign: 'center' }}>Foto</th>
+                        <th style={{ padding: '12px 16px', fontWeight: '800', color: COLORS.slate700, textTransform: 'uppercase', fontSize: '11px', textAlign: 'center' }}>VerificaMex</th>
+                        <th style={{ padding: '12px 16px', fontWeight: '800', color: COLORS.slate700, textTransform: 'uppercase', fontSize: '11px', textAlign: 'right' }}>Costo Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {auditoriaData.desglose_jugadores && auditoriaData.desglose_jugadores.length > 0 ? (
+                        auditoriaData.desglose_jugadores
+                          .filter(j => 
+                            j.ejecutor_nombre.toLowerCase().includes(searchJugador.toLowerCase()) ||
+                            j.jugador_nombre.toLowerCase().includes(searchJugador.toLowerCase()) ||
+                            j.jugador_curp.toLowerCase().includes(searchJugador.toLowerCase()) ||
+                            j.equipo_nombre.toLowerCase().includes(searchJugador.toLowerCase())
+                          )
+                          .map((j, idx) => (
+                            <tr key={idx} style={{ borderBottom: `1px solid ${COLORS.slate100}`, transition: 'background 0.2s' }} onMouseOver={(e) => e.currentTarget.style.backgroundColor = COLORS.slate50} onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
+                              <td style={{ padding: '12px 16px', fontWeight: '700', color: COLORS.slate950 }}>
+                                <div>{j.ejecutor_nombre}</div>
+                                <div style={{ fontSize: '10px', color: colorPrimary, fontWeight: '800' }}>{j.ejecutor_rol}</div>
+                              </td>
+                              <td style={{ padding: '12px 16px' }}>
+                                <div style={{ fontWeight: '700', color: COLORS.slate800 }}>{j.jugador_nombre}</div>
+                                <div style={{ fontSize: '11px', color: COLORS.slate500, fontFamily: 'Consolas, monospace' }}>{j.jugador_curp}</div>
+                              </td>
+                              <td style={{ padding: '12px 16px' }}>
+                                <div style={{ fontWeight: '600', color: COLORS.slate800 }}>{j.equipo_nombre}</div>
+                                <div style={{ fontSize: '11px', color: COLORS.slate500 }}>{j.liga_nombre}</div>
+                              </td>
+                              <td style={{ padding: '12px 16px', textAlign: 'center', fontWeight: '800', color: colorInfo }}>{j.ocr_count}</td>
+                              <td style={{ padding: '12px 16px', textAlign: 'center', fontWeight: '800', color: colorSuccess }}>{j.foto_count}</td>
+                              <td style={{ padding: '12px 16px', textAlign: 'center', fontWeight: '800', color: colorWarning }}>{j.verificamex_count}</td>
+                              <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: '800' }}>
+                                {j.costo_total_usd > 0 && <div style={{ color: colorSuccess }}>{j.costo_total_usd.toFixed(4)} USD</div>}
+                                {j.costo_total_mxn > 0 && <div style={{ color: colorPrimary }}>{j.costo_total_mxn.toFixed(2)} MXN</div>}
+                                {j.costo_total_usd === 0 && j.costo_total_mxn === 0 && <span style={{ color: COLORS.slate400 }}>$0.00</span>}
+                              </td>
+                            </tr>
+                          ))
+                      ) : (
+                        <tr>
+                          <td colSpan="7" style={{ padding: '24px', textAlign: 'center', color: COLORS.slate500, fontStyle: 'italic' }}>
+                            No hay registros de escaneos para este período.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* DOS GRID: EQUIPOS Y LIGAS */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '30px' }}>
+                
+                {/* SECCIÓN EQUIPOS */}
+                <div className="card" style={{ background: COLORS.white, border: `1px solid ${COLORS.slate200}`, borderRadius: '20px', padding: '24px', boxShadow: 'var(--shadow-md)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '18px' }}>
+                    <h4 style={{ fontSize: '16px', fontWeight: '800', color: COLORS.slate900, margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <FaFutbol style={{ color: colorPrimary }} /> Consumo por Equipo
+                    </h4>
+                    <div style={{ position: 'relative', width: '200px' }}>
+                      <FaSearch style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: COLORS.slate400, fontSize: '13px' }} />
+                      <input
+                        type="text"
+                        placeholder="Buscar equipo..."
+                        value={searchEquipo}
+                        onChange={(e) => setSearchEquipo(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '6px 12px 6px 36px',
+                          background: COLORS.slate50,
+                          border: `1.5px solid ${COLORS.slate200}`,
+                          borderRadius: '8px',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          color: COLORS.slate900,
+                          outline: 'none',
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ overflowX: 'auto', borderRadius: '12px', border: `1px solid ${COLORS.slate200}` }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                      <thead>
+                        <tr style={{ background: COLORS.slate100, borderBottom: `2px solid ${COLORS.slate200}` }}>
+                          <th style={{ padding: '10px 14px', fontWeight: '800', color: COLORS.slate700, textTransform: 'uppercase', fontSize: '10px' }}>Equipo / Liga</th>
+                          <th style={{ padding: '10px 14px', fontWeight: '800', color: COLORS.slate700, textTransform: 'uppercase', fontSize: '10px', textAlign: 'center' }}>OCR / Foto / VM</th>
+                          <th style={{ padding: '10px 14px', fontWeight: '800', color: COLORS.slate700, textTransform: 'uppercase', fontSize: '10px', textAlign: 'right' }}>Total Costo</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {auditoriaData.desglose_equipos && auditoriaData.desglose_equipos.length > 0 ? (
+                          auditoriaData.desglose_equipos
+                            .filter(e => e.equipo_nombre.toLowerCase().includes(searchEquipo.toLowerCase()))
+                            .map((e, idx) => (
+                              <tr key={idx} style={{ borderBottom: `1px solid ${COLORS.slate100}`, transition: 'background 0.2s' }} onMouseOver={(el) => el.currentTarget.style.backgroundColor = COLORS.slate50} onMouseOut={(el) => el.currentTarget.style.backgroundColor = 'transparent'}>
+                                <td style={{ padding: '10px 14px' }}>
+                                  <div style={{ fontWeight: '700', color: COLORS.slate800 }}>{e.equipo_nombre}</div>
+                                  <div style={{ fontSize: '11px', color: COLORS.slate500 }}>{e.liga_nombre}</div>
+                                </td>
+                                <td style={{ padding: '10px 14px', textAlign: 'center', fontWeight: '700' }}>
+                                  <span style={{ color: colorInfo }}>{e.ocr_count}</span>{' / '}
+                                  <span style={{ color: colorSuccess }}>{e.foto_count}</span>{' / '}
+                                  <span style={{ color: colorWarning }}>{e.verificamex_count}</span>
+                                </td>
+                                <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: '800' }}>
+                                  {e.costo_total_usd > 0 && <div style={{ color: colorSuccess }}>{e.costo_total_usd.toFixed(4)} USD</div>}
+                                  {e.costo_total_mxn > 0 && <div style={{ color: colorPrimary }}>{e.costo_total_mxn.toFixed(2)} MXN</div>}
+                                  {e.costo_total_usd === 0 && e.costo_total_mxn === 0 && <span style={{ color: COLORS.slate400 }}>$0.00</span>}
+                                </td>
+                              </tr>
+                            ))
+                        ) : (
+                          <tr>
+                            <td colSpan="3" style={{ padding: '20px', textAlign: 'center', color: COLORS.slate500, fontStyle: 'italic' }}>
+                              No hay consumos por equipo en este período.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* SECCIÓN LIGAS */}
+                <div className="card" style={{ background: COLORS.white, border: `1px solid ${COLORS.slate200}`, borderRadius: '20px', padding: '24px', boxShadow: 'var(--shadow-md)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '18px' }}>
+                    <h4 style={{ fontSize: '16px', fontWeight: '800', color: COLORS.slate900, margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <FaCalendarAlt style={{ color: colorSuccess }} /> Consumo por Liga
+                    </h4>
+                    <div style={{ position: 'relative', width: '200px' }}>
+                      <FaSearch style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: COLORS.slate400, fontSize: '13px' }} />
+                      <input
+                        type="text"
+                        placeholder="Buscar liga..."
+                        value={searchLiga}
+                        onChange={(e) => setSearchLiga(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '6px 12px 6px 36px',
+                          background: COLORS.slate50,
+                          border: `1.5px solid ${COLORS.slate200}`,
+                          borderRadius: '8px',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          color: COLORS.slate900,
+                          outline: 'none',
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ overflowX: 'auto', borderRadius: '12px', border: `1px solid ${COLORS.slate200}` }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                      <thead>
+                        <tr style={{ background: COLORS.slate100, borderBottom: `2px solid ${COLORS.slate200}` }}>
+                          <th style={{ padding: '10px 14px', fontWeight: '800', color: COLORS.slate700, textTransform: 'uppercase', fontSize: '10px' }}>Liga</th>
+                          <th style={{ padding: '10px 14px', fontWeight: '800', color: COLORS.slate700, textTransform: 'uppercase', fontSize: '10px', textAlign: 'center' }}>OCR / Foto / VM</th>
+                          <th style={{ padding: '10px 14px', fontWeight: '800', color: COLORS.slate700, textTransform: 'uppercase', fontSize: '10px', textAlign: 'right' }}>Total Costo</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {auditoriaData.desglose_ligas && auditoriaData.desglose_ligas.length > 0 ? (
+                          auditoriaData.desglose_ligas
+                            .filter(l => l.liga_nombre.toLowerCase().includes(searchLiga.toLowerCase()))
+                            .map((l, idx) => (
+                              <tr key={idx} style={{ borderBottom: `1px solid ${COLORS.slate100}`, transition: 'background 0.2s' }} onMouseOver={(el) => el.currentTarget.style.backgroundColor = COLORS.slate50} onMouseOut={(el) => el.currentTarget.style.backgroundColor = 'transparent'}>
+                                <td style={{ padding: '10px 14px', fontWeight: '700', color: COLORS.slate800 }}>
+                                  {l.liga_nombre}
+                                </td>
+                                <td style={{ padding: '10px 14px', textAlign: 'center', fontWeight: '700' }}>
+                                  <span style={{ color: colorInfo }}>{l.ocr_count}</span>{' / '}
+                                  <span style={{ color: colorSuccess }}>{l.foto_count}</span>{' / '}
+                                  <span style={{ color: colorWarning }}>{l.verificamex_count}</span>
+                                </td>
+                                <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: '800' }}>
+                                  {l.costo_total_usd > 0 && <div style={{ color: colorSuccess }}>{l.costo_total_usd.toFixed(4)} USD</div>}
+                                  {l.costo_total_mxn > 0 && <div style={{ color: colorPrimary }}>{l.costo_total_mxn.toFixed(2)} MXN</div>}
+                                  {l.costo_total_usd === 0 && l.costo_total_mxn === 0 && <span style={{ color: COLORS.slate400 }}>$0.00</span>}
+                                </td>
+                              </tr>
+                            ))
+                        ) : (
+                          <tr>
+                            <td colSpan="3" style={{ padding: '20px', textAlign: 'center', color: COLORS.slate500, fontStyle: 'italic' }}>
+                              No hay consumos por liga en este período.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+          )}
         </>
       )}
     </div>

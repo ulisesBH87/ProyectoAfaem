@@ -69,6 +69,118 @@ def track_consumption(tipo_consumo: str, proveedor: str, tipo_registro_default: 
                         usuario_id = token_payload.get("usuario_id")
                         tipo_usuario = "INVITADO"
 
+                # ── Resolución y Auditoría de Contexto (Jugador, Equipo, Liga) ──
+                equipo_id = None
+                liga_id = None
+                target_persona_id = None
+                target_nombre = None
+                target_curp = None
+                
+                if request:
+                    try:
+                        eq_val = request.query_params.get("equipo_id")
+                        if eq_val:
+                            equipo_id = int(eq_val)
+                    except ValueError:
+                        pass
+                    
+                    try:
+                        lg_val = request.query_params.get("liga_id")
+                        if lg_val:
+                            liga_id = int(lg_val)
+                    except ValueError:
+                        pass
+
+                    try:
+                        p_val = request.query_params.get("target_persona_id")
+                        if p_val:
+                            target_persona_id = int(p_val)
+                    except ValueError:
+                        pass
+
+                    target_nombre = request.query_params.get("target_nombre")
+                    target_curp = request.query_params.get("target_curp")
+
+                # Extraer CURP/Nombre si es respuesta de OCR en HTMLResponse
+                if response_data and hasattr(response_data, "body"):
+                    try:
+                        html_content = response_data.body.decode("utf-8", errors="ignore")
+                        import re
+                        if not target_curp:
+                            curp_match = re.search(r'CURP\s*\(Identidad\):.*?class="valor"[^>]*>\s*([A-Z0-9]{18})\s*<', html_content, re.DOTALL | re.IGNORECASE)
+                            if curp_match:
+                                target_curp = curp_match.group(1).strip().upper()
+                        if not target_nombre:
+                            name_match = re.search(r'Nombre\s*Completo:.*?class="valor"[^>]*>\s*([^<]+?)\s*<', html_content, re.DOTALL | re.IGNORECASE)
+                            if name_match:
+                                target_nombre = name_match.group(1).strip().upper()
+                    except Exception:
+                        pass
+
+                # Resolver automáticamente si el ejecutor es Presidente de Equipo
+                if usuario_id and not equipo_id:
+                    try:
+                        from app.modelos.usuario_modelo import Usuario
+                        from app.modelos.presidente_equipo_modelo import PresidenteEquipo
+                        from app.modelos.equipo_modelo import EquiposJugando
+                        
+                        db_user = db.query(Usuario).filter(Usuario.UsuarioId == usuario_id).first()
+                        if db_user and db_user.RolId == 3:  # Presidente de Equipo
+                            pres = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == db_user.PersonaId).first()
+                            if pres:
+                                eq_jug = db.query(EquiposJugando).filter(EquiposJugando.PresidenteEquipoId == pres.PresidenteEquipoId).first()
+                                if eq_jug:
+                                    equipo_id = eq_jug.EquipoId
+                                    liga_id = eq_jug.LigaId
+                    except Exception as res_exc:
+                        logger.error(f"[CONSUMO RESOLVER ERROR] Falló auto-resolución de presidente: {res_exc}")
+
+                # Resolver jugador si se tiene el ID
+                if target_persona_id:
+                    try:
+                        from app.modelos.persona_modelo import Personas
+                        if not target_nombre or not target_curp:
+                            pers = db.query(Personas).filter(Personas.PersonaId == target_persona_id).first()
+                            if pers:
+                                if not target_nombre:
+                                    target_nombre = f"{pers.Nombre} {pers.PrimerApellido} {pers.SegundoApellido or ''}".strip().upper()
+                                if not target_curp:
+                                    target_curp = pers.CURP
+                                    
+                        if not equipo_id:
+                            from app.modelos.miembro_equipo_modelo import MiembrosEquipo
+                            from app.modelos.equipo_modelo import EquiposJugando
+                            miembro = db.query(MiembrosEquipo).filter(MiembrosEquipo.PersonaId == target_persona_id, MiembrosEquipo.Estatus == True).first()
+                            if miembro:
+                                eq_jug = db.query(EquiposJugando).filter(EquiposJugando.EquiposJugandoId == miembro.EquipoID).first()
+                                if eq_jug:
+                                    equipo_id = eq_jug.EquipoId
+                                    liga_id = eq_jug.LigaId
+                    except Exception as player_exc:
+                        logger.error(f"[CONSUMO RESOLVER ERROR] Falló auto-resolución de jugador: {player_exc}")
+
+                # Resolver jugador si se tiene la CURP
+                if target_curp and not target_persona_id:
+                    try:
+                        from app.modelos.persona_modelo import Personas
+                        pers = db.query(Personas).filter(Personas.CURP == target_curp).first()
+                        if pers:
+                            target_persona_id = pers.PersonaId
+                            if not target_nombre:
+                                target_nombre = f"{pers.Nombre} {pers.PrimerApellido} {pers.SegundoApellido or ''}".strip().upper()
+                            
+                            if not equipo_id:
+                                from app.modelos.miembro_equipo_modelo import MiembrosEquipo
+                                from app.modelos.equipo_modelo import EquiposJugando
+                                miembro = db.query(MiembrosEquipo).filter(MiembrosEquipo.PersonaId == pers.PersonaId, MiembrosEquipo.Estatus == True).first()
+                                if miembro:
+                                    eq_jug = db.query(EquiposJugando).filter(EquiposJugando.EquiposJugandoId == miembro.EquipoID).first()
+                                    if eq_jug:
+                                        equipo_id = eq_jug.EquipoId
+                                        liga_id = eq_jug.LigaId
+                    except Exception as curp_exc:
+                        logger.error(f"[CONSUMO RESOLVER ERROR] Falló auto-resolución por CURP: {curp_exc}")
+
                 entity_type = None
                 entity_id = None
                 metadata = {}
@@ -95,7 +207,13 @@ def track_consumption(tipo_consumo: str, proveedor: str, tipo_registro_default: 
                     "ResultadoProveedor": resultado_proveedor,
                     "EsCobrable": es_cobrable,
                     "LlaveIdempotencia": idempotency_key,
-                    "Metadata": metadata
+                    "Metadata": metadata,
+                    # Datos de contexto agregados
+                    "JugadorPersonaId": target_persona_id,
+                    "JugadorNombre": target_nombre,
+                    "JugadorCURP": target_curp,
+                    "EquipoId": equipo_id,
+                    "LigaId": liga_id
                 }
                 
                 ConsumptionService.publicar_outbox(db, payload)

@@ -83,7 +83,12 @@ class ConsumptionService:
             CostoTotal=costo_total,
             Divisa=tarifa["divisa"],
             LlaveIdempotencia=payload.get("LlaveIdempotencia"),
-            Metadata=json.dumps(payload.get("Metadata", {}))
+            Metadata=json.dumps(payload.get("Metadata", {})),
+            JugadorPersonaId=payload.get("JugadorPersonaId"),
+            JugadorNombre=payload.get("JugadorNombre"),
+            JugadorCURP=payload.get("JugadorCURP"),
+            EquipoId=payload.get("EquipoId"),
+            LigaId=payload.get("LigaId")
         )
         
         db.add(nuevo_consumo)
@@ -315,3 +320,145 @@ class ConsumptionService:
             "tarifas": tarifas_list,
             "data": resumenes
         }
+
+    @classmethod
+    def obtener_auditoria_consumos(cls, db: Session, fecha_inicio: str = None, fecha_fin: str = None) -> dict:
+        """
+        Retorna el desglose de auditoría detallado agrupado por Jugador/Ejecutor, Equipo y Liga.
+        """
+        from app.modelos.usuario_modelo import Usuario
+        from app.modelos.roles_modelo import Roles
+        from app.modelos.equipo_modelo import Equipos
+        from app.modelos.catalogos_liga_modelo import Ligas
+        
+        # Mapeo de UsuarioId -> {"nombre": str, "rol": str}
+        usuarios_db = db.query(Usuario).all()
+        usuarios_map = {}
+        for u in usuarios_db:
+            nombre_usr = "SISTEMA / INVITADO"
+            rol_usr = "INVITADO"
+            if u.PersonaRelacion:
+                p = u.PersonaRelacion
+                nombre_usr = f"{p.Nombre} {p.PrimerApellido} {p.SegundoApellido or ''}".strip().upper()
+            if u.RolRelacion:
+                rol_usr = u.RolRelacion.Nombre.upper()
+            usuarios_map[u.UsuarioId] = {"nombre": nombre_usr, "rol": rol_usr}
+            
+        # Mapeo de EquipoId -> Nombre
+        equipos_db = db.query(Equipos).all()
+        equipos_map = {e.EquipoId: e.NombreEquipo.upper() for e in equipos_db}
+        
+        # Mapeo de LigaId -> Nombre
+        ligas_db = db.query(Ligas).all()
+        ligas_map = {l.LigaId: l.Nombreliga.upper() for l in ligas_db}
+        
+        # Consultar registros del Ledger
+        query = db.query(BitacoraConsumo)
+        if fecha_inicio:
+            query = query.filter(BitacoraConsumo.CreadoEn >= fecha_inicio)
+        if fecha_fin:
+            query = query.filter(BitacoraConsumo.CreadoEn <= fecha_fin)
+            
+        registros = query.all()
+        
+        desglose_jugadores = {}
+        desglose_equipos = {}
+        desglose_ligas = {}
+        
+        for r in registros:
+            usr_info = usuarios_map.get(r.UsuarioId, {"nombre": "INVITADO", "rol": "INVITADO"})
+            ejecutor_nombre = usr_info["nombre"]
+            ejecutor_rol = usr_info["rol"]
+            
+            jug_nombre = r.JugadorNombre or "SIN NOMBRE (EN OCR)"
+            jug_curp = r.JugadorCURP or "SIN CURP"
+            
+            eq_id = r.EquipoId
+            eq_nombre = equipos_map.get(eq_id, "PRE-REGISTRO / SIN EQUIPO") if eq_id else "PRE-REGISTRO / SIN EQUIPO"
+            
+            lg_id = r.LigaId
+            lg_nombre = ligas_map.get(lg_id, "SIN LIGA") if lg_id else "SIN LIGA"
+            
+            costo = float(r.CostoTotal)
+            costo_usd = costo if r.Divisa == "USD" else 0.0
+            costo_mxn = costo if r.Divisa == "MXN" else 0.0
+            
+            # A) Agrupación por Jugador
+            jug_key = (r.UsuarioId, jug_nombre, jug_curp, eq_id, lg_id)
+            if jug_key not in desglose_jugadores:
+                desglose_jugadores[jug_key] = {
+                    "ejecutor_nombre": ejecutor_nombre,
+                    "ejecutor_rol": ejecutor_rol,
+                    "jugador_nombre": jug_nombre,
+                    "jugador_curp": jug_curp,
+                    "equipo_nombre": eq_nombre,
+                    "liga_nombre": lg_nombre,
+                    "ocr_count": 0,
+                    "foto_count": 0,
+                    "verificamex_count": 0,
+                    "costo_total_usd": 0.0,
+                    "costo_total_mxn": 0.0
+                }
+            
+            item_jug = desglose_jugadores[jug_key]
+            if r.TipoConsumo == "OCR":
+                item_jug["ocr_count"] += 1
+            elif r.TipoConsumo == "PHOTO_SCAN":
+                item_jug["foto_count"] += 1
+            elif r.TipoConsumo == "VERIFICAMEX":
+                item_jug["verificamex_count"] += 1
+                
+            item_jug["costo_total_usd"] += costo_usd
+            item_jug["costo_total_mxn"] += costo_mxn
+            
+            # B) Agrupación por Equipo
+            if eq_id:
+                if eq_id not in desglose_equipos:
+                    desglose_equipos[eq_id] = {
+                        "equipo_id": eq_id,
+                        "equipo_nombre": eq_nombre,
+                        "liga_nombre": lg_nombre,
+                        "ocr_count": 0,
+                        "foto_count": 0,
+                        "verificamex_count": 0,
+                        "costo_total_usd": 0.0,
+                        "costo_total_mxn": 0.0
+                    }
+                item_eq = desglose_equipos[eq_id]
+                if r.TipoConsumo == "OCR":
+                    item_eq["ocr_count"] += 1
+                elif r.TipoConsumo == "PHOTO_SCAN":
+                    item_eq["foto_count"] += 1
+                elif r.TipoConsumo == "VERIFICAMEX":
+                    item_eq["verificamex_count"] += 1
+                item_eq["costo_total_usd"] += costo_usd
+                item_eq["costo_total_mxn"] += costo_mxn
+                
+            # C) Agrupación por Liga
+            if lg_id:
+                if lg_id not in desglose_ligas:
+                    desglose_ligas[lg_id] = {
+                        "liga_id": lg_id,
+                        "liga_nombre": lg_nombre,
+                        "ocr_count": 0,
+                        "foto_count": 0,
+                        "verificamex_count": 0,
+                        "costo_total_usd": 0.0,
+                        "costo_total_mxn": 0.0
+                    }
+                item_lg = desglose_ligas[lg_id]
+                if r.TipoConsumo == "OCR":
+                    item_lg["ocr_count"] += 1
+                elif r.TipoConsumo == "PHOTO_SCAN":
+                    item_lg["foto_count"] += 1
+                elif r.TipoConsumo == "VERIFICAMEX":
+                    item_lg["verificamex_count"] += 1
+                item_lg["costo_total_usd"] += costo_usd
+                item_lg["costo_total_mxn"] += costo_mxn
+                
+        return {
+            "desglose_jugadores": list(desglose_jugadores.values()),
+            "desglose_equipos": list(desglose_equipos.values()),
+            "desglose_ligas": list(desglose_ligas.values())
+        }
+

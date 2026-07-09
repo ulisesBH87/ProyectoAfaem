@@ -68,3 +68,24 @@ def listar_ledger(
         estado_tecnico=estado_tecnico,
         es_cobrable=es_cobrable
     )
+
+@router.get("/auditoria", dependencies=[Depends(requerir_permiso("auditorias.ver"))])
+def obtener_auditoria_consumos(
+    fecha_inicio: str = Query(None),
+    fecha_fin: str = Query(None),
+    db: Session = Depends(get_db)
+):
+    """
+    Retorna el desglose de auditoría detallado agrupado por jugador, equipo y liga.
+    """
+    from app.servicios.consumo_worker import procesar_outbox_pending
+    try:
+        procesar_outbox_pending()
+    except Exception:
+        pass
+
+    return ConsumptionService.obtener_auditoria_consumos(
+        db=db,
+        fecha_inicio=fecha_inicio,
+        fecha_fin=fecha_fin
+    )

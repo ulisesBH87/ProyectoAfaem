@@ -2,7 +2,7 @@
 import { API_BASE } from '../config/config';
 import { getErrorMessage } from '../utils/errorHandler';
 
-export const validarFotografia = async (archivo, tipo_registro = "JUGADOR") => {
+export const validarFotografia = async (archivo, tipo_registro = "JUGADOR", opciones = {}) => {
   const tiposPermitidos = [
     "image/jpg",
     "image/jpeg",
@@ -22,8 +22,15 @@ export const validarFotografia = async (archivo, tipo_registro = "JUGADOR") => {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
+  const queryParams = new URLSearchParams({ tipo_registro });
+  if (opciones.equipo_id) queryParams.append("equipo_id", opciones.equipo_id);
+  if (opciones.liga_id) queryParams.append("liga_id", opciones.liga_id);
+  if (opciones.target_persona_id) queryParams.append("target_persona_id", opciones.target_persona_id);
+  if (opciones.target_nombre) queryParams.append("target_nombre", opciones.target_nombre);
+  if (opciones.target_curp) queryParams.append("target_curp", opciones.target_curp);
+
   try {
-    const response = await fetch(`${API_BASE}/fotografia/?tipo_registro=${tipo_registro}`, {
+    const response = await fetch(`${API_BASE}/fotografia/?${queryParams.toString()}`, {
       method: "POST",
       headers,
       body: formData

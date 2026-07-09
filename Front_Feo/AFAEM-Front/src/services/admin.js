@@ -508,6 +508,11 @@ export const getConsumoLedger = async (params = {}) => {
   return response.data;
 };
 
+export const getConsumoAuditoria = async (params = {}) => {
+  const response = await api.get('/consumo/auditoria', { params });
+  return response.data;
+};
+
 export default {
   getSolicitudDetalle,
   getPagosGenerales,
@@ -550,5 +555,6 @@ export default {
   getReporteEntidadMaster,
   getReporteDiarioMaster,
   getConsumoResumen,
-  getConsumoLedger
+  getConsumoLedger,
+  getConsumoAuditoria
 };
