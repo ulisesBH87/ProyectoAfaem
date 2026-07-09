@@ -136,10 +136,12 @@ export function useRegistrarPresidente() {
 
   const validarPaso1 = () => {
     const errs = {};
+    const correoRegexEstricto = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
     if (!cuenta.nombre.trim()) errs.nombre = 'Obligatorio';
     if (!cuenta.primerApellido.trim()) errs.primerApellido = 'Obligatorio';
     if (!cuenta.correo.trim()) errs.correo = 'Obligatorio';
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cuenta.correo)) errs.correo = 'Correo inválido';
+    if (cuenta.correo.trim() && !correoRegexEstricto.test(cuenta.correo.trim())) errs.correo = 'Correo invÃ¡lido';
     if (!cuenta.telefono.trim()) errs.telefono = 'Obligatorio';
     if (!/^\d{10}$/.test(cuenta.telefono)) errs.telefono = '10 dígitos requeridos';
     if (!cuenta.curp.trim()) errs.curp = 'Obligatorio';

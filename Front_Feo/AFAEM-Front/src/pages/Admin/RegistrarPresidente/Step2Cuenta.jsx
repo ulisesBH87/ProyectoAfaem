@@ -12,6 +12,22 @@ export default function Step2Cuenta({
   cuenta, setCuentaField, cuentaErrors, codigoPaisCuenta, setCodigoPaisCuenta,
   codigoPaisOpcionalCuenta, setCodigoPaisOpcionalCuenta, isCheckingCurp
 }) {
+  const correoRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+  const telefonoRegex = /^\d{10}$/;
+  const correoTrim = String(cuenta.correo || '').trim();
+  const telefonoTrim = String(cuenta.telefono || '').trim();
+  const telefonoOpcionalTrim = String(cuenta.telefonoOpcional || '').trim();
+
+  const correoFormatoValido = correoRegex.test(correoTrim);
+  const telefonoFormatoValido = telefonoRegex.test(telefonoTrim);
+  const telefonoOpcionalFormatoValido = telefonoRegex.test(telefonoOpcionalTrim);
+
+  const helperStyleBase = {
+    fontSize: 11,
+    marginTop: 3,
+    display: 'block',
+  };
+
   return (
     <div>
       <PasoHeader
@@ -70,6 +86,11 @@ export default function Step2Cuenta({
             autoComplete="new-password"
             value={cuenta.correo} onChange={e => setCuentaField('correo', e.target.value)}
           />
+          {correoTrim && (
+            <span style={{ ...helperStyleBase, color: correoFormatoValido ? C.green : C.rose }}>
+              {correoFormatoValido ? 'Formato de correo correcto.' : 'Formato de correo incorrecto.'}
+            </span>
+          )}
           {cuentaErrors.correo && <span style={{ fontSize: 11, color: C.rose, marginTop: 3, display: 'block' }}>{cuentaErrors.correo}</span>}
         </div>
       </div>
@@ -87,6 +108,11 @@ export default function Step2Cuenta({
               onChange={e => setCuentaField('telefono', e.target.value.replace(/\D/g, '').slice(0, 10))}
             />
           </div>
+          {telefonoTrim && (
+            <span style={{ ...helperStyleBase, color: telefonoFormatoValido ? C.green : C.rose }}>
+              {telefonoFormatoValido ? 'Número de teléfono correcto.' : 'El teléfono debe tener 10 dígitos.'}
+            </span>
+          )}
           {cuentaErrors.telefono && <span style={{ fontSize: 11, color: C.rose, marginTop: 3, display: 'block' }}>{cuentaErrors.telefono}</span>}
         </div>
         <div>
@@ -100,6 +126,11 @@ export default function Step2Cuenta({
               onChange={e => setCuentaField('telefonoOpcional', e.target.value.replace(/\D/g, '').slice(0, 10))}
             />
           </div>
+          {telefonoOpcionalTrim && (
+            <span style={{ ...helperStyleBase, color: telefonoOpcionalFormatoValido ? C.green : C.rose }}>
+              {telefonoOpcionalFormatoValido ? 'Número de teléfono correcto.' : 'El teléfono debe tener 10 dígitos.'}
+            </span>
+          )}
         </div>
         <div>
           <label style={fieldStyles.label}>
