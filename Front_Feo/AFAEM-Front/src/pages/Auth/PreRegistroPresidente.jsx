@@ -18,7 +18,7 @@ import { DEFAULT_BANK_INFO } from '../../utils/paymentPdf';
 import Modal from '../../components/partials/Forms/Modal';
 import { useRBAC } from '../../hooks/useRBAC';
 import { openSecurePath, fetchSecureBlobUrl } from '../../utils/secureFetch';
-import { buildCaptureSourceDialog, getCameraCaptureKind } from '../../utils/cameraCapture';
+import { buildCaptureSourceDialog, getCameraCaptureKind, showDocumentGuide, CAMERA_CAPTURE_KIND } from '../../utils/cameraCapture';
 import { DETALLES_SEGUROS, CATALOGO_ROLES, DOC_AFILIACION_IDS } from './preRegistroConstants';
 import { convertToDDMMYYYY, convertToYYYYMMDD, normalizarNombreSeguro, parsearTelefonoE164 } from './preRegistroUtils';
 import { generarPDFCuota as generarPDFCuotaHelper, handleDownloadFormato as handleDownloadFormatoHelper, handleEmbedNewPhotoInFormat as handleEmbedNewPhotoInFormatHelper } from './preRegistroPdfHelper';
@@ -335,34 +335,55 @@ function PreRegistroPresidente() {
     }
     const inputId = isValidationFlow ? `file-val-${docKey}` : `file-${docKey}`;
     if (docKey === 'fotografia') {
-      Swal.fire({
-        title: 'Selecciona una opción',
-        text: '¿Cómo deseas cargar la fotografía?',
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonText: '📷 Tomar con cámara',
-        cancelButtonText: '📁 Subir archivo',
-        confirmButtonColor: COLORS.primary,
-        cancelButtonColor: COLORS.slate500
-      }).then((result) => {
+      const openSource = () => {
+        Swal.fire({
+          title: 'Selecciona una opción',
+          text: '¿Cómo deseas cargar la fotografía?',
+          icon: 'question',
+          showCancelButton: true,
+          confirmButtonText: '📷 Tomar con cámara',
+          cancelButtonText: '📁 Subir archivo',
+          confirmButtonColor: COLORS.primary,
+          cancelButtonColor: COLORS.slate500
+        }).then((result) => {
+          if (result.isConfirmed) {
+            setCameraTargetKey(inputId);
+            setIsCameraOpen(true);
+          } else if (result.dismiss === Swal.DismissReason.cancel) {
+            const inputEl = document.getElementById(inputId);
+            if (inputEl) inputEl.click();
+          }
+        });
+      };
+
+      showDocumentGuide('fotografia', COLORS).then((result) => {
         if (result.isConfirmed) {
-          setCameraTargetKey(inputId);
-          setIsCameraOpen(true);
-        } else if (result.dismiss === Swal.DismissReason.cancel) {
-          const inputEl = document.getElementById(inputId);
-          if (inputEl) inputEl.click();
+          openSource();
         }
       });
     } else {
-      Swal.fire(buildCaptureSourceDialog(getCameraCaptureKind(docKey), COLORS)).then((result) => {
-        if (result.isConfirmed) {
-          setCameraTargetKey(inputId);
-          setIsCameraOpen(true);
-        } else if (result.dismiss === Swal.DismissReason.cancel) {
-          const inputEl = document.getElementById(inputId);
-          if (inputEl) inputEl.click();
-        }
-      });
+      const captureKind = getCameraCaptureKind(docKey);
+      const openSource = () => {
+        Swal.fire(buildCaptureSourceDialog(captureKind, COLORS)).then((result) => {
+          if (result.isConfirmed) {
+            setCameraTargetKey(inputId);
+            setIsCameraOpen(true);
+          } else if (result.dismiss === Swal.DismissReason.cancel) {
+            const inputEl = document.getElementById(inputId);
+            if (inputEl) inputEl.click();
+          }
+        });
+      };
+
+      if (captureKind === CAMERA_CAPTURE_KIND.DOCUMENT) {
+        showDocumentGuide(docKey, COLORS).then((result) => {
+          if (result.isConfirmed) {
+            openSource();
+          }
+        });
+      } else {
+        openSource();
+      }
     }
   };
 

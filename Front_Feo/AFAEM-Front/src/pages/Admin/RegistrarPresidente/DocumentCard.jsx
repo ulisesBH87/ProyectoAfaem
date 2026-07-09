@@ -3,7 +3,7 @@ import { FaCamera, FaExclamationTriangle, FaFilePdf, FaSearchPlus, FaSyncAlt, Fa
 import Swal from 'sweetalert2';
 import CameraCaptureModal from '../../../components/Common/CameraCaptureModal';
 import COLORS from '../../../styles/colors';
-import { buildCaptureSourceDialog, getCameraCaptureKind, isPhotoCaptureKey } from '../../../utils/cameraCapture';
+import { buildCaptureSourceDialog, getCameraCaptureKind, isPhotoCaptureKey, showDocumentGuide, CAMERA_CAPTURE_KIND } from '../../../utils/cameraCapture';
 import { C } from './constants';
 
 export default function DocumentCard({
@@ -46,13 +46,25 @@ export default function DocumentCard({
       return;
     }
 
-    Swal.fire(buildCaptureSourceDialog(captureKind, COLORS)).then((result) => {
-      if (result.isConfirmed) {
-        setIsCameraOpen(true);
-      } else if (result.dismiss === Swal.DismissReason.cancel) {
-        openFilePicker();
-      }
-    });
+    const openSource = () => {
+      Swal.fire(buildCaptureSourceDialog(captureKind, COLORS)).then((result) => {
+        if (result.isConfirmed) {
+          setIsCameraOpen(true);
+        } else if (result.dismiss === Swal.DismissReason.cancel) {
+          openFilePicker();
+        }
+      });
+    };
+
+    if (captureKind === CAMERA_CAPTURE_KIND.DOCUMENT || captureKind === CAMERA_CAPTURE_KIND.PHOTO) {
+      showDocumentGuide(doc.documento, COLORS).then((result) => {
+        if (result.isConfirmed) {
+          openSource();
+        }
+      });
+    } else {
+      openSource();
+    }
   };
 
   const triggerUploadFlow = (e) => {

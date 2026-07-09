@@ -23,7 +23,7 @@ import teamsService from '../../services/teams';
 import { verificarCurp } from '../../services/auth';
 import { API_BASE } from '../../config/config';
 import { openSecurePath } from '../../utils/secureFetch';
-import { buildCaptureSourceDialog, getCameraCaptureKind } from '../../utils/cameraCapture';
+import { buildCaptureSourceDialog, getCameraCaptureKind, showDocumentGuide, CAMERA_CAPTURE_KIND } from '../../utils/cameraCapture';
 import {
   BotonPrimario,
   BotonSecundario,
@@ -1647,14 +1647,26 @@ export default function CompletarJugadoresEquipo() {
   const openDocumentCaptureOptions = (documentKey) => {
     const captureKind = getCameraCaptureKind(documentKey);
 
-    Swal.fire(buildCaptureSourceDialog(captureKind, COLORS)).then((result) => {
-      if (result.isConfirmed) {
-        setCameraTargetKey(documentKey);
-        setIsCameraOpen(true);
-      } else if (result.dismiss === Swal.DismissReason.cancel) {
-        document.getElementById(`file-${documentKey}`)?.click();
-      }
-    });
+    const openSource = () => {
+      Swal.fire(buildCaptureSourceDialog(captureKind, COLORS)).then((result) => {
+        if (result.isConfirmed) {
+          setCameraTargetKey(documentKey);
+          setIsCameraOpen(true);
+        } else if (result.dismiss === Swal.DismissReason.cancel) {
+          document.getElementById(`file-${documentKey}`)?.click();
+        }
+      });
+    };
+
+    if (captureKind === CAMERA_CAPTURE_KIND.DOCUMENT || captureKind === CAMERA_CAPTURE_KIND.PHOTO) {
+      showDocumentGuide(documentKey, COLORS).then((result) => {
+        if (result.isConfirmed) {
+          openSource();
+        }
+      });
+    } else {
+      openSource();
+    }
   };
 
   // AUXILIAR PARA ESCRITURA EN PDF

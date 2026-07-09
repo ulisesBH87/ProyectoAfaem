@@ -26,7 +26,7 @@ import { validarFotografia } from '../../services/foto';
 import CameraCaptureModal from '../../components/Common/CameraCaptureModal';
 import teamsService from '../../services/teams';
 import { API_BASE } from '../../config/config';
-import { buildCaptureSourceDialog, getCameraCaptureKind, isPhotoCaptureKey } from '../../utils/cameraCapture';
+import { buildCaptureSourceDialog, getCameraCaptureKind, isPhotoCaptureKey, showDocumentGuide, CAMERA_CAPTURE_KIND } from '../../utils/cameraCapture';
 import {
   BotonPrimario,
   BotonSecundario,
@@ -2389,31 +2389,51 @@ export default function RegistroJugadores() {
   const openDocumentCaptureOptions = (documentKey) => {
     const captureKind = getCameraCaptureKind(documentKey);
 
-    Swal.fire(buildCaptureSourceDialog(captureKind, COLORS)).then((result) => {
-      if (result.isConfirmed) {
-        setCameraTargetKey(documentKey);
-        setIsCameraOpen(true);
-      } else if (result.dismiss === Swal.DismissReason.cancel) {
-        openDocumentFilePicker(documentKey);
-      }
-    });
+    const openSource = () => {
+      Swal.fire(buildCaptureSourceDialog(captureKind, COLORS)).then((result) => {
+        if (result.isConfirmed) {
+          setCameraTargetKey(documentKey);
+          setIsCameraOpen(true);
+        } else if (result.dismiss === Swal.DismissReason.cancel) {
+          openDocumentFilePicker(documentKey);
+        }
+      });
+    };
+
+    if (captureKind === CAMERA_CAPTURE_KIND.DOCUMENT) {
+      showDocumentGuide(documentKey, COLORS).then((result) => {
+        if (result.isConfirmed) {
+          openSource();
+        }
+      });
+    } else {
+      openSource();
+    }
   };
 
   const openPhotoUploadOptions = () => {
-    Swal.fire({
-      title: 'Selecciona una opción',
-      text: '¿Cómo deseas cargar la fotografía?',
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonText: '📷 Tomar con cámara',
-      cancelButtonText: '📁 Subir archivo',
-      confirmButtonColor: COLORS.primary,
-      cancelButtonColor: COLORS.slate500
-    }).then((result) => {
+    const openSource = () => {
+      Swal.fire({
+        title: 'Selecciona una opción',
+        text: '¿Cómo deseas cargar la fotografía?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: '📷 Tomar con cámara',
+        cancelButtonText: '📁 Subir archivo',
+        confirmButtonColor: COLORS.primary,
+        cancelButtonColor: COLORS.slate500
+      }).then((result) => {
+        if (result.isConfirmed) {
+          setIsCameraOpen(true);
+        } else if (result.dismiss === Swal.DismissReason.cancel) {
+          openDocumentFilePicker('foto');
+        }
+      });
+    };
+
+    showDocumentGuide('foto', COLORS).then((result) => {
       if (result.isConfirmed) {
-        setIsCameraOpen(true);
-      } else if (result.dismiss === Swal.DismissReason.cancel) {
-        openDocumentFilePicker('foto');
+        openSource();
       }
     });
   };

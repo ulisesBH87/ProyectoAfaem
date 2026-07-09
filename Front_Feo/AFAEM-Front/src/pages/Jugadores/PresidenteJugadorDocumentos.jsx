@@ -8,7 +8,7 @@ import Swal from 'sweetalert2';
 import { FaArrowLeft, FaFileAlt, FaCheckCircle, FaExclamationCircle, FaUpload, FaClock, FaEye } from 'react-icons/fa';
 import { ROUTES } from '../../routes/paths';
 import CameraCaptureModal from '../../components/Common/CameraCaptureModal';
-import { buildCaptureSourceDialog, CAMERA_CAPTURE_KIND } from '../../utils/cameraCapture';
+import { buildCaptureSourceDialog, CAMERA_CAPTURE_KIND, showDocumentGuide } from '../../utils/cameraCapture';
 
 // Tipos de documentos requeridos y opcionales por edad
 const TIPOS_DOCUMENTO_ADULTO = [
@@ -187,14 +187,26 @@ export default function PresidenteJugadorDocumentos() {
 
     const captureKind = tipoId === 25 ? CAMERA_CAPTURE_KIND.PHOTO : CAMERA_CAPTURE_KIND.DOCUMENT;
 
-    Swal.fire(buildCaptureSourceDialog(captureKind, COLORS)).then((result) => {
-      if (result.isConfirmed) {
-        setCameraTargetTipoId(tipoId);
-        setIsCameraOpen(true);
-      } else if (result.dismiss === Swal.DismissReason.cancel) {
-        document.getElementById(`file-upload-${tipoId}`)?.click();
-      }
-    });
+    const openSource = () => {
+      Swal.fire(buildCaptureSourceDialog(captureKind, COLORS)).then((result) => {
+        if (result.isConfirmed) {
+          setCameraTargetTipoId(tipoId);
+          setIsCameraOpen(true);
+        } else if (result.dismiss === Swal.DismissReason.cancel) {
+          document.getElementById(`file-upload-${tipoId}`)?.click();
+        }
+      });
+    };
+
+    if (captureKind === CAMERA_CAPTURE_KIND.DOCUMENT || captureKind === CAMERA_CAPTURE_KIND.PHOTO) {
+      showDocumentGuide(tipoId, COLORS).then((result) => {
+        if (result.isConfirmed) {
+          openSource();
+        }
+      });
+    } else {
+      openSource();
+    }
   };
 
   if (loading) {
