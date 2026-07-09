@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../routes/paths';
-import { FaUpload, FaCheckCircle, FaTimesCircle, FaChevronRight, FaChevronLeft, FaFileAlt, FaClock, FaCamera, FaTrash, FaSearchPlus, FaSyncAlt } from 'react-icons/fa';
+import { FaUpload, FaCheckCircle, FaTimesCircle, FaChevronRight, FaChevronLeft, FaFileAlt, FaClock, FaTrash, FaSearchPlus, FaSyncAlt } from 'react-icons/fa';
 import CameraCaptureModal from '../../components/Common/CameraCaptureModal';
 import AfaemLogo from '../../assets/afaem-logo@4x.png';
 import FmfLogo from '../../assets/fmf-logo.png';
@@ -155,6 +155,62 @@ function PreRegistroPresidente() {
   });
   const [previews, setPreviews] = useState({});
   const [docMimeTypes, setDocMimeTypes] = useState({});
+
+  const uploadPaymentButtonStyle = {
+    padding: '10px 18px',
+    minHeight: '44px',
+    borderRadius: '12px',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
+    fontSize: '13px',
+    fontWeight: '800',
+    letterSpacing: '0.01em',
+    border: `1px solid ${COLORS.brandBlueLight30}`,
+    color: COLORS.white,
+    background: `linear-gradient(135deg, ${COLORS.brandBlueLight}, ${COLORS.primary})`,
+    boxShadow: `0 10px 24px ${COLORS.brandBlueLight20}`,
+    transition: 'transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease',
+  };
+
+  const downloadOrderButtonStyle = {
+    padding: '10px 18px',
+    minHeight: '44px',
+    borderRadius: '12px',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
+    fontSize: '13px',
+    fontWeight: '800',
+    letterSpacing: '0.01em',
+    border: `1px solid ${COLORS.brandBlueLight30}`,
+    color: COLORS.brandBlueLight,
+    background: COLORS.overlayWhite08,
+    boxShadow: `0 6px 18px ${COLORS.shadow10}`,
+    transition: 'transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease',
+    backdropFilter: 'blur(10px)',
+  };
+
+  const previewPaymentButtonStyle = {
+    padding: '10px 18px',
+    minHeight: '44px',
+    borderRadius: '12px',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
+    fontSize: '13px',
+    fontWeight: '800',
+    letterSpacing: '0.01em',
+    border: `1px solid ${COLORS.brandBlueLight20}`,
+    color: COLORS.slate800,
+    background: COLORS.overlayWhite06,
+    boxShadow: `0 6px 18px ${COLORS.shadow10}`,
+    transition: 'transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease',
+    backdropFilter: 'blur(10px)',
+  };
 
   useEffect(() => {
     if (!documentosGuardados || documentosGuardados.length === 0) return;
@@ -310,10 +366,28 @@ function PreRegistroPresidente() {
     }
   };
 
+  const triggerComprobanteUpload = () => {
+    Swal.fire(buildCaptureSourceDialog(getCameraCaptureKind('comprobante'), COLORS)).then((result) => {
+      if (result.isConfirmed) {
+        setCameraTargetKey('file-comprobante');
+        setIsCameraOpen(true);
+      } else if (result.dismiss === Swal.DismissReason.cancel) {
+        const inputEl = document.getElementById('comprobante');
+        if (inputEl) inputEl.click();
+      }
+    });
+  };
+
   const handleCameraPhotoCaptured = (file) => {
     if (!cameraTargetKey) return;
 
     const targetKey = cameraTargetKey.replace(/^file-val-/, '').replace(/^file-/, '');
+
+    if (targetKey === 'comprobante') {
+      manejarArchivoComprobante(file);
+      return;
+    }
+
     const isValidationFlow = cameraTargetKey.startsWith('file-val-');
     const docAfiliacionId = DOC_AFILIACION_IDS[targetKey];
 
@@ -2438,36 +2512,39 @@ function PreRegistroPresidente() {
             )}
             <h3 className="section-title-small" style={{ textAlign: 'center', marginBottom: '28px', fontSize: '26px', fontWeight: '800', letterSpacing: '-0.5px' }}>Distribución de seguros</h3>
 
+            {ordenPendienteId && (
+              <div style={{
+                background: '#f0fdf4',
+                padding: '20px',
+                borderRadius: '16px',
+                border: `1px solid ${COLORS.successBgTranslucent30}`,
+                marginBottom: '20px',
+                textAlign: 'center',
+                backdropFilter: 'blur(8px)',
+                position: 'relative',
+                overflow: 'hidden',
+                width: '100%',
+              }}>
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '1px', background: `linear-gradient(90deg, transparent, ${COLORS.greenBgTranslucent40}, transparent)` }} />
+                <div style={{
+                  display: 'inline-flex', padding: '4px 12px',
+                  background: `linear-gradient(135deg, ${COLORS.successBgTranslucent18}, ${COLORS.successBgTranslucent30})`,
+                  color: COLORS.successLight, borderRadius: '20px', fontSize: '9px', fontWeight: '800', marginBottom: '10px',
+                  border: `1px solid ${COLORS.successBgTranslucent30}`, letterSpacing: '1px', textTransform: 'uppercase',
+                  boxShadow: `0 4px 12px ${COLORS.successBgTranslucent}`,
+                }}>
+                  ● ORDEN ACTIVA #{ordenPendienteId}
+                </div>
+                <h4 style={{ color: 'var(--text-main)', fontWeight: '800', margin: '0 0 6px 0', fontSize: '16px' }}>Validación en curso</h4>
+                <p style={{ color: 'var(--text-muted)', fontSize: '13px', margin: 0, lineHeight: '1.4' }}>
+                  Ya tienes una orden activa. Para continuar, adjunta tu comprobante de pago.
+                </p>
+              </div>
+            )}
+
             <div className="cuotas-layout">
               <div className="insurance-layout-left">
-                {ordenPendienteId ? (
-                  <div style={{
-                    background: '#f0fdf4',
-                    padding: '20px',
-                    borderRadius: '16px',
-                    border: `1px solid ${COLORS.successBgTranslucent30}`,
-                    marginBottom: '20px',
-                    textAlign: 'center',
-                    backdropFilter: 'blur(8px)',
-                    position: 'relative',
-                    overflow: 'hidden',
-                  }}>
-                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '1px', background: `linear-gradient(90deg, transparent, ${COLORS.greenBgTranslucent40}, transparent)` }} />
-                    <div style={{
-                      display: 'inline-flex', padding: '4px 12px',
-                      background: `linear-gradient(135deg, ${COLORS.successBgTranslucent18}, ${COLORS.successBgTranslucent30})`,
-                      color: COLORS.successLight, borderRadius: '20px', fontSize: '9px', fontWeight: '800', marginBottom: '10px',
-                      border: `1px solid ${COLORS.successBgTranslucent30}`, letterSpacing: '1px', textTransform: 'uppercase',
-                      boxShadow: `0 4px 12px ${COLORS.successBgTranslucent}`,
-                    }}>
-                      ● ORDEN ACTIVA #{ordenPendienteId}
-                    </div>
-                    <h4 style={{ color: 'var(--text-main)', fontWeight: '800', margin: '0 0 6px 0', fontSize: '16px' }}>Validación en curso</h4>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '13px', margin: 0, lineHeight: '1.4' }}>
-                      Ya tienes una orden activa en el sistema. Para continuar, adjunta tu comprobante de pago.
-                    </p>
-                  </div>
-                ) : (
+                {!ordenPendienteId ? (
                   <div className="pago-card">
                     <div style={{
                       background: 'rgba(255, 255, 255, 0.015)',
@@ -2710,159 +2787,246 @@ function PreRegistroPresidente() {
                       )}
                     </div>
                   </div>
-                )}
+                ) : null}
 
               </div>
 
-              <div className="insurance-layout-right">
-                <div className="summary-stack">
-                  {/* Resumen de cuotas */}
-                  <div style={{
-                    background: 'white',
-                    border: `1px solid var(--color-border)`,
-                    borderRadius: '16px', padding: '16px',
-                    position: 'relative', overflow: 'hidden',
-                  }}>
-                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: `linear-gradient(90deg,transparent,${COLORS.brandBlueLight50},transparent)` }} />
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-                      <div style={{ width: '4px', height: '18px', background: `linear-gradient(180deg,${COLORS.brandBlueLight},${COLORS.primary})`, borderRadius: '4px' }} />
-                      <h5 style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: 'var(--color-text)' }}>
-                        {ordenPendienteId ? 'Detalles de la Orden' : 'Resumen de pago'}
-                      </h5>
-                    </div>
-                    {ordenPendienteId && detalleInscripciones
-                      .filter(detalle => {
-                        const tafId = Number(detalle.TipoAfiliacionId || detalle.tipo_afiliacion_id);
-                        return tafId !== 2 && tafId !== 4;
-                      })
-                      .map(detalle => (
-                        <div key={detalle.OrdenPagoDetalleId || `${detalle.TipoAfiliacionId}-${detalle.Cantidad}`} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: `1px solid var(--color-border)`, fontSize: '12px' }}>
-                          <span style={{ color: 'var(--color-text-secondary)' }}>{nombreAfiliacion(detalle.TipoAfiliacionId || detalle.tipo_afiliacion_id)} (x{detalle.Cantidad || detalle.cantidad})</span>
-                          <span style={{ color: 'var(--color-text)', fontWeight: '700' }}>${Number(detalle.Subtotal || detalle.subtotal || 0)}</span>
-                        </div>
-                      ))}
-                    {catalogoSeguros.map(seg =>
-                      asignacionSeguros[seg.id] > 0 && (
-                        <div key={seg.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: `1px solid var(--color-border)`, fontSize: '12px' }}>
-                          <span style={{ color: 'var(--color-text-secondary)' }}>{seg.nombre} (x{asignacionSeguros[seg.id]})</span>
-                          <span style={{ color: 'var(--color-text)', fontWeight: '700' }}>${seg.precio * asignacionSeguros[seg.id]}</span>
-                        </div>
-                      )
-                    )}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0 0', fontSize: '14px', fontWeight: '800' }}>
-                      <span style={{ color: 'var(--color-text-secondary)' }}>Total {ordenPendienteId ? 'a pagar' : 'estimado'}:</span>
-                      <span style={{ color: 'var(--primary)' }}>${totalMostrado}</span>
-                    </div>
-                    <button
-                      className="btn-nav-blue"
-                      onClick={irSiguientePaso}
-                      disabled={!ordenPendienteId ? (numPersonas <= 0 || totalAsignados !== segurosRequeridos) : !comprobantePago}
-                      title={!ordenPendienteId
-                        ? (numPersonas <= 0
+              {!ordenPendienteId && (
+                <div className="insurance-layout-right">
+                  <div className="summary-stack">
+                    {/* Resumen de cuotas */}
+                    <div style={{
+                      background: 'white',
+                      border: `1px solid var(--color-border)`,
+                      borderRadius: '16px', padding: '16px',
+                      position: 'relative', overflow: 'hidden',
+                    }}>
+                      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: `linear-gradient(90deg,transparent,${COLORS.brandBlueLight50},transparent)` }} />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                        <div style={{ width: '4px', height: '18px', background: `linear-gradient(180deg,${COLORS.brandBlueLight},${COLORS.primary})`, borderRadius: '4px' }} />
+                        <h5 style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: 'var(--color-text)' }}>
+                          Resumen de pago
+                        </h5>
+                      </div>
+                      {catalogoSeguros.map(seg =>
+                        asignacionSeguros[seg.id] > 0 && (
+                          <div key={seg.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: `1px solid var(--color-border)`, fontSize: '12px' }}>
+                            <span style={{ color: 'var(--color-text-secondary)' }}>{seg.nombre} (x{asignacionSeguros[seg.id]})</span>
+                            <span style={{ color: 'var(--color-text)', fontWeight: '700' }}>${seg.precio * asignacionSeguros[seg.id]}</span>
+                          </div>
+                        )
+                      )}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0 0', fontSize: '14px', fontWeight: '800' }}>
+                        <span style={{ color: 'var(--color-text-secondary)' }}>Total estimado:</span>
+                        <span style={{ color: 'var(--primary)' }}>${totalMostrado}</span>
+                      </div>
+                      <button
+                        className="btn-nav-blue"
+                        onClick={irSiguientePaso}
+                        disabled={numPersonas <= 0 || totalAsignados !== segurosRequeridos}
+                        title={numPersonas <= 0
                           ? 'Ingresa la cantidad de jugadores para continuar'
                           : (totalAsignados !== segurosRequeridos
                             ? 'La cantidad de seguros asignados debe coincidir con la cantidad total de seguros a pagar'
-                            : ''))
-                        : ''}
-                      style={{ padding: '10px 24px', marginTop: '16px', width: '100%' }}
-                    >
-                      {ordenPendienteId ? 'Finalizar' : 'Siguiente'}
-                    </button>
+                            : '')}
+                        style={{ padding: '10px 24px', marginTop: '16px', width: '100%' }}
+                      >
+                        Siguiente
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {ordenPendienteId && (
-              <div style={{
-                marginTop: '20px',
-                background: COLORS.primaryBgTranslucent,
-                border: `1.5px dashed ${comprobanteDragActive ? COLORS.brandBlueLight : COLORS.brandBlueLight30}`,
-                borderRadius: '16px',
-                padding: '18px 20px',
-                backdropFilter: 'blur(8px)',
-                transition: 'border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease',
-                boxShadow: comprobanteDragActive ? `0 0 0 3px ${COLORS.brandBlueLight20}` : 'none',
-                backgroundColor: comprobanteDragActive ? COLORS.brandBlueLight10 : COLORS.primaryBgTranslucent,
-              }}>
-                <p style={{ fontSize: '13px', fontWeight: '800', color: COLORS.brandBlueLight, marginBottom: '4px' }}>
-                  Paso 2: Sube tu comprobante de pago
-                </p>
-                <p style={{ fontSize: '10.5px', color: 'var(--text-muted)', marginBottom: '12px' }}>
-                  Adjunta el comprobante (PDF o imagen) para procesar tu registro.
-                </p>
-                <div
-                  className="file-input-custom"
-                  onDragEnter={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setComprobanteDragActive(true);
-                  }}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    if (!comprobanteDragActive) setComprobanteDragActive(true);
-                  }}
-                  onDragLeave={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    if (e.currentTarget.contains(e.relatedTarget)) return;
-                    setComprobanteDragActive(false);
-                  }}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setComprobanteDragActive(false);
-                    const file = e.dataTransfer?.files?.[0];
-                    manejarArchivoComprobante(file);
-                  }}
-                  style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}
-                >
-                  <input
-                    type="file"
-                    id="comprobante"
-                    style={{ display: 'none' }}
-                    accept=".pdf,.png,.jpg,.jpeg"
-                    onChange={(e) => {
-                      const file = e.target.files[0];
-                      if (!manejarArchivoComprobante(file)) {
-                        e.target.value = '';
-                      }
+              <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', alignItems: 'stretch', marginTop: '20px' }}>
+                <div style={{
+                  flex: '1 1 340px',
+                  minWidth: '300px',
+                  background: 'white',
+                  border: `1px solid var(--color-border)`,
+                  borderRadius: '16px',
+                  padding: '16px',
+                  position: 'relative',
+                  overflow: 'hidden',
+                }}>
+                  <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: `linear-gradient(90deg,transparent,${COLORS.brandBlueLight50},transparent)` }} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                    <div style={{ width: '4px', height: '18px', background: `linear-gradient(180deg,${COLORS.brandBlueLight},${COLORS.primary})`, borderRadius: '4px' }} />
+                    <h5 style={{ margin: 0, fontSize: '13px', fontWeight: '800', color: 'var(--color-text)' }}>
+                      Detalles de la Orden
+                    </h5>
+                  </div>
+                  {detalleInscripciones
+                    .filter(detalle => {
+                      const tafId = Number(detalle.TipoAfiliacionId || detalle.tipo_afiliacion_id);
+                      return tafId !== 2 && tafId !== 4;
+                    })
+                    .map(detalle => (
+                      <div key={detalle.OrdenPagoDetalleId || `${detalle.TipoAfiliacionId}-${detalle.Cantidad}`} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: `1px solid var(--color-border)`, fontSize: '12px' }}>
+                        <span style={{ color: 'var(--color-text-secondary)' }}>{nombreAfiliacion(detalle.TipoAfiliacionId || detalle.tipo_afiliacion_id)} (x{detalle.Cantidad || detalle.cantidad})</span>
+                        <span style={{ color: 'var(--color-text)', fontWeight: '700' }}>${Number(detalle.Subtotal || detalle.subtotal || 0)}</span>
+                      </div>
+                    ))}
+                  {catalogoSeguros.map(seg =>
+                    asignacionSeguros[seg.id] > 0 && (
+                      <div key={seg.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: `1px solid var(--color-border)`, fontSize: '12px' }}>
+                        <span style={{ color: 'var(--color-text-secondary)' }}>{seg.nombre} (x{asignacionSeguros[seg.id]})</span>
+                        <span style={{ color: 'var(--color-text)', fontWeight: '700' }}>${seg.precio * asignacionSeguros[seg.id]}</span>
+                      </div>
+                    )
+                  )}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0 0', fontSize: '14px', fontWeight: '800' }}>
+                    <span style={{ color: 'var(--color-text-secondary)' }}>Total a pagar:</span>
+                    <span style={{ color: 'var(--primary)' }}>${totalMostrado}</span>
+                  </div>
+                  <div style={{
+                    marginTop: '14px',
+                    padding: '14px',
+                    borderRadius: '14px',
+                    background: COLORS.primaryBgTranslucent,
+                    border: `1px solid ${COLORS.brandBlueLight20}`,
+                  }}>
+                    <p style={{ margin: '0 0 10px', fontSize: '12px', fontWeight: '800', color: COLORS.brandBlueLight }}>
+                      Instrucciones de pago
+                    </p>
+                    <div style={{ display: 'grid', gap: '6px', fontSize: '11.5px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px' }}>
+                        <span style={{ color: 'var(--text-muted)' }}>Banco</span>
+                        <span style={{ color: 'var(--color-text)', fontWeight: '700', textAlign: 'right' }}>{bankInfo.banco}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px' }}>
+                        <span style={{ color: 'var(--text-muted)' }}>Titular</span>
+                        <span style={{ color: 'var(--color-text)', fontWeight: '700', textAlign: 'right' }}>{bankInfo.titular}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px' }}>
+                        <span style={{ color: 'var(--text-muted)' }}>Cuenta</span>
+                        <span style={{ color: 'var(--color-text)', fontWeight: '700', textAlign: 'right' }}>{bankInfo.cuenta}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px' }}>
+                        <span style={{ color: 'var(--text-muted)' }}>CLABE</span>
+                        <span style={{ color: 'var(--color-text)', fontWeight: '700', textAlign: 'right' }}>{bankInfo.clabe}</span>
+                      </div>
+                      {bankInfo.tarjeta && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px' }}>
+                          <span style={{ color: 'var(--text-muted)' }}>Tarjeta</span>
+                          <span style={{ color: 'var(--color-text)', fontWeight: '700', textAlign: 'right' }}>{bankInfo.tarjeta}</span>
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px' }}>
+                        <span style={{ color: 'var(--text-muted)' }}>Referencia</span>
+                        <span style={{ color: COLORS.brandBlueLight, fontWeight: '800', textAlign: 'right' }}>
+                          {referenciaPago || bankInfo.referencia || 'N/A'}
+                        </span>
+                      </div>
+                    </div>
+                    <p style={{ margin: '10px 0 0', fontSize: '10.5px', lineHeight: '1.5', color: 'var(--text-muted)' }}>
+                      Realiza tu transferencia con esta referencia y después sube tu comprobante para continuar con el pre-registro.
+                    </p>
+                  </div>
+                </div>
+
+                <div style={{
+                  flex: '1 1 340px',
+                  minWidth: '300px',
+                  background: COLORS.primaryBgTranslucent,
+                  border: `1.5px dashed ${comprobanteDragActive ? COLORS.brandBlueLight : COLORS.brandBlueLight30}`,
+                  borderRadius: '16px',
+                  padding: '18px 20px',
+                  backdropFilter: 'blur(8px)',
+                  transition: 'border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease',
+                  boxShadow: comprobanteDragActive ? `0 0 0 3px ${COLORS.brandBlueLight20}` : 'none',
+                  backgroundColor: comprobanteDragActive ? COLORS.brandBlueLight10 : COLORS.primaryBgTranslucent,
+                }}>
+                  <p style={{ fontSize: '13px', fontWeight: '800', color: COLORS.brandBlueLight, marginBottom: '4px' }}>
+                    Paso 2: Sube tu comprobante de pago
+                  </p>
+                  <p style={{ fontSize: '10.5px', color: 'var(--text-muted)', marginBottom: '12px' }}>
+                    Adjunta el comprobante (PDF o imagen) para procesar tu registro.
+                  </p>
+                  <div
+                    className="file-input-custom"
+                    onDragEnter={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setComprobanteDragActive(true);
                     }}
-                  />
-                  <button
-                    className="btn-outline"
-                    onClick={() => document.getElementById('comprobante').click()}
-                    style={{ padding: '8px 16px' }}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (!comprobanteDragActive) setComprobanteDragActive(true);
+                    }}
+                    onDragLeave={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (e.currentTarget.contains(e.relatedTarget)) return;
+                      setComprobanteDragActive(false);
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setComprobanteDragActive(false);
+                      const file = e.dataTransfer?.files?.[0];
+                      manejarArchivoComprobante(file);
+                    }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}
                   >
-                    {comprobantePago ? 'Cambiar archivo' : 'Seleccionar archivo'}
-                  </button>
-                  {comprobantePago && (
+                    <input
+                      type="file"
+                      id="comprobante"
+                      style={{ display: 'none' }}
+                      accept=".pdf,.png,.jpg,.jpeg"
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (!manejarArchivoComprobante(file)) {
+                          e.target.value = '';
+                        }
+                      }}
+                    />
                     <button
                       type="button"
                       className="btn-outline"
-                      onClick={() => setPreviewDoc({ file: comprobantePago, title: 'Comprobante de pago' })}
-                      style={{ padding: '8px 16px' }}
+                      onClick={triggerComprobanteUpload}
+                      style={uploadPaymentButtonStyle}
                     >
-                      Ver archivo
+                      <FaUpload />
+                      {comprobantePago ? 'Cambiar archivo' : 'Seleccionar archivo'}
                     </button>
-                  )}
-                  {ordenPendienteId && (
                     <button
                       type="button"
                       className="btn-outline"
                       onClick={() => generarPDFCuota(ordenPendienteId)}
-                      style={{ padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--color-primary)', borderColor: 'var(--color-border-active)' }}
+                      style={downloadOrderButtonStyle}
                     >
                       <FaFileAlt /> Descargar Orden de Pago
                     </button>
-                  )}
-                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                    {comprobantePago ? comprobantePago.name : 'No se ha seleccionado archivo'}
-                  </span>
-                  <span style={{ width: '100%', fontSize: '11px', color: comprobanteDragActive ? COLORS.brandBlueLight : 'var(--text-muted)' }}>
-                    Arrastra y suelta tu comprobante aquí, o selecciónalo manualmente.
-                  </span>
+                    {comprobantePago && (
+                      <button
+                        type="button"
+                        className="btn-outline"
+                        onClick={() => setPreviewDoc({ file: comprobantePago, title: 'Comprobante de pago' })}
+                        style={previewPaymentButtonStyle}
+                      >
+                        <FaSearchPlus />
+                        Ver archivo
+                      </button>
+                    )}
+                    <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                      {comprobantePago ? comprobantePago.name : 'No se ha seleccionado archivo'}
+                    </span>
+                    <span style={{ width: '100%', fontSize: '11px', color: comprobanteDragActive ? COLORS.brandBlueLight : 'var(--text-muted)' }}>
+                      Arrastra y suelta tu comprobante aquí, o selecciónalo manualmente.
+                    </span>
+                  </div>
+                  <button
+                    className="btn-nav-blue"
+                    onClick={irSiguientePaso}
+                    disabled={!comprobantePago}
+                    style={{ padding: '10px 24px', marginTop: '16px', width: '100%' }}
+                  >
+                    Finalizar
+                  </button>
                 </div>
               </div>
             )}
