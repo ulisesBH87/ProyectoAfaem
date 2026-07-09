@@ -105,7 +105,7 @@ function RegistrarseCuenta() {
 			const res = await apiRegister(payload);
 			if (res.ok) {
 				setSuccess(true);
-				setTimeout(() => navigate('/ingresar'), 2500);
+				setTimeout(() => navigate('/ingresar'), 9000);
 			} else {
 				// MANEJAR ERROR DE CORREO DUPLICADO
 				const detail = res.json?.detail || 'Error en el registro, inténtalo de nuevo más tarde.';
