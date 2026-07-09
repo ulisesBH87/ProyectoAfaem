@@ -78,7 +78,7 @@ export default function RegistrarPresidente() {
     !!cuenta.nombre?.trim() &&
     !!cuenta.primerApellido?.trim() &&
     !!cuenta.correo?.trim() &&
-    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cuenta.correo) &&
+    /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,3}$/.test(cuenta.correo) &&
     !!cuenta.telefono?.trim() &&
     /^\d{10}$/.test(cuenta.telefono) &&
     !!cuenta.curp?.trim() &&

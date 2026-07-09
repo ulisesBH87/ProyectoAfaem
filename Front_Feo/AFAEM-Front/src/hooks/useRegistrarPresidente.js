@@ -138,8 +138,11 @@ export function useRegistrarPresidente() {
     const errs = {};
     if (!cuenta.nombre.trim()) errs.nombre = 'Obligatorio';
     if (!cuenta.primerApellido.trim()) errs.primerApellido = 'Obligatorio';
-    if (!cuenta.correo.trim()) errs.correo = 'Obligatorio';
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cuenta.correo)) errs.correo = 'Correo inválido';
+    if (!cuenta.correo.trim()) {
+      errs.correo = 'Obligatorio';
+    } else if (!/^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,3}$/.test(cuenta.correo)) {
+      errs.correo = 'Formato de correo inválido (ejemplo: nombre@dominio.com)';
+    }
     if (!cuenta.telefono.trim()) errs.telefono = 'Obligatorio';
     if (!/^\d{10}$/.test(cuenta.telefono)) errs.telefono = '10 dígitos requeridos';
     if (!cuenta.curp.trim()) errs.curp = 'Obligatorio';
