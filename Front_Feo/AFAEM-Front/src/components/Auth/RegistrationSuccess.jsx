@@ -6,28 +6,58 @@ const RegistrationSuccess = () => {
   return (
     <div style={{ textAlign: 'center', padding: '40px 0' }}>
       <style>{`
-        .registration-spinner-container {
+        .registration-success-icon-container {
           display: flex;
           justify-content: center;
           align-items: center;
           margin-bottom: 24px;
         }
-        .registration-spinner {
-          width: 60px;
-          height: 60px;
-          border: 4px solid rgba(255, 255, 255, 0.05);
-          border-top: 4px solid var(--secondary, #d97706);
-          border-right: 4px solid var(--secondary, #d97706);
+        .checkmark-circle {
+          width: 80px;
+          height: 80px;
           border-radius: 50%;
-          animation: spin-loader 1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+          background: rgba(16, 185, 129, 0.1);
+          border: 3px solid #10b981;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          animation: scaleIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
         }
-        @keyframes spin-loader {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
+        .checkmark-icon {
+          width: 40px;
+          height: 40px;
+          stroke: #10b981;
+          stroke-width: 4;
+          stroke-linecap: round;
+          stroke-linejoin: round;
+          fill: none;
+          stroke-dasharray: 48;
+          stroke-dashoffset: 48;
+          animation: drawCheckmark 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.3s forwards;
+        }
+        @keyframes scaleIn {
+          from {
+            transform: scale(0);
+            opacity: 0;
+          }
+          to {
+            transform: scale(1);
+            opacity: 1;
+          }
+        }
+        @keyframes drawCheckmark {
+          to {
+            stroke-dashoffset: 0;
+          }
         }
       `}</style>
-      <div className="registration-spinner-container">
-        <div className="registration-spinner" />
+      <div className="registration-success-icon-container">
+        <div className="checkmark-circle">
+          <svg viewBox="0 0 24 24" className="checkmark-icon">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+        </div>
       </div>
       <h2 className="heading-outfit" style={{ fontSize: '28px', color: 'var(--secondary)', marginBottom: '12px' }}>Registro exitoso</h2>
       <p className="glass-subtitle" style={{ marginBottom: '32px' }}>Tu cuenta ha sido creada correctamente. Serás redirigido al inicio de sesión.</p>

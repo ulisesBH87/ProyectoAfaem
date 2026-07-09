@@ -32,7 +32,7 @@ export function validateField(name, value, formData = {}) {
 		return '';
 	}
 	if (name === 'Correo') {
-		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+		const emailRegex = /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,3}$/;
 		if (!String(value || '').trim()) return 'El correo es obligatorio';
 		if (!emailRegex.test(value)) return 'Formato de correo inválido (ejemplo: nombre@dominio.com)';
 		return '';
@@ -125,8 +125,8 @@ export async function sendVerification(API_BASE, email, code) {
 }
 
 export async function uploadFile(API_BASE, file) {
-	const allowedTypes = ['application/pdf','image/png','image/jpeg','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
-	const allowedExtensions = ['.pdf','.png','.jpg','.jpeg','.xlsx'];
+	const allowedTypes = ['application/pdf', 'image/png', 'image/jpeg', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
+	const allowedExtensions = ['.pdf', '.png', '.jpg', '.jpeg', '.xlsx'];
 	const ext = file.name.toLowerCase().slice(file.name.lastIndexOf('.'));
 	if (!allowedExtensions.includes(ext) || !allowedTypes.includes(file.type)) {
 		const e = new Error('Tipo de archivo no permitido');
@@ -138,7 +138,7 @@ export async function uploadFile(API_BASE, file) {
 	const res = await fetch(`${API_BASE}/upload/`, { method: 'POST', body: fd });
 	if (!res.ok) {
 		let json = {};
-		try { json = await res.json(); } catch(e) {}
+		try { json = await res.json(); } catch (e) { }
 		// Creamos un mock de error para getErrorMessage
 		const mockError = new Error();
 		mockError.response = { data: json, status: res.status };
