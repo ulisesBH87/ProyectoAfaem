@@ -513,6 +513,16 @@ export const getConsumoAuditoria = async (params = {}) => {
   return response.data;
 };
 
+export const getConsumoTarifas = async () => {
+  const response = await api.get('/consumo/tarifas');
+  return response.data;
+};
+
+export const updateConsumoTarifa = async (tarifaId, payload) => {
+  const response = await api.put(`/consumo/tarifas/${tarifaId}`, payload);
+  return response.data;
+};
+
 export default {
   getSolicitudDetalle,
   getPagosGenerales,
@@ -556,5 +566,7 @@ export default {
   getReporteDiarioMaster,
   getConsumoResumen,
   getConsumoLedger,
-  getConsumoAuditoria
+  getConsumoAuditoria,
+  getConsumoTarifas,
+  updateConsumoTarifa
 };

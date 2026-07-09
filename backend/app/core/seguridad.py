@@ -165,6 +165,18 @@ def requerir_permiso(slug_permiso: str):
         print(f"[RBAC LOG] Permiso requerido por Auditorías: '{slug_permiso}'")
         print(f"[RBAC LOG] Permisos del usuario actual ({usuario.Correo}): {acceso.get('Permisos', [])}")
         
+        # Si el permiso requerido es de auditoría, debe ser exclusivo de Master (ningún administrador/admin)
+        if slug_permiso == "auditorias.ver":
+            roles_upper = [r.upper() for r in acceso.get("Roles", [])]
+            is_master = "MASTER" in roles_upper
+            is_admin = "ADMIN" in roles_upper or "ADMINISTRADOR" in roles_upper
+            if not is_master or is_admin:
+                print(f"[RBAC LOG] Denegado por rol no autorizado para auditorías: is_master={is_master}, is_admin={is_admin}")
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Acceso denegado: Auditorías, resúmenes y consumos son exclusivos de rol clasificado"
+                )
+
         resultado_rbac = slug_permiso in acceso.get("Permisos", [])
         print(f"[RBAC LOG] Resultado de validación RBAC: {'EXITOSO' if resultado_rbac else 'DENEGADO'}")
         

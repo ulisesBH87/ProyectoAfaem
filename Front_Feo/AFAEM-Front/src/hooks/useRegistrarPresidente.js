@@ -242,7 +242,7 @@ export function useRegistrarPresidente() {
     setVoucherState(file);
     procesarOCR('voucher', file, () => {
       setVoucherState(null);
-    }, "PRESIDENTE");
+    }, esEntrenador ? "ENTRENADOR" : "PRESIDENTE");
   };
 
   const fotoHook = useFotografia({ setDocuments, setPreviews, tipoRegistro: "PRESIDENTE" });
@@ -646,7 +646,7 @@ export function useRegistrarPresidente() {
             else delete next[docKey];
             return next;
           });
-        });
+        }, esEntrenador ? "ENTRENADOR" : "PRESIDENTE");
       }
     }
   };

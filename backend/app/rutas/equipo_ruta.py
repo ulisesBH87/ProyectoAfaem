@@ -2190,6 +2190,23 @@ async def registrar_presidente_admin(
         if presidente:
             presidente.EstatusId = 7
 
+        # Asociar consumos del OCR/Foto realizados durante el registro de este presidente por el administrador
+        try:
+            from app.servicios.consumo_servicio import ConsumptionService
+            target_name = f"{nueva_persona.Nombre} {nueva_persona.PrimerApellido or ''} {nueva_persona.SegundoApellido or ''}".strip().upper()
+            ConsumptionService.asociar_consumos_pendientes(
+                db=db,
+                target_persona_id=nueva_persona.PersonaId,
+                target_nombre=target_name,
+                target_curp=nueva_persona.CURP,
+                usuario_id=usuario.UsuarioId,
+                equipo_id=nuevo_equipo_temporal.EquipoId if 'nuevo_equipo_temporal' in locals() and nuevo_equipo_temporal else None,
+                liga_id=resolved_liga_id if 'resolved_liga_id' in locals() else None,
+                borrador_id=borradorId
+            )
+        except Exception as assoc_exc:
+            print(f"Error al asociar consumos del presidente registrado: {assoc_exc}")
+
         db.commit()
         
         return {

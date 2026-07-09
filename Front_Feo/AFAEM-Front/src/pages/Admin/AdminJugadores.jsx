@@ -685,7 +685,13 @@ export default function AdminJugadores() {
       });
 
       try {
-        const data = await validarFotografia(archivo);
+        const activeName = jugador.NombreCompleto || `${jugador.Nombre || ''} ${jugador.PrimerApellido || ''} ${jugador.SegundoApellido || ''}`.trim().toUpperCase();
+        const data = await validarFotografia(archivo, "JUGADOR", {
+          target_persona_id: jugador.PersonaId,
+          target_nombre: activeName,
+          target_curp: jugador.CURP || jugador.Curp,
+          equipo_id: jugador.EquipoId || jugador.EquipoID
+        });
         if (data.valido) {
           // Convertir base64 a File
           const byteCharacters = atob(data.imagen);

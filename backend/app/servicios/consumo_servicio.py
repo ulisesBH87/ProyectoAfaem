@@ -322,6 +322,99 @@ class ConsumptionService:
         }
 
     @classmethod
+    def asociar_consumos_pendientes(cls, db: Session, target_persona_id: int, target_nombre: str, target_curp: str, usuario_id: int = None, guest_id: str = None, session_id: str = None, equipo_id: int = None, liga_id: int = None, slot_id: str = None, borrador_id: str = None):
+        """
+        Asocia los consumos de la sesión/usuario o borrador/slot que aún no tienen asignado un jugador/directivo
+        con la persona recién registrada.
+        """
+        from datetime import datetime, timedelta
+        from app.modelos.consumo_modelos import BitacoraConsumo, ConsumoOutbox
+        from sqlalchemy import or_
+        import json
+        
+        # 1. Intentar procesar outbox pendiente primero
+        try:
+            from app.servicios.consumo_worker import procesar_outbox_pending
+            procesar_outbox_pending()
+        except Exception as o_exc:
+            print(f"[CONSUMO ERROR] No se pudo procesar outbox antes de asociar: {o_exc}")
+
+        # 2. Actualizar payloads en la cola de Outbox por si algún evento quedó pendiente
+        try:
+            eventos_pendientes = db.query(ConsumoOutbox).filter(ConsumoOutbox.Estado == "PENDIENTE").all()
+            for ev in eventos_pendientes:
+                try:
+                    payload = json.loads(ev.Payload)
+                    match = False
+                    if slot_id and payload.get("EntityType") == "SLOT_JUGADOR" and str(payload.get("EntityId")) == str(slot_id):
+                        match = True
+                    elif borrador_id and payload.get("EntityType") == "BORRADOR_PRESIDENTE" and str(payload.get("EntityId")) == str(borrador_id):
+                        match = True
+                    elif usuario_id and payload.get("UsuarioId") == usuario_id:
+                        match = True
+                    elif guest_id and payload.get("GuestId") == guest_id:
+                        match = True
+                    elif session_id and payload.get("SessionId") == session_id:
+                        match = True
+                        
+                    if match:
+                        payload["JugadorPersonaId"] = target_persona_id
+                        payload["JugadorNombre"] = target_nombre.upper()
+                        payload["JugadorCURP"] = target_curp.upper()
+                        if equipo_id:
+                            payload["EquipoId"] = equipo_id
+                        if liga_id:
+                            payload["LigaId"] = liga_id
+                        ev.Payload = json.dumps(payload, ensure_ascii=False)
+                except Exception as parse_exc:
+                    print(f"[CONSUMO ERROR] Error parseando payload de outbox id={ev.Id}: {parse_exc}")
+        except Exception as outbox_update_exc:
+            print(f"[CONSUMO ERROR] Error al actualizar payloads de outbox: {outbox_update_exc}")
+
+        # 3. Actualizar registros existentes en BitacoraConsumo
+        limite = datetime.utcnow() - timedelta(days=7)
+        
+        query = db.query(BitacoraConsumo).filter(
+            BitacoraConsumo.JugadorPersonaId.is_(None),
+            BitacoraConsumo.CreadoEn >= limite
+        )
+        
+        condiciones = []
+        if slot_id:
+            condiciones.append(
+                (BitacoraConsumo.EntityType == "SLOT_JUGADOR") & 
+                (BitacoraConsumo.EntityId == str(slot_id))
+            )
+        if borrador_id:
+            condiciones.append(
+                (BitacoraConsumo.EntityType == "BORRADOR_PRESIDENTE") & 
+                (BitacoraConsumo.EntityId == str(borrador_id))
+            )
+            
+        if usuario_id:
+            condiciones.append(BitacoraConsumo.UsuarioId == usuario_id)
+        if guest_id:
+            condiciones.append(BitacoraConsumo.GuestId == guest_id)
+        if session_id:
+            condiciones.append(BitacoraConsumo.SessionId == session_id)
+            
+        if not condiciones:
+            return
+            
+        query = query.filter(or_(*condiciones))
+        consumos_pendientes = query.all()
+        
+        for c in consumos_pendientes:
+            c.JugadorPersonaId = target_persona_id
+            c.JugadorNombre = target_nombre.upper()
+            c.JugadorCURP = target_curp.upper()
+            if equipo_id:
+                c.EquipoId = equipo_id
+            if liga_id:
+                c.LigaId = liga_id
+        db.flush()
+
+    @classmethod
     def obtener_auditoria_consumos(cls, db: Session, fecha_inicio: str = None, fecha_fin: str = None) -> dict:
         """
         Retorna el desglose de auditoría detallado agrupado por Jugador/Ejecutor, Equipo y Liga.
@@ -362,6 +455,7 @@ class ConsumptionService:
         registros = query.all()
         
         desglose_jugadores = {}
+        desglose_directivos = {}
         desglose_equipos = {}
         desglose_ligas = {}
         
@@ -383,33 +477,64 @@ class ConsumptionService:
             costo_usd = costo if r.Divisa == "USD" else 0.0
             costo_mxn = costo if r.Divisa == "MXN" else 0.0
             
-            # A) Agrupación por Jugador
-            jug_key = (r.UsuarioId, jug_nombre, jug_curp, eq_id, lg_id)
-            if jug_key not in desglose_jugadores:
-                desglose_jugadores[jug_key] = {
-                    "ejecutor_nombre": ejecutor_nombre,
-                    "ejecutor_rol": ejecutor_rol,
-                    "jugador_nombre": jug_nombre,
-                    "jugador_curp": jug_curp,
-                    "equipo_nombre": eq_nombre,
-                    "liga_nombre": lg_nombre,
-                    "ocr_count": 0,
-                    "foto_count": 0,
-                    "verificamex_count": 0,
-                    "costo_total_usd": 0.0,
-                    "costo_total_mxn": 0.0
-                }
-            
-            item_jug = desglose_jugadores[jug_key]
-            if r.TipoConsumo == "OCR":
-                item_jug["ocr_count"] += 1
-            elif r.TipoConsumo == "PHOTO_SCAN":
-                item_jug["foto_count"] += 1
-            elif r.TipoConsumo == "VERIFICAMEX":
-                item_jug["verificamex_count"] += 1
+            # Clasificar y agrupar por Jugador o Directivo
+            if r.TipoRegistro in ("PRESIDENTE", "ENTRENADOR"):
+                # A.2) Agrupación por Directivo (Presidente/Entrenador)
+                dir_key = (r.UsuarioId, jug_nombre, jug_curp, eq_id, lg_id, r.TipoRegistro)
+                if dir_key not in desglose_directivos:
+                    desglose_directivos[dir_key] = {
+                        "ejecutor_nombre": ejecutor_nombre,
+                        "ejecutor_rol": ejecutor_rol,
+                        "directivo_nombre": jug_nombre,
+                        "directivo_curp": jug_curp,
+                        "directivo_rol": r.TipoRegistro,
+                        "equipo_nombre": eq_nombre,
+                        "liga_nombre": lg_nombre,
+                        "ocr_count": 0,
+                        "foto_count": 0,
+                        "verificamex_count": 0,
+                        "costo_total_usd": 0.0,
+                        "costo_total_mxn": 0.0
+                    }
                 
-            item_jug["costo_total_usd"] += costo_usd
-            item_jug["costo_total_mxn"] += costo_mxn
+                item_dir = desglose_directivos[dir_key]
+                if r.TipoConsumo == "OCR":
+                    item_dir["ocr_count"] += 1
+                elif r.TipoConsumo == "PHOTO_SCAN":
+                    item_dir["foto_count"] += 1
+                elif r.TipoConsumo == "VERIFICAMEX":
+                    item_dir["verificamex_count"] += 1
+                    
+                item_dir["costo_total_usd"] += costo_usd
+                item_dir["costo_total_mxn"] += costo_mxn
+            else:
+                # A.1) Agrupación por Jugador
+                jug_key = (r.UsuarioId, jug_nombre, jug_curp, eq_id, lg_id)
+                if jug_key not in desglose_jugadores:
+                    desglose_jugadores[jug_key] = {
+                        "ejecutor_nombre": ejecutor_nombre,
+                        "ejecutor_rol": ejecutor_rol,
+                        "jugador_nombre": jug_nombre,
+                        "jugador_curp": jug_curp,
+                        "equipo_nombre": eq_nombre,
+                        "liga_nombre": lg_nombre,
+                        "ocr_count": 0,
+                        "foto_count": 0,
+                        "verificamex_count": 0,
+                        "costo_total_usd": 0.0,
+                        "costo_total_mxn": 0.0
+                    }
+                
+                item_jug = desglose_jugadores[jug_key]
+                if r.TipoConsumo == "OCR":
+                    item_jug["ocr_count"] += 1
+                elif r.TipoConsumo == "PHOTO_SCAN":
+                    item_jug["foto_count"] += 1
+                elif r.TipoConsumo == "VERIFICAMEX":
+                    item_jug["verificamex_count"] += 1
+                    
+                item_jug["costo_total_usd"] += costo_usd
+                item_jug["costo_total_mxn"] += costo_mxn
             
             # B) Agrupación por Equipo
             if eq_id:
@@ -458,7 +583,49 @@ class ConsumptionService:
                 
         return {
             "desglose_jugadores": list(desglose_jugadores.values()),
+            "desglose_directivos": list(desglose_directivos.values()),
             "desglose_equipos": list(desglose_equipos.values()),
             "desglose_ligas": list(desglose_ligas.values())
         }
+
+    @classmethod
+    def obtener_tarifas(cls, db: Session) -> list:
+        """
+        Retorna la lista de todas las tarifas registradas en la base de datos.
+        Si la tabla está vacía, se realiza un sembrado (seeding) inicial con las tarifas de fallback.
+        """
+        tarifas = db.query(CatalogoTarifas).all()
+        if not tarifas:
+            # Sembrado inicial
+            tarifas_sembrado = [
+                CatalogoTarifas(TipoConsumo="OCR", Proveedor="DEFAULT", CostoUnitario=0.0015, Divisa="USD", Descripcion="Servicio de reconocimiento óptico de caracteres para documentos de identidad (INE, Pasaporte).", Estatus=True),
+                CatalogoTarifas(TipoConsumo="PHOTO_SCAN", Proveedor="DEFAULT", CostoUnitario=1.00, Divisa="MXN", Descripcion="Servicio de validación y escaneo de fotografía de perfil / rostro.", Estatus=True),
+                CatalogoTarifas(TipoConsumo="VERIFICAMEX", Proveedor="DEFAULT", CostoUnitario=3.00, Divisa="MXN", Descripcion="Servicio de verificación de CURP y datos oficiales.", Estatus=True)
+            ]
+            db.add_all(tarifas_sembrado)
+            db.commit()
+            tarifas = db.query(CatalogoTarifas).all()
+        return tarifas
+
+    @classmethod
+    def actualizar_tarifa(cls, db: Session, tarifa_id: int, payload: dict) -> CatalogoTarifas:
+        """
+        Actualiza una tarifa existente en la base de datos.
+        """
+        tarifa = db.query(CatalogoTarifas).filter(CatalogoTarifas.TarifaId == tarifa_id).first()
+        if not tarifa:
+            return None
+        
+        if "CostoUnitario" in payload:
+            tarifa.CostoUnitario = payload["CostoUnitario"]
+        if "Divisa" in payload:
+            tarifa.Divisa = payload["Divisa"]
+        if "Descripcion" in payload:
+            tarifa.Descripcion = payload["Descripcion"]
+        if "Estatus" in payload:
+            tarifa.Estatus = payload["Estatus"]
+            
+        db.commit()
+        db.refresh(tarifa)
+        return tarifa
 

@@ -179,6 +179,24 @@ async def registrar_jugador_servicio(db, equipo_temporal_id, persona, documentos
             import json
             slot.DatosBorrador = json.dumps(extra_data, ensure_ascii=False)
 
+    # Asociar consumos del OCR/Foto realizados durante el registro de este jugador
+    try:
+        from app.servicios.consumo_servicio import ConsumptionService
+        target_name = f"{persona.nombre} {persona.primer_apellido} {persona.segundo_apellido or ''}".strip().upper()
+        ConsumptionService.asociar_consumos_pendientes(
+            db=db,
+            target_persona_id=persona_id,
+            target_nombre=target_name,
+            target_curp=persona.curp,
+            usuario_id=equipo.UsuarioId,
+            equipo_id=equipo.EquipoId,
+            liga_id=equipo.LigaId,
+            slot_id=slot.EquipoTemporalJugadorId
+        )
+    except Exception as assoc_exc:
+        # No bloquear el registro si falla la asociación de consumo
+        print(f"Error al asociar consumos del jugador registrado: {assoc_exc}")
+
     db.commit()
     return {"mensaje": "Jugador registrado"}
 

@@ -101,22 +101,6 @@ def track_consumption(tipo_consumo: str, proveedor: str, tipo_registro_default: 
                     target_nombre = request.query_params.get("target_nombre")
                     target_curp = request.query_params.get("target_curp")
 
-                # Extraer CURP/Nombre si es respuesta de OCR en HTMLResponse
-                if response_data and hasattr(response_data, "body"):
-                    try:
-                        html_content = response_data.body.decode("utf-8", errors="ignore")
-                        import re
-                        if not target_curp:
-                            curp_match = re.search(r'CURP\s*\(Identidad\):.*?class="valor"[^>]*>\s*([A-Z0-9]{18})\s*<', html_content, re.DOTALL | re.IGNORECASE)
-                            if curp_match:
-                                target_curp = curp_match.group(1).strip().upper()
-                        if not target_nombre:
-                            name_match = re.search(r'Nombre\s*Completo:.*?class="valor"[^>]*>\s*([^<]+?)\s*<', html_content, re.DOTALL | re.IGNORECASE)
-                            if name_match:
-                                target_nombre = name_match.group(1).strip().upper()
-                    except Exception:
-                        pass
-
                 # Resolver automáticamente si el ejecutor es Presidente de Equipo
                 if usuario_id and not equipo_id:
                     try:
@@ -135,17 +119,14 @@ def track_consumption(tipo_consumo: str, proveedor: str, tipo_registro_default: 
                     except Exception as res_exc:
                         logger.error(f"[CONSUMO RESOLVER ERROR] Falló auto-resolución de presidente: {res_exc}")
 
-                # Resolver jugador si se tiene el ID
+                # Resolver jugador o directivo si se tiene el ID
                 if target_persona_id:
                     try:
                         from app.modelos.persona_modelo import Personas
-                        if not target_nombre or not target_curp:
-                            pers = db.query(Personas).filter(Personas.PersonaId == target_persona_id).first()
-                            if pers:
-                                if not target_nombre:
-                                    target_nombre = f"{pers.Nombre} {pers.PrimerApellido} {pers.SegundoApellido or ''}".strip().upper()
-                                if not target_curp:
-                                    target_curp = pers.CURP
+                        pers = db.query(Personas).filter(Personas.PersonaId == target_persona_id).first()
+                        if pers:
+                            target_nombre = f"{pers.Nombre} {pers.PrimerApellido} {pers.SegundoApellido or ''}".strip().upper()
+                            target_curp = pers.CURP
                                     
                         if not equipo_id:
                             from app.modelos.miembro_equipo_modelo import MiembrosEquipo
@@ -157,38 +138,29 @@ def track_consumption(tipo_consumo: str, proveedor: str, tipo_registro_default: 
                                     equipo_id = eq_jug.EquipoId
                                     liga_id = eq_jug.LigaId
                     except Exception as player_exc:
-                        logger.error(f"[CONSUMO RESOLVER ERROR] Falló auto-resolución de jugador: {player_exc}")
-
-                # Resolver jugador si se tiene la CURP
-                if target_curp and not target_persona_id:
-                    try:
-                        from app.modelos.persona_modelo import Personas
-                        pers = db.query(Personas).filter(Personas.CURP == target_curp).first()
-                        if pers:
-                            target_persona_id = pers.PersonaId
-                            if not target_nombre:
-                                target_nombre = f"{pers.Nombre} {pers.PrimerApellido} {pers.SegundoApellido or ''}".strip().upper()
-                            
-                            if not equipo_id:
-                                from app.modelos.miembro_equipo_modelo import MiembrosEquipo
-                                from app.modelos.equipo_modelo import EquiposJugando
-                                miembro = db.query(MiembrosEquipo).filter(MiembrosEquipo.PersonaId == pers.PersonaId, MiembrosEquipo.Estatus == True).first()
-                                if miembro:
-                                    eq_jug = db.query(EquiposJugando).filter(EquiposJugando.EquiposJugandoId == miembro.EquipoID).first()
-                                    if eq_jug:
-                                        equipo_id = eq_jug.EquipoId
-                                        liga_id = eq_jug.LigaId
-                    except Exception as curp_exc:
-                        logger.error(f"[CONSUMO RESOLVER ERROR] Falló auto-resolución por CURP: {curp_exc}")
+                        logger.error(f"[CONSUMO RESOLVER ERROR] Falló auto-resolución de persona registrada: {player_exc}")
+                else:
+                    # Si no hay ID de Persona registrado oficialmente en el sistema, no guardamos el nombre/CURP temporal en la bitácora
+                    # para evitar registrar errores de OCR no corregidos.
+                    target_nombre = None
+                    target_curp = None
 
                 entity_type = None
                 entity_id = None
+                if request:
+                    if request.query_params.get("slot_id"):
+                        entity_type = "SLOT_JUGADOR"
+                        entity_id = request.query_params.get("slot_id")
+                    elif request.query_params.get("borrador_id"):
+                        entity_type = "BORRADOR_PRESIDENTE"
+                        entity_id = request.query_params.get("borrador_id")
+
                 metadata = {}
 
                 # Si la respuesta es un dict, podemos extraer entity_type y entity_id si los hay
                 if response_data and isinstance(response_data, dict):
-                    entity_type = response_data.get("entity_type")
-                    entity_id = response_data.get("entity_id")
+                    entity_type = response_data.get("entity_type") or entity_type
+                    entity_id = response_data.get("entity_id") or entity_id
                     metadata = response_data.get("metadata", {})
 
                 payload = {
