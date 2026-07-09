@@ -340,8 +340,22 @@ class PagosServicio:
                 nombre_equipo = equipo_temp.NombreEquipo
                 liga_id = equipo_temp.LigaId
 
+        curp = None
+        lugar_nacimiento = None
+        fecha_nacimiento = None
+        sexo = None
+
         if usuario and usuario.PersonaRelacion:
             telefono = usuario.PersonaRelacion.NumeroTelefono
+            curp = usuario.PersonaRelacion.CURP
+            lugar_nacimiento = usuario.PersonaRelacion.LugarNacimiento
+            if usuario.PersonaRelacion.FechaNacimiento:
+                try:
+                    fecha_nacimiento = usuario.PersonaRelacion.FechaNacimiento.strftime("%d/%m/%Y")
+                except Exception:
+                    fecha_nacimiento = str(usuario.PersonaRelacion.FechaNacimiento)
+            if usuario.PersonaRelacion.SexoRelacion:
+                sexo = usuario.PersonaRelacion.SexoRelacion.Nombre
 
         return {
             "tiene_orden": True,
@@ -358,7 +372,11 @@ class PagosServicio:
             "referencia_pago": orden.ReferenciaPago,
             "nombre_equipo": nombre_equipo,
             "liga_id": liga_id,
-            "telefono": telefono
+            "telefono": telefono,
+            "curp": curp,
+            "lugar_nacimiento": lugar_nacimiento,
+            "fecha_nacimiento": fecha_nacimiento,
+            "sexo": sexo
         }
 
 
