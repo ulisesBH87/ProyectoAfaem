@@ -599,9 +599,6 @@ export default function ConsumosMaster() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginBottom: '24px' }}>
         {/* Total Operaciones */}
         <div style={{ background: COLORS.white, border: `1px solid ${COLORS.shadow10}`, borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: `0 8px 32px 0 ${COLORS.shadow05}` }}>
-          <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: COLORS.brandBlueLight16, color: colorPrimary, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>
-            <FaReceipt />
-          </div>
           <div>
             <div style={{ fontSize: '10px', fontWeight: '700', color: COLORS.slate600, textTransform: 'uppercase', letterSpacing: '1px' }}>Total Consumos</div>
             <div style={{ fontSize: '24px', fontWeight: '900', color: COLORS.slate900, marginTop: '2px' }}>
@@ -613,9 +610,6 @@ export default function ConsumosMaster() {
 
         {/* Costo Total USD */}
         <div style={{ background: COLORS.white, border: `1px solid ${COLORS.shadow10}`, borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: `0 8px 32px 0 ${COLORS.shadow05}` }}>
-          <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: COLORS.successBgTranslucent, color: colorSuccess, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>
-            <FaCoins />
-          </div>
           <div>
             <div style={{ fontSize: '10px', fontWeight: '700', color: COLORS.slate600, textTransform: 'uppercase', letterSpacing: '1px' }}>Costo USD Acumulado</div>
             <div style={{ fontSize: '24px', fontWeight: '900', color: COLORS.slate900, marginTop: '2px' }}>
@@ -627,9 +621,6 @@ export default function ConsumosMaster() {
 
         {/* Costo Total MXN */}
         <div style={{ background: COLORS.white, border: `1px solid ${COLORS.shadow10}`, borderRadius: '16px', padding: '20px', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: `0 8px 32px 0 ${COLORS.shadow05}` }}>
-          <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: COLORS.brandBlueLight16, color: colorPrimary, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>
-            <FaCoins />
-          </div>
           <div>
             <div style={{ fontSize: '10px', fontWeight: '700', color: COLORS.slate600, textTransform: 'uppercase', letterSpacing: '1px' }}>Costo MXN Acumulado</div>
             <div style={{ fontSize: '24px', fontWeight: '900', color: COLORS.slate900, marginTop: '2px' }}>
@@ -645,7 +636,7 @@ export default function ConsumosMaster() {
         {/* Consumo por servicio (unidades) */}
         <div style={{ background: COLORS.white, border: `1px solid ${COLORS.slate200}`, borderRadius: '16px', padding: '20px', boxShadow: 'var(--shadow-sm)' }}>
           <h4 style={{ fontSize: '13px', fontWeight: '800', color: COLORS.slate700, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <FaFileAlt style={{ color: colorPrimary }} /> Consumos por Servicio (Unidades)
+            Consumos por Servicio (Unidades)
           </h4>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px' }}>
             {consumoResumen?.tarifas && consumoResumen.tarifas.length > 0 ? (
@@ -677,7 +668,7 @@ export default function ConsumosMaster() {
         {/* Costo por servicio (acumulado) */}
         <div style={{ background: COLORS.white, border: `1px solid ${COLORS.slate200}`, borderRadius: '16px', padding: '20px', boxShadow: 'var(--shadow-sm)' }}>
           <h4 style={{ fontSize: '13px', fontWeight: '800', color: COLORS.slate700, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <FaCoins style={{ color: colorSuccess }} /> Costos por Servicio (Acumulado del Periodo)
+            Costos por Servicio (Acumulado del Periodo)
           </h4>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px' }}>
             {consumoResumen?.tarifas && consumoResumen.tarifas.length > 0 ? (
@@ -711,7 +702,7 @@ export default function ConsumosMaster() {
       {/* TARIFAS DE SERVICIOS ACTIVO */}
       <div style={{ background: COLORS.white, border: `1px solid ${COLORS.slate200}`, borderRadius: '16px', padding: '20px 24px', marginBottom: '32px', boxShadow: 'var(--shadow-sm)' }}>
         <h4 style={{ fontSize: '13px', fontWeight: '800', color: COLORS.slate700, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <FaCoins style={{ color: colorInfo }} /> Catálogo de Tarifas y Costos Unitarios
+          Catálogo de Tarifas y Costos Unitarios
         </h4>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
           {loadingTarifas ? (
@@ -809,7 +800,7 @@ export default function ConsumosMaster() {
             <div className="card" style={{ background: COLORS.white, border: `1px solid ${COLORS.slate200}`, borderRadius: '20px', padding: '24px', boxShadow: 'var(--shadow-md)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '18px' }}>
                 <h4 style={{ fontSize: '15px', fontWeight: '800', color: COLORS.slate800, margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <FaUsers style={{ color: colorInfo }} /> Auditoría de Escaneos por Jugador
+                  Auditoría de Escaneos por Jugador
                 </h4>
                 <div style={{ position: 'relative', width: '300px' }}>
                   <FaSearch style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: COLORS.slate400, fontSize: '13px' }} />
@@ -896,7 +887,7 @@ export default function ConsumosMaster() {
             <div className="card" style={{ background: COLORS.white, border: `1px solid ${COLORS.slate200}`, borderRadius: '20px', padding: '24px', boxShadow: 'var(--shadow-md)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '18px' }}>
                 <h4 style={{ fontSize: '15px', fontWeight: '800', color: COLORS.slate800, margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <FaUserTie style={{ color: colorPrimary }} /> Auditoría de Escaneos por Presidente / Entrenador
+                  Auditoría de Escaneos por Presidente / Entrenador
                 </h4>
                 <div style={{ position: 'relative', width: '300px' }}>
                   <FaSearch style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: COLORS.slate400, fontSize: '13px' }} />
@@ -989,7 +980,7 @@ export default function ConsumosMaster() {
               <div className="card" style={{ background: COLORS.white, border: `1px solid ${COLORS.slate200}`, borderRadius: '20px', padding: '24px', boxShadow: 'var(--shadow-md)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '18px' }}>
                   <h4 style={{ fontSize: '15px', fontWeight: '800', color: COLORS.slate800, margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <FaFutbol style={{ color: colorPrimary }} /> Consumo por Equipo
+                    Consumo por Equipo
                   </h4>
                   <div style={{ position: 'relative', width: '200px' }}>
                     <FaSearch style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: COLORS.slate400, fontSize: '13px' }} />
@@ -1061,7 +1052,7 @@ export default function ConsumosMaster() {
               <div className="card" style={{ background: COLORS.white, border: `1px solid ${COLORS.slate200}`, borderRadius: '20px', padding: '24px', boxShadow: 'var(--shadow-md)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '18px' }}>
                   <h4 style={{ fontSize: '15px', fontWeight: '800', color: COLORS.slate800, margin: 0, textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <FaCalendarAlt style={{ color: colorSuccess }} /> Consumo por Liga
+                    Consumo por Liga
                   </h4>
                   <div style={{ position: 'relative', width: '200px' }}>
                     <FaSearch style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: COLORS.slate400, fontSize: '13px' }} />
@@ -1205,7 +1196,7 @@ export default function ConsumosMaster() {
         {/* LEDGER DETAIL TABLE */}
         <div className="card" style={{ background: COLORS.white, border: `1px solid ${COLORS.slate200}`, borderRadius: '20px', padding: '24px', boxShadow: 'var(--shadow-md)', marginBottom: '30px' }}>
           <h4 style={{ fontSize: '16px', fontWeight: '800', color: COLORS.slate900, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <FaReceipt style={{ color: colorSuccess }} /> Transacciones Ledger de Consumos (BitacoraConsumo)
+            Transacciones Ledger de Consumos (BitacoraConsumo)
           </h4>
 
           {loadingConsumo ? (
