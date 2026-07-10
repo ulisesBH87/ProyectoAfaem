@@ -81,17 +81,22 @@ export default function Step2Cuenta({
         <div>
           <label style={fieldStyles.label}>Correo Electrónico <span style={{ color: C.amber }}>*</span></label>
           <input
-            style={{ ...fieldStyles.input, textTransform: 'uppercase', borderColor: cuentaErrors.correo ? C.rose : C.inputBorder }}
+            style={{
+              ...fieldStyles.input,
+              textTransform: 'uppercase',
+              borderColor: (cuentaErrors.correo || (cuenta.correo && !/^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,3}$/.test(cuenta.correo))) ? C.rose : C.inputBorder
+            }}
             type="email" placeholder="PRESIDENTE@CORREO.COM"
             autoComplete="new-password"
             value={cuenta.correo} onChange={e => setCuentaField('correo', e.target.value)}
           />
-          {correoTrim && (
-            <span style={{ ...helperStyleBase, color: correoFormatoValido ? C.green : C.rose }}>
-              {correoFormatoValido ? 'Formato de correo correcto.' : 'Formato de correo incorrecto.'}
-            </span>
+          {cuentaErrors.correo ? (
+            <span style={{ fontSize: 11, color: C.rose, marginTop: 3, display: 'block' }}>{cuentaErrors.correo}</span>
+          ) : (
+            cuenta.correo && !/^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,3}$/.test(cuenta.correo) && (
+              <span style={{ fontSize: 11, color: C.rose, marginTop: 3, display: 'block' }}>Formato de correo inválido (ejemplo: nombre@dominio.com)</span>
+            )
           )}
-          {cuentaErrors.correo && <span style={{ fontSize: 11, color: C.rose, marginTop: 3, display: 'block' }}>{cuentaErrors.correo}</span>}
         </div>
       </div>
 

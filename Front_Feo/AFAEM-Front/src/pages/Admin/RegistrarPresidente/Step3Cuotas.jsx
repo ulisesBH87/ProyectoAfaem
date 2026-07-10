@@ -195,6 +195,24 @@ export default function Step3Cuotas({
   const [seguroDetalle, setSeguroDetalle] = useState(null);
   const [cantidadModal, setCantidadModal] = useState(0);
 
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    if (selectedEquipoId) {
+      const selected = equiposSinEntrenador.find(eq => String(eq.EquipoId) === String(selectedEquipoId));
+      if (selected) {
+        setSearchQuery(`${selected.NombreEquipo} (${selected.NombreLiga})`);
+      }
+    } else {
+      setSearchQuery('');
+    }
+  }, [selectedEquipoId, equiposSinEntrenador]);
+
+  const filteredEquipos = equiposSinEntrenador.filter(eq =>
+    `${eq.NombreEquipo} ${eq.NombreLiga}`.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   useEffect(() => {
     if (seguroDetalle) {
       document.body.style.overflow = 'hidden';
@@ -249,19 +267,70 @@ export default function Step3Cuotas({
           <div>
             <label style={fieldStyles.label}>Nombre del Equipo <span style={{ color: C.amber }}>*</span></label>
             {esEntrenador ? (
-              <select
-                style={{ ...fieldStyles.select, background: C.inputBg, color: C.text }}
-                value={selectedEquipoId || ''}
-                onChange={handleEquipoSelectChange}
-                required
-              >
-                <option value="">Selecciona un equipo sin entrenador...</option>
-                {equiposSinEntrenador.map(eq => (
-                  <option key={eq.EquipoId} value={eq.EquipoId}>
-                    {eq.NombreEquipo} ({eq.NombreLiga})
-                  </option>
-                ))}
-              </select>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="text"
+                  style={{ ...fieldStyles.input, background: C.inputBg, color: C.text }}
+                  value={searchQuery}
+                  placeholder="Buscar equipo..."
+                  onFocus={() => setIsOpen(true)}
+                  onBlur={() => setTimeout(() => setIsOpen(false), 200)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setSearchQuery(val);
+                    setIsOpen(true);
+                    if (!val) {
+                      handleEquipoSelectChange({ target: { value: '' } });
+                    }
+                  }}
+                  required
+                />
+                {isOpen && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '100%',
+                    left: 0,
+                    right: 0,
+                    zIndex: 1000,
+                    background: '#1e293b',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    borderRadius: '8px',
+                    maxHeight: '200px',
+                    overflowY: 'auto',
+                    marginTop: '4px',
+                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.5)'
+                  }}>
+                    {filteredEquipos.length > 0 ? (
+                      filteredEquipos.map(eq => (
+                        <div
+                          key={eq.EquipoId}
+                          onClick={() => {
+                            handleEquipoSelectChange({ target: { value: String(eq.EquipoId) } });
+                            setSearchQuery(`${eq.NombreEquipo} (${eq.NombreLiga})`);
+                            setIsOpen(false);
+                          }}
+                          style={{
+                            padding: '10px 14px',
+                            cursor: 'pointer',
+                            borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+                            fontSize: '13px',
+                            color: 'white',
+                            transition: 'background 0.2s'
+                          }}
+                          onMouseEnter={(e) => e.target.style.background = 'rgba(255, 255, 255, 0.08)'}
+                          onMouseLeave={(e) => e.target.style.background = 'transparent'}
+                        >
+                          {eq.NombreEquipo} ({eq.NombreLiga})
+                        </div>
+                      ))
+                    ) : (
+                      <div style={{ padding: '12px 14px', color: 'rgba(255, 255, 255, 0.4)', fontSize: '13px' }}>
+                        No se encontraron equipos...
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             ) : (
               <input
                 style={{ ...fieldStyles.input, textTransform: 'uppercase' }}

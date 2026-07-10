@@ -785,6 +785,18 @@ function PreRegistroPresidente() {
       setCodigoPais(parsedCodigo);
       setOcrResults(prev => ({ ...prev, telefono: parsedLocal }));
     }
+    if (data.curp) {
+      setOcrResults(prev => ({ ...prev, curp: data.curp.toUpperCase() }));
+    }
+    if (data.lugar_nacimiento) {
+      setOcrResults(prev => ({ ...prev, nacionalidad: data.lugar_nacimiento.toUpperCase() }));
+    }
+    if (data.fecha_nacimiento) {
+      setOcrResults(prev => ({ ...prev, fecha_nac: data.fecha_nacimiento }));
+    }
+    if (data.sexo) {
+      setOcrResults(prev => ({ ...prev, sexo: data.sexo.toUpperCase() }));
+    }
 
     if (data.afiliacion) {
       setTipoAfiliacion(data.afiliacion);
