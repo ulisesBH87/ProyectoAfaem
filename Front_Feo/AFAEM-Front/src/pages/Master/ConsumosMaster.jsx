@@ -115,6 +115,31 @@ const formatPdfCell = (text, options = {}) => ({
   ...options
 });
 
+const sortReportRows = (rows) => {
+  return [...rows].sort((a, b) => {
+    const mxnDiff = Number(b?.costo_total_mxn || 0) - Number(a?.costo_total_mxn || 0);
+    if (mxnDiff !== 0) {
+      return mxnDiff;
+    }
+
+    const usdDiff = Number(b?.costo_total_usd || 0) - Number(a?.costo_total_usd || 0);
+    if (usdDiff !== 0) {
+      return usdDiff;
+    }
+
+    const totalOpsA =
+      Number(a?.ocr_count || 0) +
+      Number(a?.foto_count || 0) +
+      Number(a?.verificamex_count || 0);
+    const totalOpsB =
+      Number(b?.ocr_count || 0) +
+      Number(b?.foto_count || 0) +
+      Number(b?.verificamex_count || 0);
+
+    return totalOpsB - totalOpsA;
+  });
+};
+
 export default function ConsumosMaster() {
   const [mesSeleccionado, setMesSeleccionado] = useState(() => new Date().getMonth() + 1);
   const [anioSeleccionado, setAnioSeleccionado] = useState(() => new Date().getFullYear());
@@ -469,15 +494,15 @@ export default function ConsumosMaster() {
       ]);
 
       const serviceSummary = buildServiceSummary(resumen);
-      const ligas = (auditoria?.desglose_ligas || []).map((liga) => ({
+      const ligas = sortReportRows((auditoria?.desglose_ligas || []).map((liga) => ({
         nombre: liga.liga_nombre,
         ocr_count: liga.ocr_count,
         foto_count: liga.foto_count,
         verificamex_count: liga.verificamex_count,
         costo_total_usd: liga.costo_total_usd,
         costo_total_mxn: liga.costo_total_mxn
-      }));
-      const equipos = (auditoria?.desglose_equipos || []).map((equipo) => ({
+      })));
+      const equipos = sortReportRows((auditoria?.desglose_equipos || []).map((equipo) => ({
         nombre: equipo.equipo_nombre,
         subtitulo: equipo.liga_nombre,
         ocr_count: equipo.ocr_count,
@@ -485,8 +510,8 @@ export default function ConsumosMaster() {
         verificamex_count: equipo.verificamex_count,
         costo_total_usd: equipo.costo_total_usd,
         costo_total_mxn: equipo.costo_total_mxn
-      }));
-      const personas = [
+      })));
+      const personas = sortReportRows([
         ...(auditoria?.desglose_jugadores || []).map((item) => ({
           nombre: item.jugador_nombre,
           subtitulo: `${item.equipo_nombre} | ${item.liga_nombre}`,
@@ -507,7 +532,7 @@ export default function ConsumosMaster() {
           costo_total_usd: item.costo_total_usd,
           costo_total_mxn: item.costo_total_mxn
         }))
-      ];
+      ]);
 
       const doc = new jsPDF({ unit: 'mm', format: 'a4' });
       let y = 18;
@@ -550,22 +575,50 @@ export default function ConsumosMaster() {
         '#0b4ea6'
       );
 
-      y = generarSeccionPdf(
+      y = generarTablaPdf(
         doc,
         'Costo por ligas',
-        ligas.map((liga) =>
-          `${liga.nombre}: OCR ${liga.ocr_count}, Foto ${liga.foto_count}, VerificaMex ${liga.verificamex_count} | ${formatCurrency(liga.costo_total_usd, 'USD')} | ${formatCurrency(liga.costo_total_mxn, 'MXN')}`
-        ),
+        [
+          { key: 'nombre', header: 'Liga', width: 62, emphasis: true, fontSize: 8.4 },
+          { key: 'ocr', header: 'OCR', width: 14, align: 'right' },
+          { key: 'foto', header: 'Foto', width: 14, align: 'right' },
+          { key: 'vm', header: 'VM', width: 14, align: 'right' },
+          { key: 'usd', header: 'Costo USD', width: 34, align: 'right' },
+          { key: 'mxn', header: 'Costo MXN', width: 40, align: 'right' }
+        ],
+        ligas.map((liga) => ({
+          nombre: liga.nombre,
+          ocr: liga.ocr_count,
+          foto: liga.foto_count,
+          vm: liga.verificamex_count,
+          usd: formatCurrency(liga.costo_total_usd, 'USD'),
+          mxn: formatCurrency(liga.costo_total_mxn, 'MXN')
+        })),
         y,
         '#059669'
       );
 
-      y = generarSeccionPdf(
+      y = generarTablaPdf(
         doc,
         'Costo por equipos',
-        equipos.map((equipo) =>
-          `${equipo.nombre} (${equipo.subtitulo}): OCR ${equipo.ocr_count}, Foto ${equipo.foto_count}, VerificaMex ${equipo.verificamex_count} | ${formatCurrency(equipo.costo_total_usd, 'USD')} | ${formatCurrency(equipo.costo_total_mxn, 'MXN')}`
-        ),
+        [
+          { key: 'equipo', header: 'Equipo', width: 52, emphasis: true, fontSize: 8.2 },
+          { key: 'liga', header: 'Liga', width: 38, fontSize: 8 },
+          { key: 'ocr', header: 'OCR', width: 12, align: 'right' },
+          { key: 'foto', header: 'Foto', width: 12, align: 'right' },
+          { key: 'vm', header: 'VM', width: 12, align: 'right' },
+          { key: 'usd', header: 'Costo USD', width: 24, align: 'right' },
+          { key: 'mxn', header: 'Costo MXN', width: 28, align: 'right' }
+        ],
+        equipos.map((equipo) => ({
+          equipo: equipo.nombre,
+          liga: equipo.subtitulo,
+          ocr: equipo.ocr_count,
+          foto: equipo.foto_count,
+          vm: equipo.verificamex_count,
+          usd: formatCurrency(equipo.costo_total_usd, 'USD'),
+          mxn: formatCurrency(equipo.costo_total_mxn, 'MXN')
+        })),
         y,
         '#d97706'
       );
