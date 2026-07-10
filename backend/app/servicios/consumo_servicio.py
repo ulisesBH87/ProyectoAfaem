@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from datetime import datetime, time, timedelta
 from uuid import UUID
 from sqlalchemy.orm import Session
 from sqlalchemy.sql import text
@@ -19,6 +19,27 @@ TARIFAS_DEFAULT = {
 }
 
 class ConsumptionService:
+
+    @staticmethod
+    def _parse_fecha_inicio(fecha_inicio: str | None):
+        if not fecha_inicio:
+            return None
+        try:
+            return datetime.fromisoformat(fecha_inicio)
+        except ValueError:
+            return fecha_inicio
+
+    @staticmethod
+    def _parse_fecha_fin_inclusiva(fecha_fin: str | None):
+        if not fecha_fin:
+            return None
+        try:
+            fecha = datetime.fromisoformat(fecha_fin)
+            if len(str(fecha_fin)) <= 10:
+                return datetime.combine(fecha.date(), time.max)
+            return fecha
+        except ValueError:
+            return fecha_fin
 
     @classmethod
     def obtener_tarifa(cls, db: Session, tipo_consumo: str, proveedor: str) -> dict:
@@ -201,11 +222,13 @@ class ConsumptionService:
         es_cobrable: bool = None
     ) -> dict:
         query = db.query(BitacoraConsumo)
+        fecha_inicio_dt = ConsumptionService._parse_fecha_inicio(fecha_inicio)
+        fecha_fin_dt = ConsumptionService._parse_fecha_fin_inclusiva(fecha_fin)
         
-        if fecha_inicio:
-            query = query.filter(BitacoraConsumo.CreadoEn >= fecha_inicio)
-        if fecha_fin:
-            query = query.filter(BitacoraConsumo.CreadoEn <= fecha_fin)
+        if fecha_inicio_dt:
+            query = query.filter(BitacoraConsumo.CreadoEn >= fecha_inicio_dt)
+        if fecha_fin_dt:
+            query = query.filter(BitacoraConsumo.CreadoEn <= fecha_fin_dt)
         if usuario_id is not None:
             query = query.filter(BitacoraConsumo.UsuarioId == usuario_id)
         if guest_id:
@@ -327,7 +350,6 @@ class ConsumptionService:
         Asocia los consumos de la sesión/usuario o borrador/slot que aún no tienen asignado un jugador/directivo
         con la persona recién registrada.
         """
-        from datetime import datetime, timedelta
         from app.modelos.consumo_modelos import BitacoraConsumo, ConsumoOutbox
         from sqlalchemy import or_
         import json
@@ -447,10 +469,12 @@ class ConsumptionService:
         
         # Consultar registros del Ledger
         query = db.query(BitacoraConsumo)
-        if fecha_inicio:
-            query = query.filter(BitacoraConsumo.CreadoEn >= fecha_inicio)
-        if fecha_fin:
-            query = query.filter(BitacoraConsumo.CreadoEn <= fecha_fin)
+        fecha_inicio_dt = cls._parse_fecha_inicio(fecha_inicio)
+        fecha_fin_dt = cls._parse_fecha_fin_inclusiva(fecha_fin)
+        if fecha_inicio_dt:
+            query = query.filter(BitacoraConsumo.CreadoEn >= fecha_inicio_dt)
+        if fecha_fin_dt:
+            query = query.filter(BitacoraConsumo.CreadoEn <= fecha_fin_dt)
             
         registros = query.all()
         

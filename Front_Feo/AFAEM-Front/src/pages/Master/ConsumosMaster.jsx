@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import jsPDF from 'jspdf';
 import {
   FaCoins,
   FaFileAlt,
@@ -12,7 +13,8 @@ import {
   FaReceipt,
   FaUsers,
   FaCalendarAlt,
-  FaClock
+  FaClock,
+  FaDownload
 } from 'react-icons/fa';
 
 import Loader from '../../components/Loader';
@@ -42,6 +44,49 @@ const MESES = [
 
 const ANIOS = [2025, 2026, 2027, 2028, 2029];
 
+const SERVICE_ORDER = ['OCR', 'PHOTO_SCAN', 'VERIFICAMEX'];
+
+const formatCurrency = (amount, currency) => {
+  const value = Number(amount || 0);
+  return `${value.toFixed(currency === 'USD' ? 4 : 2)} ${currency}`;
+};
+
+const formatDateLabel = (value) => {
+  if (!value) return '-';
+  const [year, month, day] = value.split('-').map(Number);
+  const date = new Date(year, (month || 1) - 1, day || 1);
+  return date.toLocaleDateString('es-MX', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric'
+  });
+};
+
+const buildServiceSummary = (resumen) => {
+  const tarifas = resumen?.tarifas || [];
+  const operaciones = resumen?.operaciones_por_servicio || {};
+  const costos = resumen?.costo_por_operacion || {};
+  const knownServices = [...new Set([
+    ...tarifas.map((tar) => tar.tipo_consumo),
+    ...Object.keys(operaciones),
+    ...Object.keys(costos)
+  ])];
+
+  return knownServices
+    .map((tipo) => {
+      const tarifa = tarifas.find((tar) => tar.tipo_consumo === tipo);
+      return {
+        tipo,
+        proveedor: tarifa?.proveedor || 'DEFAULT',
+        cantidad: operaciones[tipo] || 0,
+        costo: costos[tipo] || 0,
+        divisa: tarifa?.divisa || 'MXN',
+        descripcion: tarifa?.descripcion || ''
+      };
+    })
+    .sort((a, b) => SERVICE_ORDER.indexOf(a.tipo) - SERVICE_ORDER.indexOf(b.tipo));
+};
+
 export default function ConsumosMaster() {
   const [mesSeleccionado, setMesSeleccionado] = useState(() => new Date().getMonth() + 1);
   const [anioSeleccionado, setAnioSeleccionado] = useState(() => new Date().getFullYear());
@@ -51,7 +96,7 @@ export default function ConsumosMaster() {
   const [ledgerTotal, setLedgerTotal] = useState(0);
   const [ledgerPage, setLedgerPage] = useState(1);
   const [ledgerSize] = useState(10);
-  
+
   const [loadingConsumo, setLoadingConsumo] = useState(false);
   const [loadingAuditoria, setLoadingAuditoria] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -81,6 +126,10 @@ export default function ConsumosMaster() {
   const [searchDirectivo, setSearchDirectivo] = useState('');
   const [searchEquipo, setSearchEquipo] = useState('');
   const [searchLiga, setSearchLiga] = useState('');
+  const [showReporteModal, setShowReporteModal] = useState(false);
+  const [reporteFechaInicio, setReporteFechaInicio] = useState('');
+  const [reporteFechaFin, setReporteFechaFin] = useState('');
+  const [generandoReporte, setGenerandoReporte] = useState(false);
 
   // 1. Carga de Resumen Financiero y Ledger
   useEffect(() => {
@@ -164,7 +213,7 @@ export default function ConsumosMaster() {
   const handleSaveTarifa = async (e) => {
     e.preventDefault();
     if (!editingTarifa) return;
-    
+
     setSubmittingTarifa(true);
     try {
       const id = editingTarifa.TarifaId || editingTarifa.tarifa_id;
@@ -186,6 +235,183 @@ export default function ConsumosMaster() {
 
   const handleRecargar = () => {
     setRefreshTrigger(prev => prev + 1);
+  };
+
+  const handleOpenReporte = () => {
+    setReporteFechaInicio('');
+    setReporteFechaFin('');
+    setShowReporteModal(true);
+  };
+
+  const generarSeccionPdf = (doc, title, lines, y, color = '#0f172a') => {
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const marginX = 16;
+    const maxWidth = 178;
+
+    if (y > pageHeight - 30) {
+      doc.addPage();
+      y = 18;
+    }
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.setTextColor(color);
+    doc.text(title, marginX, y);
+    y += 8;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9.5);
+    doc.setTextColor('#334155');
+
+    if (!lines.length) {
+      doc.text('Sin registros para este periodo.', marginX, y);
+      return y + 8;
+    }
+
+    lines.forEach((line) => {
+      const wrapped = doc.splitTextToSize(line, maxWidth);
+      if (y + wrapped.length * 5 > pageHeight - 16) {
+        doc.addPage();
+        y = 18;
+      }
+      doc.text(wrapped, marginX, y);
+      y += wrapped.length * 5 + 1;
+    });
+
+    return y + 3;
+  };
+
+  const handleGenerarReporte = async () => {
+    if (!reporteFechaInicio || !reporteFechaFin || reporteFechaInicio > reporteFechaFin) return;
+
+    setGenerandoReporte(true);
+    try {
+      const params = { fecha_inicio: reporteFechaInicio, fecha_fin: reporteFechaFin };
+      const [resumen, auditoria] = await Promise.all([
+        getConsumoResumen(params),
+        getConsumoAuditoria(params)
+      ]);
+
+      const serviceSummary = buildServiceSummary(resumen);
+      const ligas = (auditoria?.desglose_ligas || []).map((liga) => ({
+        nombre: liga.liga_nombre,
+        ocr_count: liga.ocr_count,
+        foto_count: liga.foto_count,
+        verificamex_count: liga.verificamex_count,
+        costo_total_usd: liga.costo_total_usd,
+        costo_total_mxn: liga.costo_total_mxn
+      }));
+      const equipos = (auditoria?.desglose_equipos || []).map((equipo) => ({
+        nombre: equipo.equipo_nombre,
+        subtitulo: equipo.liga_nombre,
+        ocr_count: equipo.ocr_count,
+        foto_count: equipo.foto_count,
+        verificamex_count: equipo.verificamex_count,
+        costo_total_usd: equipo.costo_total_usd,
+        costo_total_mxn: equipo.costo_total_mxn
+      }));
+      const personas = [
+        ...(auditoria?.desglose_jugadores || []).map((item) => ({
+          nombre: item.jugador_nombre,
+          subtitulo: `${item.equipo_nombre} | ${item.liga_nombre}`,
+          tipo: 'Jugador',
+          ocr_count: item.ocr_count,
+          foto_count: item.foto_count,
+          verificamex_count: item.verificamex_count,
+          costo_total_usd: item.costo_total_usd,
+          costo_total_mxn: item.costo_total_mxn
+        })),
+        ...(auditoria?.desglose_directivos || []).map((item) => ({
+          nombre: item.directivo_nombre,
+          subtitulo: `${item.directivo_rol} | ${item.equipo_nombre} | ${item.liga_nombre}`,
+          tipo: 'Presidente/Entrenador',
+          ocr_count: item.ocr_count,
+          foto_count: item.foto_count,
+          verificamex_count: item.verificamex_count,
+          costo_total_usd: item.costo_total_usd,
+          costo_total_mxn: item.costo_total_mxn
+        }))
+      ];
+
+      const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+      let y = 18;
+
+      doc.setFillColor(15, 23, 42);
+      doc.roundedRect(12, 12, 186, 30, 4, 4, 'F');
+      doc.setTextColor('#ffffff');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(18);
+      doc.text('Reporte de consumos', 16, 24);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.text(`Periodo: ${formatDateLabel(reporteFechaInicio)} al ${formatDateLabel(reporteFechaFin)}`, 16, 31);
+      y = 52;
+
+      doc.setTextColor('#0f172a');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.text('Resumen general', 16, y);
+      y += 8;
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      [
+        `Consumo total: ${resumen?.total_operaciones ?? 0} operaciones`,
+        `Consumo en USD: ${formatCurrency(resumen?.costo_total_usd, 'USD')}`,
+        `Consumo en MXN: ${formatCurrency(resumen?.costo_total_mxn, 'MXN')}`
+      ].forEach((line) => {
+        doc.text(line, 16, y);
+        y += 6;
+      });
+
+      y = generarSeccionPdf(
+        doc,
+        'Costo por servicio',
+        serviceSummary.map((service) =>
+          `${service.tipo}: ${service.cantidad} operaciones | ${formatCurrency(service.costo, service.divisa)} | Proveedor ${service.proveedor}`
+        ),
+        y + 3,
+        '#0b4ea6'
+      );
+
+      y = generarSeccionPdf(
+        doc,
+        'Costo por ligas',
+        ligas.map((liga) =>
+          `${liga.nombre}: OCR ${liga.ocr_count}, Foto ${liga.foto_count}, VerificaMex ${liga.verificamex_count} | ${formatCurrency(liga.costo_total_usd, 'USD')} | ${formatCurrency(liga.costo_total_mxn, 'MXN')}`
+        ),
+        y,
+        '#059669'
+      );
+
+      y = generarSeccionPdf(
+        doc,
+        'Costo por equipos',
+        equipos.map((equipo) =>
+          `${equipo.nombre} (${equipo.subtitulo}): OCR ${equipo.ocr_count}, Foto ${equipo.foto_count}, VerificaMex ${equipo.verificamex_count} | ${formatCurrency(equipo.costo_total_usd, 'USD')} | ${formatCurrency(equipo.costo_total_mxn, 'MXN')}`
+        ),
+        y,
+        '#d97706'
+      );
+
+      y = generarSeccionPdf(
+        doc,
+        'Jugadores y presidente/entrenador',
+        personas.map((persona) =>
+          `${persona.tipo}: ${persona.nombre} (${persona.subtitulo}) | OCR ${persona.ocr_count}, Foto ${persona.foto_count}, VerificaMex ${persona.verificamex_count} | ${formatCurrency(persona.costo_total_usd, 'USD')} | ${formatCurrency(persona.costo_total_mxn, 'MXN')}`
+        ),
+        y,
+        '#8b5cf6'
+      );
+
+      doc.save(`reporte-consumos-${reporteFechaInicio}-a-${reporteFechaFin}.pdf`);
+      setShowReporteModal(false);
+    } catch (error) {
+      console.error('Error al generar reporte PDF:', error);
+      alert('No se pudo generar el reporte PDF. Intente nuevamente.');
+    } finally {
+      setGenerandoReporte(false);
+    }
   };
 
   // Paleta de colores Premium
@@ -335,6 +561,31 @@ export default function ConsumosMaster() {
           >
             <FaRedo size={12} style={{ transition: 'transform 0.5s ease', transform: (loadingConsumo || loadingAuditoria) ? 'rotate(360deg)' : 'none' }} /> Recargar
           </button>
+
+          <button
+            onClick={handleOpenReporte}
+            title="Abrir generador de reporte"
+            style={{
+              background: COLORS.slate900,
+              border: 'none',
+              borderRadius: '10px',
+              padding: '8px 14px',
+              color: COLORS.white,
+              fontSize: '13px',
+              fontWeight: '700',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              boxShadow: 'var(--shadow-sm)',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = colorPrimary; }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = COLORS.slate900; }}
+          >
+            <FaDownload size={12} /> Reporte
+          </button>
         </div>
       </div>
 
@@ -461,13 +712,13 @@ export default function ConsumosMaster() {
             <div style={{ fontSize: '12px', color: COLORS.slate500, fontStyle: 'italic' }}>Cargando tarifas...</div>
           ) : tarifas && tarifas.length > 0 ? (
             tarifas.map((tar, idx) => (
-              <div key={idx} style={{ 
-                background: COLORS.slate50, 
-                border: `1px solid ${COLORS.slate200}`, 
-                borderRadius: '14px', 
-                padding: '16px', 
-                display: 'flex', 
-                flexDirection: 'column', 
+              <div key={idx} style={{
+                background: COLORS.slate50,
+                border: `1px solid ${COLORS.slate200}`,
+                borderRadius: '14px',
+                padding: '16px',
+                display: 'flex',
+                flexDirection: 'column',
                 justifyContent: 'space-between',
                 gap: '12px',
                 boxShadow: 'var(--shadow-sm)'
@@ -481,18 +732,18 @@ export default function ConsumosMaster() {
                       Proveedor: <span style={{ color: COLORS.slate900 }}>{tar.Proveedor || tar.proveedor}</span>
                     </h5>
                   </div>
-                  <span style={{ 
-                    fontSize: '10px', 
-                    fontWeight: '800', 
-                    padding: '3px 8px', 
-                    borderRadius: '8px', 
+                  <span style={{
+                    fontSize: '10px',
+                    fontWeight: '800',
+                    padding: '3px 8px',
+                    borderRadius: '8px',
                     backgroundColor: (tar.Estatus ?? tar.estatus) ? COLORS.successBgTranslucent : COLORS.dangerBgTranslucent,
                     color: (tar.Estatus ?? tar.estatus) ? COLORS.success : COLORS.danger
                   }}>
                     {(tar.Estatus ?? tar.estatus) ? 'ACTIVO' : 'INACTIVO'}
                   </span>
                 </div>
-                
+
                 <p style={{ margin: 0, fontSize: '11px', color: COLORS.slate500, lineHeight: '1.4' }}>
                   {tar.Descripcion || tar.descripcion || 'Sin descripción disponible.'}
                 </p>
@@ -504,7 +755,7 @@ export default function ConsumosMaster() {
                       {parseFloat(tar.CostoUnitario ?? tar.costo_unitario).toFixed(4)} <span style={{ fontSize: '11px', color: COLORS.slate500, fontWeight: '700' }}>{tar.Divisa || tar.divisa}</span>
                     </div>
                   </div>
-                  
+
                   <button
                     onClick={() => handleOpenEdit(tar)}
                     style={{
@@ -547,7 +798,7 @@ export default function ConsumosMaster() {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
-            
+
             {/* 1. SECCIÓN JUGADORES */}
             <div className="card" style={{ background: COLORS.white, border: `1px solid ${COLORS.slate200}`, borderRadius: '20px', padding: '24px', boxShadow: 'var(--shadow-md)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '18px' }}>
@@ -593,7 +844,7 @@ export default function ConsumosMaster() {
                   <tbody>
                     {auditoriaData.desglose_jugadores && auditoriaData.desglose_jugadores.length > 0 ? (
                       auditoriaData.desglose_jugadores
-                        .filter(j => 
+                        .filter(j =>
                           j.ejecutor_nombre.toLowerCase().includes(searchJugador.toLowerCase()) ||
                           j.jugador_nombre.toLowerCase().includes(searchJugador.toLowerCase()) ||
                           j.jugador_curp.toLowerCase().includes(searchJugador.toLowerCase()) ||
@@ -680,7 +931,7 @@ export default function ConsumosMaster() {
                   <tbody>
                     {auditoriaData.desglose_directivos && auditoriaData.desglose_directivos.length > 0 ? (
                       auditoriaData.desglose_directivos
-                        .filter(d => 
+                        .filter(d =>
                           d.ejecutor_nombre.toLowerCase().includes(searchDirectivo.toLowerCase()) ||
                           d.directivo_nombre.toLowerCase().includes(searchDirectivo.toLowerCase()) ||
                           d.directivo_curp.toLowerCase().includes(searchDirectivo.toLowerCase()) ||
@@ -727,7 +978,7 @@ export default function ConsumosMaster() {
 
             {/* 3. DOS COLS: EQUIPOS Y LIGAS */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '30px' }}>
-              
+
               {/* SECCIÓN EQUIPOS */}
               <div className="card" style={{ background: COLORS.white, border: `1px solid ${COLORS.slate200}`, borderRadius: '20px', padding: '24px', boxShadow: 'var(--shadow-md)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '18px' }}>
@@ -1159,6 +1410,139 @@ export default function ConsumosMaster() {
           </div>
         </div>
       </div>
+
+      {showReporteModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          backgroundColor: 'rgba(15, 23, 42, 0.6)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 9998,
+          padding: '20px'
+        }}>
+          <div style={{
+            background: COLORS.white,
+            borderRadius: '20px',
+            width: '520px',
+            maxWidth: '100%',
+            padding: '24px',
+            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)',
+            fontFamily: "'Outfit', sans-serif"
+          }}>
+            <h3 style={{ margin: '0 0 8px 0', fontSize: '20px', fontWeight: '800', color: COLORS.slate900 }}>
+              Reporte de Consumos
+            </h3>
+            <p style={{ margin: '0 0 20px 0', fontSize: '13px', color: COLORS.slate500, lineHeight: '1.5' }}>
+              Selecciona la fecha de inicio y la fecha de fin para generar el PDF con consumo total, costos por servicio, ligas, equipos y jugadores/presidente.
+            </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px', marginBottom: '16px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: COLORS.slate600, textTransform: 'uppercase', marginBottom: '6px' }}>
+                  Fecha de inicio
+                </label>
+                <input
+                  type="date"
+                  value={reporteFechaInicio}
+                  onChange={(e) => setReporteFechaInicio(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    borderRadius: '10px',
+                    border: `1.5px solid ${COLORS.slate200}`,
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: COLORS.slate900,
+                    boxSizing: 'border-box',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: COLORS.slate600, textTransform: 'uppercase', marginBottom: '6px' }}>
+                  Fecha de fin
+                </label>
+                <input
+                  type="date"
+                  value={reporteFechaFin}
+                  min={reporteFechaInicio || undefined}
+                  onChange={(e) => setReporteFechaFin(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    borderRadius: '10px',
+                    border: `1.5px solid ${COLORS.slate200}`,
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: COLORS.slate900,
+                    boxSizing: 'border-box',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+            </div>
+
+            {reporteFechaInicio && reporteFechaFin && reporteFechaInicio > reporteFechaFin && (
+              <div style={{
+                marginBottom: '16px',
+                padding: '10px 12px',
+                borderRadius: '10px',
+                background: COLORS.dangerBgLight,
+                color: COLORS.dangerDark,
+                fontSize: '12px',
+                fontWeight: '700'
+              }}>
+                La fecha de fin debe ser igual o posterior a la fecha de inicio.
+              </div>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={() => setShowReporteModal(false)}
+                disabled={generandoReporte}
+                style={{
+                  background: COLORS.white,
+                  color: COLORS.slate700,
+                  border: `1.5px solid ${COLORS.slate200}`,
+                  borderRadius: '10px',
+                  padding: '10px 16px',
+                  fontSize: '13px',
+                  fontWeight: '700',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleGenerarReporte}
+                disabled={!reporteFechaInicio || !reporteFechaFin || reporteFechaInicio > reporteFechaFin || generandoReporte}
+                style={{
+                  background: (!reporteFechaInicio || !reporteFechaFin || reporteFechaInicio > reporteFechaFin || generandoReporte) ? COLORS.slate300 : colorSuccess,
+                  color: COLORS.white,
+                  border: 'none',
+                  borderRadius: '10px',
+                  padding: '10px 16px',
+                  fontSize: '13px',
+                  fontWeight: '700',
+                  cursor: (!reporteFechaInicio || !reporteFechaFin || reporteFechaInicio > reporteFechaFin || generandoReporte) ? 'not-allowed' : 'pointer',
+                  boxShadow: 'var(--shadow-sm)'
+                }}
+              >
+                {generandoReporte ? 'Generando reporte...' : 'Generar reporte'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* MODAL EDITAR TARIFA */}
       {editingTarifa && (
