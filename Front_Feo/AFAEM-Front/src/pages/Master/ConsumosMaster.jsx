@@ -115,6 +115,31 @@ const formatPdfCell = (text, options = {}) => ({
   ...options
 });
 
+const sortReportRows = (rows) => {
+  return [...rows].sort((a, b) => {
+    const mxnDiff = Number(b?.costo_total_mxn || 0) - Number(a?.costo_total_mxn || 0);
+    if (mxnDiff !== 0) {
+      return mxnDiff;
+    }
+
+    const usdDiff = Number(b?.costo_total_usd || 0) - Number(a?.costo_total_usd || 0);
+    if (usdDiff !== 0) {
+      return usdDiff;
+    }
+
+    const totalOpsA =
+      Number(a?.ocr_count || 0) +
+      Number(a?.foto_count || 0) +
+      Number(a?.verificamex_count || 0);
+    const totalOpsB =
+      Number(b?.ocr_count || 0) +
+      Number(b?.foto_count || 0) +
+      Number(b?.verificamex_count || 0);
+
+    return totalOpsB - totalOpsA;
+  });
+};
+
 export default function ConsumosMaster() {
   const [mesSeleccionado, setMesSeleccionado] = useState(() => new Date().getMonth() + 1);
   const [anioSeleccionado, setAnioSeleccionado] = useState(() => new Date().getFullYear());
