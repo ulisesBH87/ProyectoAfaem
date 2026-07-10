@@ -93,6 +93,20 @@ const renderModalPortal = (content) => {
   return createPortal(content, document.body);
 };
 
+const sortReportRows = (rows) => {
+  return [...rows].sort((a, b) => {
+    const mxnDiff = Number(b.costo_total_mxn || 0) - Number(a.costo_total_mxn || 0);
+    if (mxnDiff !== 0) return mxnDiff;
+
+    const usdDiff = Number(b.costo_total_usd || 0) - Number(a.costo_total_usd || 0);
+    if (usdDiff !== 0) return usdDiff;
+
+    const totalOpsA = Number(a.ocr_count || 0) + Number(a.foto_count || 0) + Number(a.verificamex_count || 0);
+    const totalOpsB = Number(b.ocr_count || 0) + Number(b.foto_count || 0) + Number(b.verificamex_count || 0);
+    return totalOpsB - totalOpsA;
+  });
+};
+
 export default function ConsumosMaster() {
   const [mesSeleccionado, setMesSeleccionado] = useState(() => new Date().getMonth() + 1);
   const [anioSeleccionado, setAnioSeleccionado] = useState(() => new Date().getFullYear());
@@ -287,6 +301,98 @@ export default function ConsumosMaster() {
     return y + 3;
   };
 
+  const generarTituloPdf = (doc, title, y, color = '#0f172a') => {
+    const pageHeight = doc.internal.pageSize.getHeight();
+    if (y > pageHeight - 30) {
+      doc.addPage();
+      y = 18;
+    }
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.setTextColor(color);
+    doc.text(title, 16, y);
+    return y + 8;
+  };
+
+  const generarTablaPdf = (doc, title, columns, rows, y, color = '#0f172a') => {
+    const marginX = 16;
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const rowPaddingY = 3;
+    const minRowHeight = 8;
+
+    const drawHeader = (currentY) => {
+      doc.setFillColor(241, 245, 249);
+      doc.rect(marginX, currentY, 178, 9, 'F');
+      doc.setDrawColor(203, 213, 225);
+      doc.rect(marginX, currentY, 178, 9);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8.2);
+      doc.setTextColor('#334155');
+
+      let x = marginX;
+      columns.forEach((column) => {
+        const textX = column.align === 'right' ? x + column.width - 1.5 : x + 1.5;
+        doc.text(column.header, textX, currentY + 5.8, {
+          align: column.align === 'right' ? 'right' : 'left',
+          baseline: 'middle'
+        });
+        x += column.width;
+      });
+
+      return currentY + 9;
+    };
+
+    y = generarTituloPdf(doc, title, y, color);
+
+    if (!rows.length) {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9.5);
+      doc.setTextColor('#334155');
+      doc.text('Sin registros para este periodo.', marginX, y);
+      return y + 8;
+    }
+
+    y = drawHeader(y);
+
+    rows.forEach((row, index) => {
+      const rowLines = columns.map((column) => {
+        const value = String(row[column.key] ?? '');
+        return doc.splitTextToSize(value, Math.max(column.width - 3, 8));
+      });
+      const maxLines = Math.max(...rowLines.map((lines) => lines.length), 1);
+      const rowHeight = Math.max(minRowHeight, maxLines * 4 + rowPaddingY * 2);
+
+      if (y + rowHeight > pageHeight - 14) {
+        doc.addPage();
+        y = 18;
+        y = drawHeader(y);
+      }
+
+      doc.setFillColor(index % 2 === 0 ? 255 : 248, index % 2 === 0 ? 255 : 250, index % 2 === 0 ? 255 : 252);
+      doc.rect(marginX, y, 178, rowHeight, 'F');
+      doc.setDrawColor(226, 232, 240);
+      doc.rect(marginX, y, 178, rowHeight);
+
+      let x = marginX;
+      columns.forEach((column, columnIndex) => {
+        const textX = column.align === 'right' ? x + column.width - 1.5 : x + 1.5;
+        doc.setFont('helvetica', column.emphasis ? 'bold' : 'normal');
+        doc.setFontSize(column.fontSize || 8);
+        doc.setTextColor(column.color || '#0f172a');
+        doc.text(rowLines[columnIndex], textX, y + rowPaddingY + 3.2, {
+          align: column.align === 'right' ? 'right' : 'left',
+          baseline: 'top'
+        });
+        x += column.width;
+      });
+
+      y += rowHeight;
+    });
+
+    return y + 5;
+  };
+
   const handleGenerarReporte = async () => {
     if (!reporteFechaInicio || !reporteFechaFin || reporteFechaInicio > reporteFechaFin) return;
 
@@ -299,15 +405,15 @@ export default function ConsumosMaster() {
       ]);
 
       const serviceSummary = buildServiceSummary(resumen);
-      const ligas = (auditoria?.desglose_ligas || []).map((liga) => ({
+      const ligas = sortReportRows((auditoria?.desglose_ligas || []).map((liga) => ({
         nombre: liga.liga_nombre,
         ocr_count: liga.ocr_count,
         foto_count: liga.foto_count,
         verificamex_count: liga.verificamex_count,
         costo_total_usd: liga.costo_total_usd,
         costo_total_mxn: liga.costo_total_mxn
-      }));
-      const equipos = (auditoria?.desglose_equipos || []).map((equipo) => ({
+      })));
+      const equipos = sortReportRows((auditoria?.desglose_equipos || []).map((equipo) => ({
         nombre: equipo.equipo_nombre,
         subtitulo: equipo.liga_nombre,
         ocr_count: equipo.ocr_count,
@@ -315,8 +421,8 @@ export default function ConsumosMaster() {
         verificamex_count: equipo.verificamex_count,
         costo_total_usd: equipo.costo_total_usd,
         costo_total_mxn: equipo.costo_total_mxn
-      }));
-      const personas = [
+      })));
+      const personas = sortReportRows([
         ...(auditoria?.desglose_jugadores || []).map((item) => ({
           nombre: item.jugador_nombre,
           subtitulo: `${item.equipo_nombre} | ${item.liga_nombre}`,
@@ -337,7 +443,7 @@ export default function ConsumosMaster() {
           costo_total_usd: item.costo_total_usd,
           costo_total_mxn: item.costo_total_mxn
         }))
-      ];
+      ]);
 
       const doc = new jsPDF({ unit: 'mm', format: 'a4' });
       let y = 18;
@@ -380,32 +486,77 @@ export default function ConsumosMaster() {
         '#0b4ea6'
       );
 
-      y = generarSeccionPdf(
+      y = generarTablaPdf(
         doc,
         'Costo por ligas',
-        ligas.map((liga) =>
-          `${liga.nombre}: OCR ${liga.ocr_count}, Foto ${liga.foto_count}, VerificaMex ${liga.verificamex_count} | ${formatCurrency(liga.costo_total_usd, 'USD')} | ${formatCurrency(liga.costo_total_mxn, 'MXN')}`
-        ),
+        [
+          { key: 'nombre', header: 'Liga', width: 62, emphasis: true, fontSize: 8.4 },
+          { key: 'ocr', header: 'OCR', width: 14, align: 'right' },
+          { key: 'foto', header: 'Foto', width: 14, align: 'right' },
+          { key: 'vm', header: 'VM', width: 14, align: 'right' },
+          { key: 'usd', header: 'Costo USD', width: 34, align: 'right' },
+          { key: 'mxn', header: 'Costo MXN', width: 40, align: 'right' }
+        ],
+        ligas.map((liga) => ({
+          nombre: liga.nombre,
+          ocr: liga.ocr_count,
+          foto: liga.foto_count,
+          vm: liga.verificamex_count,
+          usd: formatCurrency(liga.costo_total_usd, 'USD'),
+          mxn: formatCurrency(liga.costo_total_mxn, 'MXN')
+        })),
         y,
         '#059669'
       );
 
-      y = generarSeccionPdf(
+      y = generarTablaPdf(
         doc,
         'Costo por equipos',
-        equipos.map((equipo) =>
-          `${equipo.nombre} (${equipo.subtitulo}): OCR ${equipo.ocr_count}, Foto ${equipo.foto_count}, VerificaMex ${equipo.verificamex_count} | ${formatCurrency(equipo.costo_total_usd, 'USD')} | ${formatCurrency(equipo.costo_total_mxn, 'MXN')}`
-        ),
+        [
+          { key: 'equipo', header: 'Equipo', width: 52, emphasis: true, fontSize: 8.2 },
+          { key: 'liga', header: 'Liga', width: 38, fontSize: 8 },
+          { key: 'ocr', header: 'OCR', width: 12, align: 'right' },
+          { key: 'foto', header: 'Foto', width: 12, align: 'right' },
+          { key: 'vm', header: 'VM', width: 12, align: 'right' },
+          { key: 'usd', header: 'Costo USD', width: 24, align: 'right' },
+          { key: 'mxn', header: 'Costo MXN', width: 28, align: 'right' }
+        ],
+        equipos.map((equipo) => ({
+          equipo: equipo.nombre,
+          liga: equipo.subtitulo,
+          ocr: equipo.ocr_count,
+          foto: equipo.foto_count,
+          vm: equipo.verificamex_count,
+          usd: formatCurrency(equipo.costo_total_usd, 'USD'),
+          mxn: formatCurrency(equipo.costo_total_mxn, 'MXN')
+        })),
         y,
         '#d97706'
       );
 
-      y = generarSeccionPdf(
+      y = generarTablaPdf(
         doc,
         'Jugadores y presidente/entrenador',
-        personas.map((persona) =>
-          `${persona.tipo}: ${persona.nombre} (${persona.subtitulo}) | OCR ${persona.ocr_count}, Foto ${persona.foto_count}, VerificaMex ${persona.verificamex_count} | ${formatCurrency(persona.costo_total_usd, 'USD')} | ${formatCurrency(persona.costo_total_mxn, 'MXN')}`
-        ),
+        [
+          { key: 'tipo', header: 'Tipo', width: 26, fontSize: 7.8 },
+          { key: 'nombre', header: 'Nombre', width: 44, emphasis: true, fontSize: 8.1 },
+          { key: 'detalle', header: 'Equipo / Liga / Rol', width: 50, fontSize: 7.8 },
+          { key: 'ocr', header: 'OCR', width: 10, align: 'right' },
+          { key: 'foto', header: 'Foto', width: 10, align: 'right' },
+          { key: 'vm', header: 'VM', width: 10, align: 'right' },
+          { key: 'usd', header: 'USD', width: 12, align: 'right', fontSize: 7.6 },
+          { key: 'mxn', header: 'MXN', width: 16, align: 'right', fontSize: 7.6 }
+        ],
+        personas.map((persona) => ({
+          tipo: persona.tipo,
+          nombre: persona.nombre,
+          detalle: persona.subtitulo,
+          ocr: persona.ocr_count,
+          foto: persona.foto_count,
+          vm: persona.verificamex_count,
+          usd: formatCurrency(persona.costo_total_usd, 'USD'),
+          mxn: formatCurrency(persona.costo_total_mxn, 'MXN')
+        })),
         y,
         '#8b5cf6'
       );
