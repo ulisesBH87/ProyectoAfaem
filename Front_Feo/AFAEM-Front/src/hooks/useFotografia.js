@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import Swal from 'sweetalert2';
 import { validarFotografia } from '../services/foto';
 import { C } from '../pages/Admin/RegistrarPresidente/constants';
+import { registerSuccessfulScanAttempt } from '../utils/scanAttemptWarning';
 
 /**
  * useFotografia
@@ -13,6 +14,7 @@ export function useFotografia({ setDocuments, setPreviews, tipoRegistro = "JUGAD
   const [fotoError, setFotoError] = useState(null);
   const [fotoFallida, setFotoFallida] = useState(false);
   const [fotoArchivo, setFotoArchivo] = useState(null);
+  const successfulScanCountsRef = useRef({});
 
   // ── Helper interno: carga la foto sin validar (reutilizado en else+catch) ─
   const _cargarFotoForzada = (archivo) => {
@@ -53,6 +55,7 @@ export function useFotografia({ setDocuments, setPreviews, tipoRegistro = "JUGAD
 
     try {
       const data = await validarFotografia(archivo, tipoRegistro, { ...opciones, ...opcionesExtra });
+      await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: 'fotografia', Swal });
 
       if (data.valido) {
         // Convertir base64 → File

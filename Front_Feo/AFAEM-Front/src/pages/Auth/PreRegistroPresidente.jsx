@@ -1,5 +1,5 @@
 import COLORS from '../../styles/colors';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../routes/paths';
@@ -23,6 +23,7 @@ import { DETALLES_SEGUROS, CATALOGO_ROLES, DOC_AFILIACION_IDS } from './preRegis
 import { convertToDDMMYYYY, convertToYYYYMMDD, normalizarNombreSeguro, parsearTelefonoE164 } from './preRegistroUtils';
 import { generarPDFCuota as generarPDFCuotaHelper, handleDownloadFormato as handleDownloadFormatoHelper, handleEmbedNewPhotoInFormat as handleEmbedNewPhotoInFormatHelper } from './preRegistroPdfHelper';
 import { procesarOCRReal as procesarOCRRealHelper } from './preRegistroOcrHelper';
+import { registerSuccessfulScanAttempt } from '../../utils/scanAttemptWarning';
 import SeguroDetallesModal from './components/SeguroDetallesModal';
 import StepBienvenida from './components/StepBienvenida';
 import StepRevisionSolicitud from './components/StepRevisionSolicitud';
@@ -33,6 +34,7 @@ function PreRegistroPresidente() {
   const { estatusId, refreshAccess, isLoading: rbacLoading } = useRBAC();
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const nombreUsuarioCompleto = user?.usuario?.nombre || user?.nombre || user?.Nombre || user?.NombreUsuario || 'Usuario';
+  const successfulScanCountsRef = useRef({});
 
   // Estados Generales
   const [loading, setLoading] = useState(false);
@@ -1219,7 +1221,7 @@ function PreRegistroPresidente() {
   };
 
   const procesarOCRReal = async (docKey, file, prevDoc) => {
-    await procesarOCRRealHelper(docKey, file, prevDoc, { API_BASE, Swal, setOcrResults, setCodigoPais, setDocuments });
+    await procesarOCRRealHelper(docKey, file, prevDoc, { API_BASE, Swal, setOcrResults, setCodigoPais, setDocuments, successfulScanCountsRef });
   };
 
   const safeSetField = (form, fieldName, value, fontSize) => {
@@ -1259,6 +1261,7 @@ function PreRegistroPresidente() {
 
     try {
       const data = await validarFotografia(archivo, "PRESIDENTE");
+      await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: 'fotografia', Swal });
       if (data.valido) {
         setFotoPreview(`data:${data.tipo_imagen};base64,${data.imagen}`);
         setDocuments(prev => ({ ...prev, fotografia: archivo }));
