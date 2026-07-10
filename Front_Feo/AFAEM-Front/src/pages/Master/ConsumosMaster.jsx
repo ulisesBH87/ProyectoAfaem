@@ -46,6 +46,11 @@ const MESES = [
 const ANIOS = [2025, 2026, 2027, 2028, 2029];
 
 const SERVICE_ORDER = ['OCR', 'PHOTO_SCAN', 'VERIFICAMEX'];
+const PDF_SCAN_ALERTS = {
+  OCR: 8,
+  PHOTO_SCAN: 5,
+  VERIFICAMEX: 3
+};
 
 const formatCurrency = (amount, currency) => {
   const value = Number(amount || 0);
@@ -92,6 +97,11 @@ const renderModalPortal = (content) => {
   if (typeof document === 'undefined') return null;
   return createPortal(content, document.body);
 };
+
+const formatPdfCell = (text, options = {}) => ({
+  text: String(text ?? ''),
+  ...options
+});
 
 export default function ConsumosMaster() {
   const [mesSeleccionado, setMesSeleccionado] = useState(() => new Date().getMonth() + 1);
@@ -287,6 +297,107 @@ export default function ConsumosMaster() {
     return y + 3;
   };
 
+  const generarTablaPdf = (doc, title, columns, rows, y, color = '#0f172a') => {
+    const marginX = 16;
+    const tableWidth = 178;
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const rowPaddingY = 3;
+    const minRowHeight = 8;
+
+    if (y > pageHeight - 30) {
+      doc.addPage();
+      y = 18;
+    }
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.setTextColor(color);
+    doc.text(title, marginX, y);
+    y += 8;
+
+    if (!rows.length) {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9.5);
+      doc.setTextColor('#334155');
+      doc.text('Sin registros para este periodo.', marginX, y);
+      return y + 8;
+    }
+
+    const drawHeader = (currentY) => {
+      doc.setFillColor(241, 245, 249);
+      doc.rect(marginX, currentY, tableWidth, 9, 'F');
+      doc.setDrawColor(203, 213, 225);
+      doc.rect(marginX, currentY, tableWidth, 9);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8.1);
+      doc.setTextColor('#334155');
+
+      let x = marginX;
+      columns.forEach((column) => {
+        const textX = column.align === 'right' ? x + column.width - 1.5 : x + 1.5;
+        doc.text(column.header, textX, currentY + 5.6, {
+          align: column.align === 'right' ? 'right' : 'left',
+          baseline: 'middle'
+        });
+        x += column.width;
+      });
+
+      return currentY + 9;
+    };
+
+    y = drawHeader(y);
+
+    rows.forEach((row, rowIndex) => {
+      const preparedCells = columns.map((column) => {
+        const rawValue = row[column.key];
+        if (rawValue && typeof rawValue === 'object' && !Array.isArray(rawValue)) {
+          return {
+            text: String(rawValue.text ?? ''),
+            color: rawValue.color,
+            fontStyle: rawValue.fontStyle,
+            fontSize: rawValue.fontSize
+          };
+        }
+        return { text: String(rawValue ?? '') };
+      });
+
+      const wrappedCells = preparedCells.map((cell, index) =>
+        doc.splitTextToSize(cell.text, Math.max(columns[index].width - 3, 8))
+      );
+      const maxLines = Math.max(...wrappedCells.map((lines) => lines.length), 1);
+      const rowHeight = Math.max(minRowHeight, maxLines * 4 + rowPaddingY * 2);
+
+      if (y + rowHeight > pageHeight - 14) {
+        doc.addPage();
+        y = 18;
+        y = drawHeader(y);
+      }
+
+      doc.setFillColor(rowIndex % 2 === 0 ? 255 : 248, rowIndex % 2 === 0 ? 255 : 250, rowIndex % 2 === 0 ? 255 : 252);
+      doc.rect(marginX, y, tableWidth, rowHeight, 'F');
+      doc.setDrawColor(226, 232, 240);
+      doc.rect(marginX, y, tableWidth, rowHeight);
+
+      let x = marginX;
+      columns.forEach((column, columnIndex) => {
+        const cell = preparedCells[columnIndex];
+        const textX = column.align === 'right' ? x + column.width - 1.5 : x + 1.5;
+        doc.setFont('helvetica', cell.fontStyle || column.fontStyle || (column.emphasis ? 'bold' : 'normal'));
+        doc.setFontSize(cell.fontSize || column.fontSize || 8);
+        doc.setTextColor(cell.color || column.color || '#0f172a');
+        doc.text(wrappedCells[columnIndex], textX, y + rowPaddingY + 3.2, {
+          align: column.align === 'right' ? 'right' : 'left',
+          baseline: 'top'
+        });
+        x += column.width;
+      });
+
+      y += rowHeight;
+    });
+
+    return y + 5;
+  };
+
   const handleGenerarReporte = async () => {
     if (!reporteFechaInicio || !reporteFechaFin || reporteFechaInicio > reporteFechaFin) return;
 
@@ -400,12 +511,38 @@ export default function ConsumosMaster() {
         '#d97706'
       );
 
-      y = generarSeccionPdf(
+      y = generarTablaPdf(
         doc,
         'Jugadores y presidente/entrenador',
-        personas.map((persona) =>
-          `${persona.tipo}: ${persona.nombre} (${persona.subtitulo}) | OCR ${persona.ocr_count}, Foto ${persona.foto_count}, VerificaMex ${persona.verificamex_count} | ${formatCurrency(persona.costo_total_usd, 'USD')} | ${formatCurrency(persona.costo_total_mxn, 'MXN')}`
-        ),
+        [
+          { key: 'tipo', header: 'Tipo', width: 26, fontSize: 7.8 },
+          { key: 'nombre', header: 'Nombre', width: 38, emphasis: true, fontSize: 8 },
+          { key: 'detalle', header: 'Equipo / Liga / Rol', width: 48, fontSize: 7.7 },
+          { key: 'ocr', header: 'OCR', width: 12, align: 'right' },
+          { key: 'foto', header: 'Foto', width: 12, align: 'right' },
+          { key: 'vm', header: 'VM', width: 12, align: 'right' },
+          { key: 'usd', header: 'USD', width: 14, align: 'right', fontSize: 7.4 },
+          { key: 'mxn', header: 'MXN', width: 16, align: 'right', fontSize: 7.4 }
+        ],
+        personas.map((persona) => ({
+          tipo: persona.tipo,
+          nombre: persona.nombre,
+          detalle: persona.subtitulo,
+          ocr: formatPdfCell(persona.ocr_count, {
+            color: Number(persona.ocr_count || 0) >= PDF_SCAN_ALERTS.OCR ? '#dc2626' : undefined,
+            fontStyle: Number(persona.ocr_count || 0) >= PDF_SCAN_ALERTS.OCR ? 'bold' : undefined
+          }),
+          foto: formatPdfCell(persona.foto_count, {
+            color: Number(persona.foto_count || 0) >= PDF_SCAN_ALERTS.PHOTO_SCAN ? '#dc2626' : undefined,
+            fontStyle: Number(persona.foto_count || 0) >= PDF_SCAN_ALERTS.PHOTO_SCAN ? 'bold' : undefined
+          }),
+          vm: formatPdfCell(persona.verificamex_count, {
+            color: Number(persona.verificamex_count || 0) >= PDF_SCAN_ALERTS.VERIFICAMEX ? '#dc2626' : undefined,
+            fontStyle: Number(persona.verificamex_count || 0) >= PDF_SCAN_ALERTS.VERIFICAMEX ? 'bold' : undefined
+          }),
+          usd: formatCurrency(persona.costo_total_usd, 'USD'),
+          mxn: formatCurrency(persona.costo_total_mxn, 'MXN')
+        })),
         y,
         '#8b5cf6'
       );
