@@ -51,6 +51,11 @@ const PDF_SCAN_ALERTS = {
   PHOTO_SCAN: 5,
   VERIFICAMEX: 3
 };
+const SERVICE_TITLES = {
+  OCR: 'Escaneo OCR',
+  PHOTO_SCAN: 'Escaneo Fotografía',
+  VERIFICAMEX: 'VerificaMEX'
+};
 
 const formatCurrency = (amount, currency) => {
   const value = Number(amount || 0);
@@ -68,6 +73,13 @@ const formatDateLabel = (value) => {
   });
 };
 
+const getProviderDisplayName = (serviceType, provider) => {
+  if (serviceType === 'PHOTO_SCAN' && (provider || '').toUpperCase() === 'DEFAULT') {
+    return 'PHOTO SCAN';
+  }
+  return provider || 'DEFAULT';
+};
+
 const buildServiceSummary = (resumen) => {
   const tarifas = resumen?.tarifas || [];
   const operaciones = resumen?.operaciones_por_servicio || {};
@@ -83,7 +95,7 @@ const buildServiceSummary = (resumen) => {
       const tarifa = tarifas.find((tar) => tar.tipo_consumo === tipo);
       return {
         tipo,
-        proveedor: tarifa?.proveedor || 'DEFAULT',
+        proveedor: getProviderDisplayName(tipo, tarifa?.proveedor || 'DEFAULT'),
         cantidad: operaciones[tipo] || 0,
         costo: costos[tipo] || 0,
         divisa: tarifa?.divisa || 'MXN',
@@ -146,6 +158,53 @@ export default function ConsumosMaster() {
   const [reporteFechaInicio, setReporteFechaInicio] = useState('');
   const [reporteFechaFin, setReporteFechaFin] = useState('');
   const [generandoReporte, setGenerandoReporte] = useState(false);
+  const serviceCards = Object.values(
+    buildServiceSummary(consumoResumen).reduce((acc, service) => {
+      const rawType = String(service?.tipo || '').trim().toUpperCase();
+      const normalizedType =
+        rawType === 'PHOTO SCAN' ||
+        rawType === 'ESCANEO FOTOGRAFÍA' ||
+        rawType === 'ESCANEO FOTOGRAFIA' ||
+        rawType === 'FOTOGRAFÍA' ||
+        rawType === 'FOTOGRAFIA'
+          ? 'PHOTO_SCAN'
+        : rawType === 'VERIFICA MEX' ||
+          rawType === 'VERIFICACIÓN CURP' ||
+          rawType === 'VERIFICACION CURP' ||
+          rawType === 'VERIFICACIÓN CURP/CIUDADANO' ||
+          rawType === 'VERIFICACION CURP/CIUDADANO'
+          ? 'VERIFICAMEX'
+        : rawType === 'ESCANEO OCR'
+          ? 'OCR'
+        :
+        rawType;
+
+      if (!normalizedType) {
+        return acc;
+      }
+
+      if (!acc[normalizedType]) {
+        acc[normalizedType] = {
+          ...service,
+          tipo: normalizedType
+        };
+        return acc;
+      }
+
+      acc[normalizedType] = {
+        ...acc[normalizedType],
+        cantidad: Number(acc[normalizedType].cantidad || 0) + Number(service.cantidad || 0),
+        costo: Number(acc[normalizedType].costo || 0) + Number(service.costo || 0),
+        proveedor: (acc[normalizedType].proveedor && acc[normalizedType].proveedor !== 'DEFAULT')
+          ? acc[normalizedType].proveedor
+          : service.proveedor,
+        divisa: acc[normalizedType].divisa || service.divisa,
+        descripcion: acc[normalizedType].descripcion || service.descripcion
+      };
+
+      return acc;
+    }, {})
+  ).sort((a, b) => SERVICE_ORDER.indexOf(a.tipo) - SERVICE_ORDER.indexOf(b.tipo));
 
   // 1. Carga de Resumen Financiero y Ledger
   useEffect(() => {
@@ -776,12 +835,12 @@ export default function ConsumosMaster() {
             Consumos por Servicio (Unidades)
           </h4>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px' }}>
-            {consumoResumen?.tarifas && consumoResumen.tarifas.length > 0 ? (
-              consumoResumen.tarifas.map((tar, idx) => {
-                const icon = getServiceIcon(tar.tipo_consumo);
-                const color = getServiceColor(tar.tipo_consumo);
-                const bg = getServiceBg(tar.tipo_consumo);
-                const count = consumoResumen?.operaciones_por_servicio?.[tar.tipo_consumo] ?? 0;
+            {serviceCards && serviceCards.length > 0 ? (
+              serviceCards.map((service, idx) => {
+                const icon = getServiceIcon(service.tipo);
+                const color = getServiceColor(service.tipo);
+                const bg = getServiceBg(service.tipo);
+                const count = service.cantidad ?? 0;
 
                 return (
                   <div key={idx} style={{ background: COLORS.slate50, border: `1px solid ${COLORS.slate200}`, borderRadius: '12px', padding: '16px', display: 'flex', alignItems: 'center', gap: '14px' }}>
@@ -789,7 +848,7 @@ export default function ConsumosMaster() {
                       {icon}
                     </div>
                     <div>
-                      <div style={{ fontSize: '9px', fontWeight: '700', color: COLORS.slate500, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{tar.tipo_consumo}</div>
+                      <div style={{ fontSize: '9px', fontWeight: '700', color: COLORS.slate500, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{SERVICE_TITLES[service.tipo] || service.tipo}</div>
                       <div style={{ fontSize: '20px', fontWeight: '900', color: COLORS.slate900, marginTop: '2px' }}>{loadingConsumo ? '...' : count}</div>
                       <div style={{ fontSize: '11px', color: COLORS.slate400 }}>{count === 1 ? 'Unidad' : 'Unidades'}</div>
                     </div>
@@ -808,13 +867,13 @@ export default function ConsumosMaster() {
             Costos por Servicio (Acumulado del Periodo)
           </h4>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px' }}>
-            {consumoResumen?.tarifas && consumoResumen.tarifas.length > 0 ? (
-              consumoResumen.tarifas.map((tar, idx) => {
-                const icon = getServiceIcon(tar.tipo_consumo);
-                const color = getServiceColor(tar.tipo_consumo);
-                const bg = getServiceBg(tar.tipo_consumo);
-                const cost = consumoResumen?.costo_por_operacion?.[tar.tipo_consumo] ?? 0.0;
-                const decimalPlaces = tar.divisa === 'USD' ? 4 : 2;
+            {serviceCards && serviceCards.length > 0 ? (
+              serviceCards.map((service, idx) => {
+                const icon = getServiceIcon(service.tipo);
+                const color = getServiceColor(service.tipo);
+                const bg = getServiceBg(service.tipo);
+                const cost = service.costo ?? 0.0;
+                const decimalPlaces = service.divisa === 'USD' ? 4 : 2;
 
                 return (
                   <div key={idx} style={{ background: COLORS.slate50, border: `1px solid ${COLORS.slate200}`, borderRadius: '12px', padding: '16px', display: 'flex', alignItems: 'center', gap: '14px' }}>
@@ -822,9 +881,9 @@ export default function ConsumosMaster() {
                       {icon}
                     </div>
                     <div>
-                      <div style={{ fontSize: '9px', fontWeight: '700', color: COLORS.slate500, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Costo {tar.tipo_consumo}</div>
+                      <div style={{ fontSize: '9px', fontWeight: '700', color: COLORS.slate500, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Costo {SERVICE_TITLES[service.tipo] || service.tipo}</div>
                       <div style={{ fontSize: '20px', fontWeight: '900', color: COLORS.slate900, marginTop: '2px' }}>{loadingConsumo ? '...' : cost.toFixed(decimalPlaces)}</div>
-                      <div style={{ fontSize: '11px', color: COLORS.slate400, fontWeight: '700' }}>{tar.divisa}</div>
+                      <div style={{ fontSize: '11px', color: COLORS.slate400, fontWeight: '700' }}>{service.divisa}</div>
                     </div>
                   </div>
                 );
@@ -863,7 +922,7 @@ export default function ConsumosMaster() {
                       {tar.TipoConsumo || tar.tipo_consumo}
                     </span>
                     <h5 style={{ margin: '4px 0 0 0', fontSize: '13px', fontWeight: '700', color: COLORS.slate700 }}>
-                      Proveedor: <span style={{ color: COLORS.slate900 }}>{tar.Proveedor || tar.proveedor}</span>
+                      Proveedor: <span style={{ color: COLORS.slate900 }}>{getProviderDisplayName(tar.TipoConsumo || tar.tipo_consumo, tar.Proveedor || tar.proveedor)}</span>
                     </h5>
                   </div>
                   <span style={{
