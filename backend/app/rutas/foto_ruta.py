@@ -18,7 +18,7 @@ router = APIRouter(prefix="/fotografia", tags=["Fotografía"])
 
 #definir una ruta POST para validar un archivo
 @router.post("/")
-@track_consumption(tipo_consumo="PHOTO_SCAN", proveedor="DEFAULT", tipo_registro_default="JUGADOR")
+@track_consumption(tipo_consumo="PHOTO_SCAN", proveedor="PHOTO SCAN", tipo_registro_default="JUGADOR")
 async def validar_archivo(
     request: Request,
     file: UploadFile = File(...),

@@ -1,5 +1,5 @@
 import COLORS from '../../styles/colors';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ROUTES } from '../../routes/paths';
@@ -24,6 +24,7 @@ import { verificarCurp } from '../../services/auth';
 import { API_BASE } from '../../config/config';
 import { openSecurePath } from '../../utils/secureFetch';
 import { buildCaptureSourceDialog, getCameraCaptureKind, showDocumentGuide, CAMERA_CAPTURE_KIND } from '../../utils/cameraCapture';
+import { registerSuccessfulScanAttempt } from '../../utils/scanAttemptWarning';
 import {
   BotonPrimario,
   BotonSecundario,
@@ -251,6 +252,7 @@ const StepBadge = ({ number, isActive, isDone }) => (
 );
 
 export default function CompletarJugadoresEquipo() {
+  const successfulScanCountsRef = useRef({});
   const { equipoId } = useParams();
   const navigate = useNavigate();
 
@@ -1263,6 +1265,7 @@ export default function CompletarJugadoresEquipo() {
           target_nombre: activeName,
           target_curp: extractedData.curp?.toUpperCase()
         });
+        await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: documentKey, Swal });
         if (data.valido) {
           // Convertir base64 a URL y a File
           const imageUrl = `data:${data.tipo_imagen};base64,${data.imagen}`;
@@ -1373,6 +1376,7 @@ export default function CompletarJugadoresEquipo() {
           body: formDataOcr
         });
         if (!response.ok) throw new Error('Error al obtener la información.');
+        await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: documentKey, Swal });
 
         const htmlText = await response.text();
         const parser = new DOMParser();

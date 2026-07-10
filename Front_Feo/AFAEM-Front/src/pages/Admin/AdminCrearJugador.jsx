@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../routes/paths';
 import Swal from 'sweetalert2';
@@ -20,6 +20,7 @@ import CameraCaptureModal from '../../components/Common/CameraCaptureModal';
 import adminService from '../../services/admin';
 import teamsService from '../../services/teams';
 import { buildCaptureSourceDialog, getCameraCaptureKind, showDocumentGuide, CAMERA_CAPTURE_KIND } from '../../utils/cameraCapture';
+import { registerSuccessfulScanAttempt } from '../../utils/scanAttemptWarning';
 import {
   BotonPrimario,
   BotonSecundario,
@@ -77,6 +78,7 @@ const StepBadge = ({ number, isActive, isDone }) => (
 
 export default function AdminCrearJugador() {
   const navigate = useNavigate();
+  const successfulScanCountsRef = useRef({});
 
   // Límites de fecha para el registro de jugadores
   const today = new Date().toISOString().split('T')[0];
@@ -412,6 +414,7 @@ export default function AdminCrearJugador() {
           target_nombre: activeName,
           target_curp: extractedData.curp?.toUpperCase()
         });
+        await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: documentKey, Swal });
         if (data.valido) {
 
           // convertir base64 a URL
@@ -506,6 +509,7 @@ export default function AdminCrearJugador() {
           body: formDataOcr
         });
         if (!response.ok) throw new Error('Ocurrió un error al analizar el documento');
+        await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: documentKey, Swal });
 
         const htmlText = await response.text();
         const parser = new DOMParser();

@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import Swal from 'sweetalert2';
 import { API_BASE } from '../config/config';
 import { toDDMMYYYY } from '../pages/Admin/RegistrarPresidente/constants';
+import { registerSuccessfulScanAttempt } from '../utils/scanAttemptWarning';
 
 export function extraerMontoDeVoucher(rawText) {
   if (!rawText) return null;
@@ -84,6 +85,7 @@ export function extraerMontoDeVoucher(rawText) {
  */
 export function useOCR() {
   const [ocrResults, setOcrResults] = useState({});
+  const successfulScanCountsRef = useRef({});
 
   // ── Mejora específica para Acta de Nacimiento ────────────────────────────
   const mejorarActa = (rawText, data) => {
@@ -209,6 +211,7 @@ export function useOCR() {
         body: fd
       });
       if (!res.ok) throw new Error();
+      await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: docKey, Swal });
       const htmlText = await res.text();
       const doc = new DOMParser().parseFromString(htmlText, 'text/html');
 

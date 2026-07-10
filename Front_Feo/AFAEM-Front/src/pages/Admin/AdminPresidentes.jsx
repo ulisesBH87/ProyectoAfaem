@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ROUTES } from '../../routes/paths';
 import { FaPlus, FaCheck, FaTimes, FaUserTie, FaUser, FaEdit, FaTrash, FaMoneyBillWave, FaFileAlt, FaCheckCircle, FaArrowLeft, FaSearch, FaUserPlus, FaShieldAlt, FaSave, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaWhatsapp, FaCopy, FaLink, FaArrowRight } from 'react-icons/fa';
@@ -13,6 +13,7 @@ import { API_BASE } from '../../config/config';
 import { useSecureBlob } from '../../hooks/useSecureBlob';
 import { getPresidentesDirectorio, updatePresidente, deletePresidente, getPresidentesDisponibles, vincularPresidenteEquipo, registrarPresidenteAdmin, obtenerLinkInvitacion, regenerarInvitacion, enviarLinkRegistroPresidenteWhatsApp } from '../../services/admin';
 import COLORS from '../../styles/colors';
+import { registerSuccessfulScanAttempt } from '../../utils/scanAttemptWarning';
 
 /* ─── Catálogos ─── */
 const CATALOGO_SEGUROS_INICIAL = [
@@ -82,6 +83,7 @@ const StepCircle = ({ num, label, active, done }) => (
    COMPONENTE PRINCIPAL
 ══════════════════════════════════════════════════════════════════════ */
 export default function AdminPresidentes() {
+  const successfulScanCountsRef = useRef({});
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [esNavegacionCruzada, setEsNavegacionCruzada] = useState(false);
@@ -444,6 +446,7 @@ export default function AdminPresidentes() {
         body: fd
       });
       if (!res.ok) throw new Error('Error al conectar con el servidor');
+      await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: docKey, Swal });
       const htmlText = await res.text();
       const doc = new DOMParser().parseFromString(htmlText, 'text/html');
       const cleanVal = (val) => {
@@ -610,6 +613,7 @@ export default function AdminPresidentes() {
     Swal.fire({ title: 'Validando Fotografía...', html: 'Verificando formato, rostros y calidad. <b>Por favor espere.</b>', allowOutsideClick: false, allowEscapeKey: false, didOpen: () => Swal.showLoading() });
     try {
       const data = await validarFotografia(archivo, "PRESIDENTE");
+      await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: 'fotografia', Swal });
       if (data.valido) {
         setDocuments(prev => ({ ...prev, fotografia: archivo }));
         Swal.fire({ title: '¡Fotografía Aceptada!', icon: 'success', timer: 1500, showConfirmButton: false });

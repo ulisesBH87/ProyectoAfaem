@@ -46,6 +46,16 @@ const MESES = [
 const ANIOS = [2025, 2026, 2027, 2028, 2029];
 
 const SERVICE_ORDER = ['OCR', 'PHOTO_SCAN', 'VERIFICAMEX'];
+const PDF_SCAN_ALERTS = {
+  OCR: 8,
+  PHOTO_SCAN: 5,
+  VERIFICAMEX: 3
+};
+const SERVICE_TITLES = {
+  OCR: 'Escaneo OCR',
+  PHOTO_SCAN: 'Escaneo Fotografía',
+  VERIFICAMEX: 'VerificaMEX'
+};
 
 const formatCurrency = (amount, currency) => {
   const value = Number(amount || 0);
@@ -63,6 +73,13 @@ const formatDateLabel = (value) => {
   });
 };
 
+const getProviderDisplayName = (serviceType, provider) => {
+  if (serviceType === 'PHOTO_SCAN' && (provider || '').toUpperCase() === 'DEFAULT') {
+    return 'PHOTO SCAN';
+  }
+  return provider || 'DEFAULT';
+};
+
 const buildServiceSummary = (resumen) => {
   const tarifas = resumen?.tarifas || [];
   const operaciones = resumen?.operaciones_por_servicio || {};
@@ -78,7 +95,7 @@ const buildServiceSummary = (resumen) => {
       const tarifa = tarifas.find((tar) => tar.tipo_consumo === tipo);
       return {
         tipo,
-        proveedor: tarifa?.proveedor || 'DEFAULT',
+        proveedor: getProviderDisplayName(tipo, tarifa?.proveedor || 'DEFAULT'),
         cantidad: operaciones[tipo] || 0,
         costo: costos[tipo] || 0,
         divisa: tarifa?.divisa || 'MXN',
@@ -93,19 +110,10 @@ const renderModalPortal = (content) => {
   return createPortal(content, document.body);
 };
 
-const sortReportRows = (rows) => {
-  return [...rows].sort((a, b) => {
-    const mxnDiff = Number(b.costo_total_mxn || 0) - Number(a.costo_total_mxn || 0);
-    if (mxnDiff !== 0) return mxnDiff;
-
-    const usdDiff = Number(b.costo_total_usd || 0) - Number(a.costo_total_usd || 0);
-    if (usdDiff !== 0) return usdDiff;
-
-    const totalOpsA = Number(a.ocr_count || 0) + Number(a.foto_count || 0) + Number(a.verificamex_count || 0);
-    const totalOpsB = Number(b.ocr_count || 0) + Number(b.foto_count || 0) + Number(b.verificamex_count || 0);
-    return totalOpsB - totalOpsA;
-  });
-};
+const formatPdfCell = (text, options = {}) => ({
+  text: String(text ?? ''),
+  ...options
+});
 
 export default function ConsumosMaster() {
   const [mesSeleccionado, setMesSeleccionado] = useState(() => new Date().getMonth() + 1);
@@ -150,6 +158,53 @@ export default function ConsumosMaster() {
   const [reporteFechaInicio, setReporteFechaInicio] = useState('');
   const [reporteFechaFin, setReporteFechaFin] = useState('');
   const [generandoReporte, setGenerandoReporte] = useState(false);
+  const serviceCards = Object.values(
+    buildServiceSummary(consumoResumen).reduce((acc, service) => {
+      const rawType = String(service?.tipo || '').trim().toUpperCase();
+      const normalizedType =
+        rawType === 'PHOTO SCAN' ||
+        rawType === 'ESCANEO FOTOGRAFÍA' ||
+        rawType === 'ESCANEO FOTOGRAFIA' ||
+        rawType === 'FOTOGRAFÍA' ||
+        rawType === 'FOTOGRAFIA'
+          ? 'PHOTO_SCAN'
+        : rawType === 'VERIFICA MEX' ||
+          rawType === 'VERIFICACIÓN CURP' ||
+          rawType === 'VERIFICACION CURP' ||
+          rawType === 'VERIFICACIÓN CURP/CIUDADANO' ||
+          rawType === 'VERIFICACION CURP/CIUDADANO'
+          ? 'VERIFICAMEX'
+        : rawType === 'ESCANEO OCR'
+          ? 'OCR'
+        :
+        rawType;
+
+      if (!normalizedType) {
+        return acc;
+      }
+
+      if (!acc[normalizedType]) {
+        acc[normalizedType] = {
+          ...service,
+          tipo: normalizedType
+        };
+        return acc;
+      }
+
+      acc[normalizedType] = {
+        ...acc[normalizedType],
+        cantidad: Number(acc[normalizedType].cantidad || 0) + Number(service.cantidad || 0),
+        costo: Number(acc[normalizedType].costo || 0) + Number(service.costo || 0),
+        proveedor: (acc[normalizedType].proveedor && acc[normalizedType].proveedor !== 'DEFAULT')
+          ? acc[normalizedType].proveedor
+          : service.proveedor,
+        divisa: acc[normalizedType].divisa || service.divisa,
+        descripcion: acc[normalizedType].descripcion || service.descripcion
+      };
+
+      return acc;
+    }, {})
+  ).sort((a, b) => SERVICE_ORDER.indexOf(a.tipo) - SERVICE_ORDER.indexOf(b.tipo));
 
   // 1. Carga de Resumen Financiero y Ledger
   useEffect(() => {
@@ -301,8 +356,13 @@ export default function ConsumosMaster() {
     return y + 3;
   };
 
-  const generarTituloPdf = (doc, title, y, color = '#0f172a') => {
+  const generarTablaPdf = (doc, title, columns, rows, y, color = '#0f172a') => {
+    const marginX = 16;
+    const tableWidth = 178;
     const pageHeight = doc.internal.pageSize.getHeight();
+    const rowPaddingY = 3;
+    const minRowHeight = 8;
+
     if (y > pageHeight - 30) {
       doc.addPage();
       y = 18;
@@ -311,39 +371,8 @@ export default function ConsumosMaster() {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(12);
     doc.setTextColor(color);
-    doc.text(title, 16, y);
-    return y + 8;
-  };
-
-  const generarTablaPdf = (doc, title, columns, rows, y, color = '#0f172a') => {
-    const marginX = 16;
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const rowPaddingY = 3;
-    const minRowHeight = 8;
-
-    const drawHeader = (currentY) => {
-      doc.setFillColor(241, 245, 249);
-      doc.rect(marginX, currentY, 178, 9, 'F');
-      doc.setDrawColor(203, 213, 225);
-      doc.rect(marginX, currentY, 178, 9);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(8.2);
-      doc.setTextColor('#334155');
-
-      let x = marginX;
-      columns.forEach((column) => {
-        const textX = column.align === 'right' ? x + column.width - 1.5 : x + 1.5;
-        doc.text(column.header, textX, currentY + 5.8, {
-          align: column.align === 'right' ? 'right' : 'left',
-          baseline: 'middle'
-        });
-        x += column.width;
-      });
-
-      return currentY + 9;
-    };
-
-    y = generarTituloPdf(doc, title, y, color);
+    doc.text(title, marginX, y);
+    y += 8;
 
     if (!rows.length) {
       doc.setFont('helvetica', 'normal');
@@ -353,14 +382,48 @@ export default function ConsumosMaster() {
       return y + 8;
     }
 
+    const drawHeader = (currentY) => {
+      doc.setFillColor(241, 245, 249);
+      doc.rect(marginX, currentY, tableWidth, 9, 'F');
+      doc.setDrawColor(203, 213, 225);
+      doc.rect(marginX, currentY, tableWidth, 9);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8.1);
+      doc.setTextColor('#334155');
+
+      let x = marginX;
+      columns.forEach((column) => {
+        const textX = column.align === 'right' ? x + column.width - 1.5 : x + 1.5;
+        doc.text(column.header, textX, currentY + 5.6, {
+          align: column.align === 'right' ? 'right' : 'left',
+          baseline: 'middle'
+        });
+        x += column.width;
+      });
+
+      return currentY + 9;
+    };
+
     y = drawHeader(y);
 
-    rows.forEach((row, index) => {
-      const rowLines = columns.map((column) => {
-        const value = String(row[column.key] ?? '');
-        return doc.splitTextToSize(value, Math.max(column.width - 3, 8));
+    rows.forEach((row, rowIndex) => {
+      const preparedCells = columns.map((column) => {
+        const rawValue = row[column.key];
+        if (rawValue && typeof rawValue === 'object' && !Array.isArray(rawValue)) {
+          return {
+            text: String(rawValue.text ?? ''),
+            color: rawValue.color,
+            fontStyle: rawValue.fontStyle,
+            fontSize: rawValue.fontSize
+          };
+        }
+        return { text: String(rawValue ?? '') };
       });
-      const maxLines = Math.max(...rowLines.map((lines) => lines.length), 1);
+
+      const wrappedCells = preparedCells.map((cell, index) =>
+        doc.splitTextToSize(cell.text, Math.max(columns[index].width - 3, 8))
+      );
+      const maxLines = Math.max(...wrappedCells.map((lines) => lines.length), 1);
       const rowHeight = Math.max(minRowHeight, maxLines * 4 + rowPaddingY * 2);
 
       if (y + rowHeight > pageHeight - 14) {
@@ -369,18 +432,19 @@ export default function ConsumosMaster() {
         y = drawHeader(y);
       }
 
-      doc.setFillColor(index % 2 === 0 ? 255 : 248, index % 2 === 0 ? 255 : 250, index % 2 === 0 ? 255 : 252);
-      doc.rect(marginX, y, 178, rowHeight, 'F');
+      doc.setFillColor(rowIndex % 2 === 0 ? 255 : 248, rowIndex % 2 === 0 ? 255 : 250, rowIndex % 2 === 0 ? 255 : 252);
+      doc.rect(marginX, y, tableWidth, rowHeight, 'F');
       doc.setDrawColor(226, 232, 240);
-      doc.rect(marginX, y, 178, rowHeight);
+      doc.rect(marginX, y, tableWidth, rowHeight);
 
       let x = marginX;
       columns.forEach((column, columnIndex) => {
+        const cell = preparedCells[columnIndex];
         const textX = column.align === 'right' ? x + column.width - 1.5 : x + 1.5;
-        doc.setFont('helvetica', column.emphasis ? 'bold' : 'normal');
-        doc.setFontSize(column.fontSize || 8);
-        doc.setTextColor(column.color || '#0f172a');
-        doc.text(rowLines[columnIndex], textX, y + rowPaddingY + 3.2, {
+        doc.setFont('helvetica', cell.fontStyle || column.fontStyle || (column.emphasis ? 'bold' : 'normal'));
+        doc.setFontSize(cell.fontSize || column.fontSize || 8);
+        doc.setTextColor(cell.color || column.color || '#0f172a');
+        doc.text(wrappedCells[columnIndex], textX, y + rowPaddingY + 3.2, {
           align: column.align === 'right' ? 'right' : 'left',
           baseline: 'top'
         });
@@ -539,21 +603,30 @@ export default function ConsumosMaster() {
         'Jugadores y presidente/entrenador',
         [
           { key: 'tipo', header: 'Tipo', width: 26, fontSize: 7.8 },
-          { key: 'nombre', header: 'Nombre', width: 44, emphasis: true, fontSize: 8.1 },
-          { key: 'detalle', header: 'Equipo / Liga / Rol', width: 50, fontSize: 7.8 },
-          { key: 'ocr', header: 'OCR', width: 10, align: 'right' },
-          { key: 'foto', header: 'Foto', width: 10, align: 'right' },
-          { key: 'vm', header: 'VM', width: 10, align: 'right' },
-          { key: 'usd', header: 'USD', width: 12, align: 'right', fontSize: 7.6 },
-          { key: 'mxn', header: 'MXN', width: 16, align: 'right', fontSize: 7.6 }
+          { key: 'nombre', header: 'Nombre', width: 38, emphasis: true, fontSize: 8 },
+          { key: 'detalle', header: 'Equipo / Liga / Rol', width: 48, fontSize: 7.7 },
+          { key: 'ocr', header: 'OCR', width: 12, align: 'right' },
+          { key: 'foto', header: 'Foto', width: 12, align: 'right' },
+          { key: 'vm', header: 'VM', width: 12, align: 'right' },
+          { key: 'usd', header: 'USD', width: 14, align: 'right', fontSize: 7.4 },
+          { key: 'mxn', header: 'MXN', width: 16, align: 'right', fontSize: 7.4 }
         ],
         personas.map((persona) => ({
           tipo: persona.tipo,
           nombre: persona.nombre,
           detalle: persona.subtitulo,
-          ocr: persona.ocr_count,
-          foto: persona.foto_count,
-          vm: persona.verificamex_count,
+          ocr: formatPdfCell(persona.ocr_count, {
+            color: Number(persona.ocr_count || 0) >= PDF_SCAN_ALERTS.OCR ? '#dc2626' : undefined,
+            fontStyle: Number(persona.ocr_count || 0) >= PDF_SCAN_ALERTS.OCR ? 'bold' : undefined
+          }),
+          foto: formatPdfCell(persona.foto_count, {
+            color: Number(persona.foto_count || 0) >= PDF_SCAN_ALERTS.PHOTO_SCAN ? '#dc2626' : undefined,
+            fontStyle: Number(persona.foto_count || 0) >= PDF_SCAN_ALERTS.PHOTO_SCAN ? 'bold' : undefined
+          }),
+          vm: formatPdfCell(persona.verificamex_count, {
+            color: Number(persona.verificamex_count || 0) >= PDF_SCAN_ALERTS.VERIFICAMEX ? '#dc2626' : undefined,
+            fontStyle: Number(persona.verificamex_count || 0) >= PDF_SCAN_ALERTS.VERIFICAMEX ? 'bold' : undefined
+          }),
           usd: formatCurrency(persona.costo_total_usd, 'USD'),
           mxn: formatCurrency(persona.costo_total_mxn, 'MXN')
         })),
@@ -790,12 +863,12 @@ export default function ConsumosMaster() {
             Consumos por Servicio (Unidades)
           </h4>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px' }}>
-            {consumoResumen?.tarifas && consumoResumen.tarifas.length > 0 ? (
-              consumoResumen.tarifas.map((tar, idx) => {
-                const icon = getServiceIcon(tar.tipo_consumo);
-                const color = getServiceColor(tar.tipo_consumo);
-                const bg = getServiceBg(tar.tipo_consumo);
-                const count = consumoResumen?.operaciones_por_servicio?.[tar.tipo_consumo] ?? 0;
+            {serviceCards && serviceCards.length > 0 ? (
+              serviceCards.map((service, idx) => {
+                const icon = getServiceIcon(service.tipo);
+                const color = getServiceColor(service.tipo);
+                const bg = getServiceBg(service.tipo);
+                const count = service.cantidad ?? 0;
 
                 return (
                   <div key={idx} style={{ background: COLORS.slate50, border: `1px solid ${COLORS.slate200}`, borderRadius: '12px', padding: '16px', display: 'flex', alignItems: 'center', gap: '14px' }}>
@@ -803,7 +876,7 @@ export default function ConsumosMaster() {
                       {icon}
                     </div>
                     <div>
-                      <div style={{ fontSize: '9px', fontWeight: '700', color: COLORS.slate500, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{tar.tipo_consumo}</div>
+                      <div style={{ fontSize: '9px', fontWeight: '700', color: COLORS.slate500, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{SERVICE_TITLES[service.tipo] || service.tipo}</div>
                       <div style={{ fontSize: '20px', fontWeight: '900', color: COLORS.slate900, marginTop: '2px' }}>{loadingConsumo ? '...' : count}</div>
                       <div style={{ fontSize: '11px', color: COLORS.slate400 }}>{count === 1 ? 'Unidad' : 'Unidades'}</div>
                     </div>
@@ -822,13 +895,13 @@ export default function ConsumosMaster() {
             Costos por Servicio (Acumulado del Periodo)
           </h4>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px' }}>
-            {consumoResumen?.tarifas && consumoResumen.tarifas.length > 0 ? (
-              consumoResumen.tarifas.map((tar, idx) => {
-                const icon = getServiceIcon(tar.tipo_consumo);
-                const color = getServiceColor(tar.tipo_consumo);
-                const bg = getServiceBg(tar.tipo_consumo);
-                const cost = consumoResumen?.costo_por_operacion?.[tar.tipo_consumo] ?? 0.0;
-                const decimalPlaces = tar.divisa === 'USD' ? 4 : 2;
+            {serviceCards && serviceCards.length > 0 ? (
+              serviceCards.map((service, idx) => {
+                const icon = getServiceIcon(service.tipo);
+                const color = getServiceColor(service.tipo);
+                const bg = getServiceBg(service.tipo);
+                const cost = service.costo ?? 0.0;
+                const decimalPlaces = service.divisa === 'USD' ? 4 : 2;
 
                 return (
                   <div key={idx} style={{ background: COLORS.slate50, border: `1px solid ${COLORS.slate200}`, borderRadius: '12px', padding: '16px', display: 'flex', alignItems: 'center', gap: '14px' }}>
@@ -836,9 +909,9 @@ export default function ConsumosMaster() {
                       {icon}
                     </div>
                     <div>
-                      <div style={{ fontSize: '9px', fontWeight: '700', color: COLORS.slate500, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Costo {tar.tipo_consumo}</div>
+                      <div style={{ fontSize: '9px', fontWeight: '700', color: COLORS.slate500, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Costo {SERVICE_TITLES[service.tipo] || service.tipo}</div>
                       <div style={{ fontSize: '20px', fontWeight: '900', color: COLORS.slate900, marginTop: '2px' }}>{loadingConsumo ? '...' : cost.toFixed(decimalPlaces)}</div>
-                      <div style={{ fontSize: '11px', color: COLORS.slate400, fontWeight: '700' }}>{tar.divisa}</div>
+                      <div style={{ fontSize: '11px', color: COLORS.slate400, fontWeight: '700' }}>{service.divisa}</div>
                     </div>
                   </div>
                 );
@@ -877,7 +950,7 @@ export default function ConsumosMaster() {
                       {tar.TipoConsumo || tar.tipo_consumo}
                     </span>
                     <h5 style={{ margin: '4px 0 0 0', fontSize: '13px', fontWeight: '700', color: COLORS.slate700 }}>
-                      Proveedor: <span style={{ color: COLORS.slate900 }}>{tar.Proveedor || tar.proveedor}</span>
+                      Proveedor: <span style={{ color: COLORS.slate900 }}>{getProviderDisplayName(tar.TipoConsumo || tar.tipo_consumo, tar.Proveedor || tar.proveedor)}</span>
                     </h5>
                   </div>
                   <span style={{

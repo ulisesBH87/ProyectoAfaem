@@ -27,6 +27,7 @@ import CameraCaptureModal from '../../components/Common/CameraCaptureModal';
 import teamsService from '../../services/teams';
 import { API_BASE } from '../../config/config';
 import { buildCaptureSourceDialog, getCameraCaptureKind, isPhotoCaptureKey, showDocumentGuide, CAMERA_CAPTURE_KIND } from '../../utils/cameraCapture';
+import { registerSuccessfulScanAttempt } from '../../utils/scanAttemptWarning';
 import {
   BotonPrimario,
   BotonSecundario,
@@ -298,6 +299,7 @@ const StepBadge = ({ number, isActive, isDone }) => (
 );
 
 export default function RegistroJugadores() {
+  const successfulScanCountsRef = useRef({});
   const navigate = useNavigate();
   const location = useLocation();
   const { tokenIdentificador, tokenSecreto } = useParams();
@@ -2064,6 +2066,7 @@ export default function RegistroJugadores() {
           target_curp: activeCurp,
           slot_id: activeSlotId
         });
+        await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: documentKey, Swal });
         if (data.valido) {
           const imageUrl = `data:${data.tipo_imagen};base64,${data.imagen}`;
           const byteCharacters = atob(data.imagen);
@@ -2176,6 +2179,7 @@ export default function RegistroJugadores() {
           body: formDataOcr
         });
         if (!response.ok) throw new Error('Error al analizar el documento');
+        await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: documentKey, Swal });
 
         const htmlText = await response.text();
         const parser = new DOMParser();

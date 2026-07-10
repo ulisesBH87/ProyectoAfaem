@@ -28,6 +28,7 @@ import adminService from '../../services/admin';
 import teamsService from '../../services/teams';
 import { API_BASE } from '../../config/config';
 import { buildCaptureSourceDialog, getCameraCaptureKind, showDocumentGuide, CAMERA_CAPTURE_KIND } from '../../utils/cameraCapture';
+import { registerSuccessfulScanAttempt } from '../../utils/scanAttemptWarning';
 import {
   BotonPrimario,
   BotonSecundario,
@@ -567,6 +568,7 @@ export default function ConfigurarEquipo() {
   const [previewDoc, setPreviewDoc] = useState({ open: false, url: '', type: '', title: '' });
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [cameraTargetKey, setCameraTargetKey] = useState('foto');
+  const successfulScanCountsRef = useRef({});
 
   const handleResetForm = async () => {
     const result = await Swal.fire({
@@ -1692,6 +1694,7 @@ export default function ConfigurarEquipo() {
       });
       try {
         const data = await validarFotografia(file, "PRESIDENTE");
+        await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: documentKey, Swal });
         if (data.valido) {
           // Convertir base64 a URL y a File
           const imageUrl = `data:${data.tipo_imagen};base64,${data.imagen}`;
@@ -1795,6 +1798,7 @@ export default function ConfigurarEquipo() {
           body: formDataOcr
         });
         if (!response.ok) throw new Error('Error al analizar el documento');
+        await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: documentKey, Swal });
 
         const htmlText = await response.text();
         const parser = new DOMParser();
