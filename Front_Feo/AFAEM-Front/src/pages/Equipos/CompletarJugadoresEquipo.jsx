@@ -1256,7 +1256,13 @@ export default function CompletarJugadoresEquipo() {
         didOpen: () => { Swal.showLoading(); }
       });
       try {
-        const data = await validarFotografia(file);
+        const activeName = `${extractedData.nombreJugador || ''} ${extractedData.apellidoPaterno || ''} ${extractedData.apellidoMaterno || ''}`.trim().toUpperCase();
+        const data = await validarFotografia(file, "JUGADOR", {
+          equipo_id: equipoId,
+          liga_id: equipo?.LigaId || equipo?.ligaId,
+          target_nombre: activeName,
+          target_curp: extractedData.curp?.toUpperCase()
+        });
         if (data.valido) {
           // Convertir base64 a URL y a File
           const imageUrl = `data:${data.tipo_imagen};base64,${data.imagen}`;
@@ -1349,10 +1355,17 @@ export default function CompletarJugadoresEquipo() {
       });
 
       try {
+        const activeName = `${extractedData.nombreJugador || ''} ${extractedData.apellidoPaterno || ''} ${extractedData.apellidoMaterno || ''}`.trim().toUpperCase();
+        const params = new URLSearchParams({ tipo_registro: "JUGADOR" });
+        if (equipoId) params.append("equipo_id", equipoId);
+        if (equipo?.LigaId || equipo?.ligaId) params.append("liga_id", equipo?.LigaId || equipo?.ligaId);
+        if (activeName) params.append("target_nombre", activeName);
+        if (extractedData.curp) params.append("target_curp", extractedData.curp.toUpperCase());
+
         const formDataOcr = new FormData();
         formDataOcr.append('file_id', file);
         const token = localStorage.getItem('token') || sessionStorage.getItem('temp_token');
-        const response = await fetch(`${API_BASE}/documentos/ocr`, {
+        const response = await fetch(`${API_BASE}/documentos/ocr?${params.toString()}`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`

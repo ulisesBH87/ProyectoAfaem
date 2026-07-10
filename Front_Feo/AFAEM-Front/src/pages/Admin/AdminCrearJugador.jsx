@@ -406,8 +406,12 @@ export default function AdminCrearJugador() {
         didOpen: () => { Swal.showLoading(); }
       });
       try {
-
-        const data = await validarFotografia(file);
+        const activeName = `${extractedData.nombreJugador || ''} ${extractedData.apellidoPaterno || ''} ${extractedData.apellidoMaterno || ''}`.trim().toUpperCase();
+        const data = await validarFotografia(file, "JUGADOR", {
+          equipo_id: extractedData.equipoSeleccionado,
+          target_nombre: activeName,
+          target_curp: extractedData.curp?.toUpperCase()
+        });
         if (data.valido) {
 
           // convertir base64 a URL
@@ -484,11 +488,17 @@ export default function AdminCrearJugador() {
       });
 
       try {
+        const activeName = `${extractedData.nombreJugador || ''} ${extractedData.apellidoPaterno || ''} ${extractedData.apellidoMaterno || ''}`.trim().toUpperCase();
+        const params = new URLSearchParams({ tipo_registro: "JUGADOR" });
+        if (extractedData.equipoSeleccionado) params.append("equipo_id", extractedData.equipoSeleccionado);
+        if (activeName) params.append("target_nombre", activeName);
+        if (extractedData.curp) params.append("target_curp", extractedData.curp.toUpperCase());
+
         const formDataOcr = new FormData();
         formDataOcr.append('file_id', file);
 
         const token = localStorage.getItem('token') || sessionStorage.getItem('temp_token');
-        const response = await fetch(`${API_BASE}/documentos/ocr`, {
+        const response = await fetch(`${API_BASE}/documentos/ocr?${params.toString()}`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`

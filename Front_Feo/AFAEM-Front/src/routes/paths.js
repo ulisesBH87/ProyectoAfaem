@@ -35,6 +35,7 @@ export const ROUTES = {
   MASTER: {
     AUDITORIAS: "/ms/au",
     RESUMENES: "/ms/r",
+    CONSUMOS: "/ms/c",
   },
 
   PRESIDENTE: {

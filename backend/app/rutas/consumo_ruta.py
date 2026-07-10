@@ -68,3 +68,50 @@ def listar_ledger(
         estado_tecnico=estado_tecnico,
         es_cobrable=es_cobrable
     )
+
+@router.get("/auditoria", dependencies=[Depends(requerir_permiso("auditorias.ver"))])
+def obtener_auditoria_consumos(
+    fecha_inicio: str = Query(None),
+    fecha_fin: str = Query(None),
+    db: Session = Depends(get_db)
+):
+    """
+    Retorna el desglose de auditoría detallado agrupado por jugador, equipo y liga.
+    """
+    from app.servicios.consumo_worker import procesar_outbox_pending
+    try:
+        procesar_outbox_pending()
+    except Exception:
+        pass
+
+    return ConsumptionService.obtener_auditoria_consumos(
+        db=db,
+        fecha_inicio=fecha_inicio,
+        fecha_fin=fecha_fin
+    )
+
+@router.get("/tarifas", dependencies=[Depends(requerir_permiso("auditorias.ver"))])
+def obtener_tarifas(db: Session = Depends(get_db)):
+    """
+    Retorna el listado de tarifas configuradas.
+    """
+    return ConsumptionService.obtener_tarifas(db)
+
+@router.put("/tarifas/{tarifa_id}", dependencies=[Depends(requerir_permiso("auditorias.ver"))])
+def actualizar_tarifa(tarifa_id: int, payload: dict, db: Session = Depends(get_db)):
+    """
+    Actualiza el costo y otros parámetros de una tarifa.
+    """
+    tarifa = ConsumptionService.actualizar_tarifa(db, tarifa_id, payload)
+    if not tarifa:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Tarifa no encontrada")
+    return {"mensaje": "Tarifa actualizada correctamente", "tarifa": {
+        "TarifaId": tarifa.TarifaId,
+        "TipoConsumo": tarifa.TipoConsumo,
+        "Proveedor": tarifa.Proveedor,
+        "CostoUnitario": float(tarifa.CostoUnitario),
+        "Divisa": tarifa.Divisa,
+        "Descripcion": tarifa.Descripcion,
+        "Estatus": tarifa.Estatus
+    }}

@@ -44,6 +44,13 @@ class BitacoraConsumo(Base):
     LlaveIdempotencia = Column(String(256), nullable=False, unique=True)
     CreadoEn = Column(DateTime(timezone=True), nullable=False, default=func.now(), index=True)
     Metadata = Column(String, nullable=True) # NVARCHAR(MAX)
+    
+    # Nuevas columnas de auditoría y desgloses
+    JugadorPersonaId = Column(Integer, nullable=True)
+    JugadorNombre = Column(String(200), nullable=True)
+    JugadorCURP = Column(String(50), nullable=True)
+    EquipoId = Column(Integer, nullable=True)
+    LigaId = Column(Integer, nullable=True)
 
     UsuarioRelacion = relationship("Usuario", foreign_keys=[UsuarioId])
 

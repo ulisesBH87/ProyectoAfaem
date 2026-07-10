@@ -136,6 +136,7 @@ export function useRegistrarPresidente() {
 
   const validarPaso1 = () => {
     const errs = {};
+    const correoRegexEstricto = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
     if (!cuenta.nombre.trim()) errs.nombre = 'Obligatorio';
     if (!cuenta.primerApellido.trim()) errs.primerApellido = 'Obligatorio';
     if (!cuenta.correo.trim()) {
@@ -243,7 +244,7 @@ export function useRegistrarPresidente() {
     setVoucherState(file);
     procesarOCR('voucher', file, () => {
       setVoucherState(null);
-    }, "PRESIDENTE");
+    }, esEntrenador ? "ENTRENADOR" : "PRESIDENTE");
   };
 
   const fotoHook = useFotografia({ setDocuments, setPreviews, tipoRegistro: "PRESIDENTE" });
@@ -647,7 +648,7 @@ export function useRegistrarPresidente() {
             else delete next[docKey];
             return next;
           });
-        });
+        }, esEntrenador ? "ENTRENADOR" : "PRESIDENTE");
       }
     }
   };

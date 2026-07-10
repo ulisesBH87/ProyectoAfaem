@@ -22,6 +22,7 @@ const DashboardSidebar = ({ collapsed, mobileOpen, isMobile: isMobileProp }) => 
 
   // DEFINICIÓN DE TEMAS (Glassmorphism)
   const isAdmin = hasRole('Admin') || hasRole('Administrador');
+  const isMaster = hasRole('MASTER') || (hasPermission('auditorias.ver') && !isAdmin);
   const isMobile = isMobileProp !== undefined ? isMobileProp : (window.innerWidth <= 768);
   const isExpanded = isMobile || !collapsed || isHovered;
 
@@ -138,10 +139,16 @@ const DashboardSidebar = ({ collapsed, mobileOpen, isMobile: isMobileProp }) => 
       <nav style={{ flex: 1, padding: '12px 10px', overflowY: 'auto', overflowX: 'hidden' }}>
         {menus
           .filter(item => {
-            // Seguridad: Si es una ruta de admin, solo mostrar si es admin o si tiene el permiso para ver auditorías
+            // Seguridad: Si es una ruta de Master, ocultar a cualquiera que no sea Master
+            if (item.Ruta && (item.Ruta.startsWith('/ms') || ['Auditorías', 'Resúmenes', 'Consumos'].includes(item.Nombre))) {
+              if (!isMaster) return false;
+            }
+
+            // Seguridad: Si es una ruta de Admin, ocultar a cualquiera que no sea Admin
             if (item.Ruta && item.Ruta.startsWith('/ad') && !isAdmin) {
-              if (item.Nombre === 'Auditorías' && hasPermission('auditorias.ver')) {
-                // Permitir ver Auditorías
+              // Permitir excepción para la pantalla de Auditorías si es Master
+              if (item.Nombre === 'Auditorías' && isMaster) {
+                // Permitir
               } else {
                 return false;
               }
