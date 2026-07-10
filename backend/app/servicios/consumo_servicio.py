@@ -11,7 +11,8 @@ TARIFAS_DEFAULT = {
         "DEFAULT": {"tarifa_id": 1, "costo_unitario": 0.0015, "divisa": "USD"}
     },
     "PHOTO_SCAN": {
-        "DEFAULT": {"tarifa_id": 2, "costo_unitario": 1.00, "divisa": "MXN"}
+        "DEFAULT": {"tarifa_id": 2, "costo_unitario": 1.00, "divisa": "MXN"},
+        "PHOTO SCAN": {"tarifa_id": 2, "costo_unitario": 1.00, "divisa": "MXN"}
     },
     "VERIFICAMEX": {
         "DEFAULT": {"tarifa_id": 3, "costo_unitario": 3.00, "divisa": "MXN"}
@@ -19,6 +20,20 @@ TARIFAS_DEFAULT = {
 }
 
 class ConsumptionService:
+
+    @staticmethod
+    def _resolve_provider_candidates(tipo_consumo: str, proveedor: str | None) -> list[str]:
+        provider = (proveedor or "DEFAULT").strip()
+        candidates = [provider]
+
+        if tipo_consumo == "PHOTO_SCAN":
+            if provider.upper() == "DEFAULT":
+                candidates.append("PHOTO SCAN")
+            elif provider.upper() == "PHOTO SCAN":
+                candidates.append("DEFAULT")
+
+        # Preserva orden y elimina duplicados
+        return list(dict.fromkeys(candidates))
 
     @staticmethod
     def _parse_fecha_inicio(fecha_inicio: str | None):
@@ -47,22 +62,30 @@ class ConsumptionService:
         Retorna la tarifa activa desde la base de datos (CatalogoTarifas).
         Si no se encuentra, recurre al fallback local de TARIFAS_DEFAULT.
         """
-        tarifa_db = db.query(CatalogoTarifas).filter(
-            CatalogoTarifas.TipoConsumo == tipo_consumo,
-            CatalogoTarifas.Proveedor == proveedor,
-            CatalogoTarifas.Estatus == True
-        ).first()
+        provider_candidates = cls._resolve_provider_candidates(tipo_consumo, proveedor)
+        for candidate in provider_candidates:
+            tarifa_db = db.query(CatalogoTarifas).filter(
+                CatalogoTarifas.TipoConsumo == tipo_consumo,
+                CatalogoTarifas.Proveedor == candidate,
+                CatalogoTarifas.Estatus == True
+            ).first()
 
-        if tarifa_db:
-            return {
-                "tarifa_id": tarifa_db.TarifaId,
-                "costo_unitario": float(tarifa_db.CostoUnitario),
-                "divisa": tarifa_db.Divisa
-            }
+            if tarifa_db:
+                return {
+                    "tarifa_id": tarifa_db.TarifaId,
+                    "costo_unitario": float(tarifa_db.CostoUnitario),
+                    "divisa": tarifa_db.Divisa
+                }
 
         # Fallback local
         operacion = TARIFAS_DEFAULT.get(tipo_consumo, {})
-        tarifa = operacion.get(proveedor, operacion.get("DEFAULT"))
+        tarifa = None
+        for candidate in provider_candidates:
+            tarifa = operacion.get(candidate)
+            if tarifa:
+                break
+        if not tarifa:
+            tarifa = operacion.get("DEFAULT")
         
         if not tarifa:
             return {"tarifa_id": 99, "costo_unitario": 0.00, "divisa": "MXN"}
@@ -305,7 +328,14 @@ class ConsumptionService:
                 # Fallback local
                 from app.servicios.consumo_servicio import TARIFAS_DEFAULT
                 operacion = TARIFAS_DEFAULT.get(r.TipoConsumo, {})
-                t_fallback = operacion.get(r.Proveedor, operacion.get("DEFAULT", {"divisa": "MXN"}))
+                provider_candidates = ConsumptionService._resolve_provider_candidates(r.TipoConsumo, r.Proveedor)
+                t_fallback = None
+                for candidate in provider_candidates:
+                    t_fallback = operacion.get(candidate)
+                    if t_fallback:
+                        break
+                if not t_fallback:
+                    t_fallback = operacion.get("DEFAULT", {"divisa": "MXN"})
                 divisa = t_fallback["divisa"]
             
             costo_val = float(r.CostoAcumulado)
@@ -623,7 +653,7 @@ class ConsumptionService:
             # Sembrado inicial
             tarifas_sembrado = [
                 CatalogoTarifas(TipoConsumo="OCR", Proveedor="DEFAULT", CostoUnitario=0.0015, Divisa="USD", Descripcion="Servicio de reconocimiento óptico de caracteres para documentos de identidad (INE, Pasaporte).", Estatus=True),
-                CatalogoTarifas(TipoConsumo="PHOTO_SCAN", Proveedor="DEFAULT", CostoUnitario=1.00, Divisa="MXN", Descripcion="Servicio de validación y escaneo de fotografía de perfil / rostro.", Estatus=True),
+                CatalogoTarifas(TipoConsumo="PHOTO_SCAN", Proveedor="PHOTO SCAN", CostoUnitario=1.00, Divisa="MXN", Descripcion="Servicio de validación y escaneo de fotografía de perfil / rostro.", Estatus=True),
                 CatalogoTarifas(TipoConsumo="VERIFICAMEX", Proveedor="DEFAULT", CostoUnitario=3.00, Divisa="MXN", Descripcion="Servicio de verificación de CURP y datos oficiales.", Estatus=True)
             ]
             db.add_all(tarifas_sembrado)
