@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import jsPDF from 'jspdf';
+import { createPortal } from 'react-dom';
 import {
   FaCoins,
   FaFileAlt,
@@ -85,6 +86,11 @@ const buildServiceSummary = (resumen) => {
       };
     })
     .sort((a, b) => SERVICE_ORDER.indexOf(a.tipo) - SERVICE_ORDER.indexOf(b.tipo));
+};
+
+const renderModalPortal = (content) => {
+  if (typeof document === 'undefined') return null;
+  return createPortal(content, document.body);
 };
 
 export default function ConsumosMaster() {
@@ -1411,7 +1417,7 @@ export default function ConsumosMaster() {
         </div>
       </div>
 
-      {showReporteModal && (
+      {showReporteModal && renderModalPortal(
         <div style={{
           position: 'fixed',
           top: 0,
@@ -1545,7 +1551,7 @@ export default function ConsumosMaster() {
       )}
 
       {/* MODAL EDITAR TARIFA */}
-      {editingTarifa && (
+      {editingTarifa && renderModalPortal(
         <div style={{
           position: 'fixed',
           top: 0,
