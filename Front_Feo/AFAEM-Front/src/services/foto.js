@@ -28,6 +28,8 @@ export const validarFotografia = async (archivo, tipo_registro = "JUGADOR", opci
   if (opciones.target_persona_id) queryParams.append("target_persona_id", opciones.target_persona_id);
   if (opciones.target_nombre) queryParams.append("target_nombre", opciones.target_nombre);
   if (opciones.target_curp) queryParams.append("target_curp", opciones.target_curp);
+  if (opciones.slot_id) queryParams.append("slot_id", opciones.slot_id);
+  if (opciones.borrador_id) queryParams.append("borrador_id", opciones.borrador_id);
 
   try {
     const response = await fetch(`${API_BASE}/fotografia/?${queryParams.toString()}`, {

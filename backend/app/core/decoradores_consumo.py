@@ -140,10 +140,14 @@ def track_consumption(tipo_consumo: str, proveedor: str, tipo_registro_default: 
                     except Exception as player_exc:
                         logger.error(f"[CONSUMO RESOLVER ERROR] Falló auto-resolución de persona registrada: {player_exc}")
                 else:
-                    # Si no hay ID de Persona registrado oficialmente en el sistema, no guardamos el nombre/CURP temporal en la bitácora
-                    # para evitar registrar errores de OCR no corregidos.
-                    target_nombre = None
-                    target_curp = None
+                    # Si no hay ID de Persona registrado en el sistema, preservamos el nombre/CURP
+                    # solo si hay un slot_id o borrador_id que ancle el consumo a una entidad conocida.
+                    # Sin ese ancla, descartamos para evitar datos sucios de OCR no corregido.
+                    slot_id_req = request.query_params.get("slot_id") if request else None
+                    borrador_id_req = request.query_params.get("borrador_id") if request else None
+                    if not slot_id_req and not borrador_id_req:
+                        target_nombre = None
+                        target_curp = None
 
                 entity_type = None
                 entity_id = None

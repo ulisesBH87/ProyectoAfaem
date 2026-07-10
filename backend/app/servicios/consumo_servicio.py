@@ -359,8 +359,8 @@ class ConsumptionService:
                         
                     if match:
                         payload["JugadorPersonaId"] = target_persona_id
-                        payload["JugadorNombre"] = target_nombre.upper()
-                        payload["JugadorCURP"] = target_curp.upper()
+                        payload["JugadorNombre"] = target_nombre.upper() if target_nombre else None
+                        payload["JugadorCURP"] = target_curp.upper() if target_curp else None
                         if equipo_id:
                             payload["EquipoId"] = equipo_id
                         if liga_id:
@@ -406,8 +406,8 @@ class ConsumptionService:
         
         for c in consumos_pendientes:
             c.JugadorPersonaId = target_persona_id
-            c.JugadorNombre = target_nombre.upper()
-            c.JugadorCURP = target_curp.upper()
+            c.JugadorNombre = target_nombre.upper() if target_nombre else None
+            c.JugadorCURP = target_curp.upper() if target_curp else None
             if equipo_id:
                 c.EquipoId = equipo_id
             if liga_id:

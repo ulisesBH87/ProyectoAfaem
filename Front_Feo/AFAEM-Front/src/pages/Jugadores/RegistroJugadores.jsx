@@ -2057,10 +2057,12 @@ export default function RegistroJugadores() {
         const activePlayer = jugadores[uploadPlayerIndex];
         const activeName = activePlayer ? `${activePlayer.nombre || ''} ${activePlayer.primer_apellido || ''} ${activePlayer.segundo_apellido || ''}`.trim().toUpperCase() : '';
         const activeCurp = activePlayer?.curp ? activePlayer.curp.toUpperCase() : '';
+        const activeSlotId = activePlayer?.slotId || null;
         const data = await validarFotografia(file, "JUGADOR", {
           equipo_id: teamId,
           target_nombre: activeName,
-          target_curp: activeCurp
+          target_curp: activeCurp,
+          slot_id: activeSlotId
         });
         if (data.valido) {
           const imageUrl = `data:${data.tipo_imagen};base64,${data.imagen}`;
@@ -2156,10 +2158,12 @@ export default function RegistroJugadores() {
         const activePlayer = jugadores[uploadPlayerIndex];
         const activeName = activePlayer ? `${activePlayer.nombre || ''} ${activePlayer.primer_apellido || ''} ${activePlayer.segundo_apellido || ''}`.trim().toUpperCase() : '';
         const activeCurp = activePlayer?.curp ? activePlayer.curp.toUpperCase() : '';
+        const activeSlotId = activePlayer?.slotId || null;
         const params = new URLSearchParams({ tipo_registro: "JUGADOR" });
         if (teamId) params.append("equipo_id", teamId);
         if (activeName) params.append("target_nombre", activeName);
         if (activeCurp) params.append("target_curp", activeCurp);
+        if (activeSlotId) params.append("slot_id", activeSlotId);
 
         const formDataOcr = new FormData();
         formDataOcr.append('file_id', file);
