@@ -1323,6 +1323,7 @@ def get_mis_jugadores_reales(db: Session = Depends(get_db), usuario = Depends(ob
                 "EstatusDocumentos": estatus_docs,
                 "SeguroNombre": r.SeguroNombre or "Sin seguro asignado",
                 "EquipoId": r.EquipoId,
+                "NUI": r.NUI,
                 "InicioSeguro": r.InicioSeguro,
                 "Vigencia": r.Vigencia
             })
