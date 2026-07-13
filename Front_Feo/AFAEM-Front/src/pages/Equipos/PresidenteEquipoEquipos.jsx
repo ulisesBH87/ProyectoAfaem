@@ -457,12 +457,22 @@ export default function PresidenteEquipoEquipos() {
             <div className="teams-card-grid">
               {paginatedTeams.map((team) => (
                 <div key={team.EquipoId} className="team-card-refined">
-                  <div className="team-card-logo-wrapper">
+                  <div className="team-card-logo-wrapper" style={{ position: 'relative' }}>
                     {team.RutaLogo ? (
-                      <img
-                        src={obtenerRutaLogo(team.RutaLogo)}
-                        alt={team.NombreEquipo}
-                      />
+                      <>
+                        <img
+                          src={obtenerRutaLogo(team.RutaLogo)}
+                          alt={team.NombreEquipo}
+                        />
+                        <div className="replace-logo-overlay">
+                          <button
+                            onClick={() => handleAddLogoClick(team.EquipoId)}
+                            className="btn-replace-logo"
+                          >
+                            Reemplazar
+                          </button>
+                        </div>
+                      </>
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
                         <FaShieldAlt style={{ fontSize: '40px', color: '#94a3b8' }} />

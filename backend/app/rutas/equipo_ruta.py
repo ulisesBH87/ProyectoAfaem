@@ -1241,6 +1241,16 @@ async def actualizar_logo_equipo(
             
         await team_logo.seek(0)
         
+        # Eliminar logo anterior si existe
+        if equipo.RutaLogo:
+            try:
+                from app.servicios.documentos_servicio import resolver_ruta_absoluta
+                ruta_anterior_abs = resolver_ruta_absoluta(equipo.RutaLogo)
+                if ruta_anterior_abs and os.path.exists(ruta_anterior_abs):
+                    os.remove(ruta_anterior_abs)
+            except Exception as delete_error:
+                print(f"Error al eliminar logo anterior: {delete_error}")
+        
         # Guardar logo
         from app.utilidades.file_handler import guardar_logo
         form_data = {"team_logo": team_logo}
