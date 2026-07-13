@@ -1,5 +1,5 @@
 import COLORS from '../../styles/colors';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../../routes/paths';
 import DashboardTable from '../../components/DashboardTable';
@@ -44,6 +44,56 @@ export default function PresidenteEquipoEquipos() {
   const [sortOrder, setSortOrder] = useState('desc'); // 'asc' | 'desc'
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
+
+  const fileInputRef = useRef(null);
+  const [selectedTeamId, setSelectedTeamId] = useState(null);
+
+  const handleAddLogoClick = (teamId) => {
+    setSelectedTeamId(teamId);
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      Swal.fire('Error', 'El archivo supera el peso máximo permitido (5 MB)', 'error');
+      return;
+    }
+
+    try {
+      Swal.fire({
+        title: 'Cargando logo...',
+        text: 'Por favor espera',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
+      const response = await teamsService.uploadTeamLogo(selectedTeamId, file);
+      
+      Swal.fire({
+        title: '¡Éxito!',
+        text: 'El logo se ha actualizado correctamente.',
+        icon: 'success',
+        timer: 2000,
+        showConfirmButton: false
+      });
+
+      loadTeams();
+    } catch (err) {
+      console.error(err);
+      Swal.fire('Error', err.response?.data?.detail || 'No se pudo cargar el logo del equipo', 'error');
+    } finally {
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
 
   // Función para verificar estado de pago para agregar jugador
   const verificarEstadoPagoJugador = async (equipoId) => {
@@ -414,7 +464,25 @@ export default function PresidenteEquipoEquipos() {
                         alt={team.NombreEquipo}
                       />
                     ) : (
-                      <FaShieldAlt />
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                        <FaShieldAlt style={{ fontSize: '40px', color: '#94a3b8' }} />
+                        <button
+                          onClick={() => handleAddLogoClick(team.EquipoId)}
+                          style={{
+                            padding: '4px 10px',
+                            fontSize: '11px',
+                            fontWeight: 'bold',
+                            borderRadius: '8px',
+                            backgroundColor: 'var(--primary)',
+                            color: 'white',
+                            border: 'none',
+                            cursor: 'pointer',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                          }}
+                        >
+                          Añadir logo
+                        </button>
+                      </div>
                     )}
                   </div>
                   <div className="team-card-info">
@@ -512,6 +580,13 @@ export default function PresidenteEquipoEquipos() {
           </>
         )}
       </div>
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        accept="image/*"
+        style={{ display: 'none' }}
+      />
     </div>
   );
 }

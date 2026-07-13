@@ -428,6 +428,27 @@ export const checkTeamSlots = async (equipoId) => {
   }
 };
 
+/**
+ * SUBE EL LOGO DE UN EQUIPO EXISTENTE
+ */
+export const uploadTeamLogo = async (equipoJugandoId, file) => {
+  try {
+    const token = localStorage.getItem('token');
+    const formData = new FormData();
+    formData.append('team_logo', file);
+
+    const response = await api.post(`/equipo-temporal/equipos-jugando/${equipoJugandoId}/logo`, formData, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
 export const registrarGrupoJugadores = async (equipoTemporalId) => {
   try {
     const token = getAuthToken();
@@ -463,5 +484,6 @@ export default {
   getEquipoTemporalInfo,
   getPresidentesActivos,
   finalizarSolicitudCompleta,
-  checkTeamSlots
+  checkTeamSlots,
+  uploadTeamLogo
 };
