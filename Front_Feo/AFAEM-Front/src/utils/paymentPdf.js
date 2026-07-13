@@ -79,14 +79,14 @@ const renderOrdenPagoPDF = async ({
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);
   doc.text(`Orden de Pago No. ${ordenId}`, 15, 65);
-  doc.text(`Nombre de la escuela o club: ${schoolOrClub}`, 15, 71);
+  doc.text(`Nombre del solicitante: ${schoolOrClub}`, 15, 71);
 
   let yPosition = 77;
 
   // 4. Tabla de Conceptos (Cabecera)
   doc.setFillColor(94, 94, 94);
   doc.rect(15, yPosition, 180, 8, 'F');
-  
+
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
   doc.setTextColor(255, 255, 255);
@@ -102,7 +102,7 @@ const renderOrdenPagoPDF = async ({
   concepts.forEach((c) => {
     doc.rect(15, yPosition, 180, 12);
     doc.line(15 + 135, yPosition, 15 + 135, yPosition + 12);
-    
+
     doc.text(c.concepto, 17, yPosition + 7.5);
     doc.setFont(undefined, 'bold');
     doc.text(formatCurrency(c.importe), 15 + 135 + 22.5, yPosition + 7.5, { align: 'center' });
@@ -130,7 +130,7 @@ const renderOrdenPagoPDF = async ({
   yPosition += 8;
   doc.setFillColor(94, 94, 94);
   doc.rect(15, yPosition, 180, 8, 'F');
-  
+
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(255, 255, 255);
   doc.text('Mes/Año', 15 + 47.5, yPosition + 5.5, { align: 'center' });
@@ -168,7 +168,7 @@ const renderOrdenPagoPDF = async ({
   doc.text('N° de Cuenta: ' + bankInfo.cuenta, 20, yText + 5);
   doc.text('N° de Tarjeta: ' + bankInfo.tarjeta, 105, yText + 5);
   doc.text('Cuenta Clave: ' + bankInfo.clabe, 20, yText + 10);
-  
+
   doc.setFont(undefined, 'bold');
   doc.text('Referencia Obligatoria: ' + referenciaPago, 105, yText + 10);
 
@@ -189,12 +189,12 @@ export const generarPDFCuota = async ({
   referenciaPago = null
 }) => {
   const schoolOrClub = (
-    user.NombreEquipo || 
-    user.equipo || 
-    user.usuario?.nombre || 
-    user.usuario?.Nombre || 
-    user.Nombre || 
-    user.NombreUsuario || 
+    user.NombreEquipo ||
+    user.equipo ||
+    user.usuario?.nombre ||
+    user.usuario?.Nombre ||
+    user.Nombre ||
+    user.NombreUsuario ||
     'N/A'
   ).toUpperCase().trim();
 
@@ -240,12 +240,12 @@ export const generarPDFOrdenPagoJugador = async ({
   user = {}
 }) => {
   const schoolOrClub = (
-    user.NombreEquipo || 
-    user.equipo || 
-    user.usuario?.nombre || 
-    user.usuario?.Nombre || 
-    user.Nombre || 
-    user.NombreUsuario || 
+    user.NombreEquipo ||
+    user.equipo ||
+    user.usuario?.nombre ||
+    user.usuario?.Nombre ||
+    user.Nombre ||
+    user.NombreUsuario ||
     'N/A'
   ).toUpperCase().trim();
 
