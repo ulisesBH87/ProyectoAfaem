@@ -255,7 +255,7 @@ export default function Step3Cuotas({
     <div>
       <PasoHeader
         titulo="Cuotas y Seguros"
-        descripcion={esEntrenador ? "Asigna el seguro para el entrenador y selecciona su equipo." : "Configura la plantilla inicial del equipo y asigna sus seguros."}
+        descripcion={esEntrenador ? "Asigna el seguro para el cuerpo técnico y selecciona su equipo." : "Configura la plantilla inicial del equipo y asigna sus seguros."}
       />
 
       {/* Datos del expediente */}
@@ -404,7 +404,7 @@ export default function Step3Cuotas({
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
             <div style={{ width: 4, height: 18, background: `linear-gradient(180deg, ${C.amber}, ${C.orange})`, borderRadius: 4 }} />
             <h3 style={{ margin: 0, fontSize: 14, fontWeight: 800, color: 'white' }}>
-              {esEntrenador ? 'Seguro del Entrenador' : 'Plantilla y Seguros'}
+              {esEntrenador ? 'Seguro del Cuerpo Técnico' : 'Plantilla y Seguros'}
             </h3>
           </div>
 
@@ -447,7 +447,7 @@ export default function Step3Cuotas({
               .map(([titulo, lista, isPres]) => (
                 <div key={titulo} style={{ width: '100%' }}>
                   <div style={{ fontSize: 11, fontWeight: 800, color: C.amber, marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.8px' }}>
-                    {esEntrenador ? 'Selecciona el Seguro del Entrenador' : titulo}
+                    {esEntrenador ? 'Selecciona el Seguro del Cuerpo Técnico' : titulo}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {cargandoSeguros ? (

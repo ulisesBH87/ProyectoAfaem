@@ -1467,7 +1467,7 @@ export default function AdminPresidentes() {
           </button>
           <button onClick={() => navigate(`${ROUTES.ADMIN.REGISTRAR_PRESIDENTE}?esEntrenador=true`)}
             style={{ background: `linear-gradient(135deg, ${COLORS.warningDark}, ${COLORS.orangeDark})`, color: 'white', border: 'none', borderRadius: 10, padding: '12px 24px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
-            <FaPlus /> Registrar Entrenador
+            <FaPlus /> Registrar Cuerpo Técnico
           </button>
         </div>
       </div>
