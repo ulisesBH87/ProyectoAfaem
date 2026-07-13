@@ -248,7 +248,7 @@ export default function Step3Cuotas({
   };
 
   const hasInsurancesSelected = esEntrenador
-    ? segurosPresidente.some(seg => Number(asignacion[seg.id] || 0) > 0)
+    ? segurosJugadores.some(seg => Number(asignacion[seg.id] || 0) > 0)
     : totalAsignados > 0;
 
   return (
@@ -358,7 +358,19 @@ export default function Step3Cuotas({
               disabled
             >
               <option value="">Selecciona…</option>
-              {CATALOGO_ROLES.map(r => <option key={r.valor} value={r.valor}>{r.etiqueta}</option>)}
+              {esEntrenador ? (
+                segurosJugadores.map(s => (
+                  <option key={s.id} value={s.nombre.toUpperCase().trim()}>
+                    {s.nombre.toUpperCase().trim()}
+                  </option>
+                ))
+              ) : (
+                CATALOGO_ROLES.map(r => (
+                  <option key={r.valor} value={r.valor}>
+                    {r.etiqueta}
+                  </option>
+                ))
+              )}
             </select>
           </div>
           <div>
@@ -443,7 +455,7 @@ export default function Step3Cuotas({
           {/* Grid de seguros por categoría */}
           <div className={esEntrenador ? "" : "rp-grid-1to1"}>
             {[['Seguros Jugadores', segurosJugadores, false], ['Seguros Presidente', segurosPresidente, true]]
-              .filter(([, , isPres]) => !esEntrenador || isPres)
+              .filter(([, , isPres]) => esEntrenador ? !isPres : true)
               .map(([titulo, lista, isPres]) => (
                 <div key={titulo} style={{ width: '100%' }}>
                   <div style={{ fontSize: 11, fontWeight: 800, color: C.amber, marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.8px' }}>
@@ -458,7 +470,7 @@ export default function Step3Cuotas({
                       <SeguroRow
                         key={seg.id}
                         seg={seg}
-                        isPres={isPres}
+                        isPres={esEntrenador || isPres}
                         isChecked={Number(asignacion[seg.id] || 0) === 1}
                         asignacion={asignacion}
                         onSelectPres={() => handleSelectPres(seg, lista)}
