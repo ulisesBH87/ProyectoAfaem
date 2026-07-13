@@ -89,7 +89,7 @@ export default function RegistrarPresidente() {
     cuenta.contrasena === cuenta.confirmarContrasena &&
     esFechaPresidenteValida;
 
-  const selectedPresCount = segurosPresidente.reduce((acc, seg) => acc + Number(asignacion[seg.id] || 0), 0);
+  const selectedPresCount = (esEntrenador ? segurosJugadores : segurosPresidente).reduce((acc, seg) => acc + Number(asignacion[seg.id] || 0), 0);
   const isPaso3Ready = esEntrenador
     ? (!!selectedEquipoId && !!liga && selectedPresCount === 1)
     : (!!equipo?.trim() && !!liga?.trim() && Number(numPersonas) > 0 && totalAsignados === segurosRequeridos && nombreEquipoValido);

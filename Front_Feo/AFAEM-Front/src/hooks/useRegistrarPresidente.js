@@ -160,7 +160,7 @@ export function useRegistrarPresidente() {
   // ── Paso 2: Cuotas ───────────────────────────────────────────────────────
   const [numPersonas, setNumPersonas] = useState('');
   const [voucher, setVoucherState] = useState(null);
-  const segurosHook = useSeguros();
+  const segurosHook = useSeguros(esEntrenador);
   const { seguros, segurosPresidente, segurosJugadores, asignacion, setAsignacion, ligasCatalogo, totalAsignados, totalPagar, cargandoSeguros } = segurosHook;
   const segurosRequeridos = Number(numPersonas || 0);
 
@@ -474,13 +474,14 @@ export function useRegistrarPresidente() {
     };
   }, []);
 
-  // ── Sincronizar tipo de afiliación con seguro de presidente ─────────────
+  // ── Sincronizar tipo de afiliación con seguro de presidente/cuerpo técnico ─────────────
   useEffect(() => {
-    if (seguros.length > 0 && segurosPresidente.length > 0) {
-      const selected = segurosPresidente.find(seg => Number(asignacion[seg.id] || 0) > 0);
+    const segurosDeInteres = esEntrenador ? segurosJugadores : segurosPresidente;
+    if (seguros.length > 0 && segurosDeInteres.length > 0) {
+      const selected = segurosDeInteres.find(seg => Number(asignacion[seg.id] || 0) > 0);
       setTipoAfiliacion(selected ? selected.nombre.toUpperCase().trim() : '');
     }
-  }, [asignacion, seguros, segurosPresidente]);
+  }, [asignacion, seguros, segurosPresidente, segurosJugadores, esEntrenador]);
 
   // ── Pre-rellenar al avanzar al Paso 2 (Cuenta) o después ────────────────
   useEffect(() => {
@@ -684,9 +685,9 @@ export function useRegistrarPresidente() {
         setPaso(3);
         return;
       }
-      const selectedPresCount = segurosPresidente.reduce((acc, seg) => acc + Number(asignacion[seg.id] || 0), 0);
-      if (selectedPresCount !== 1) {
-        Swal.fire('Atención', 'Selecciona exactamente un seguro para el entrenador.', 'warning');
+      const selectedCoachCount = segurosJugadores.reduce((acc, seg) => acc + Number(asignacion[seg.id] || 0), 0);
+      if (selectedCoachCount !== 1) {
+        Swal.fire('Atención', 'Selecciona exactamente un seguro para el cuerpo técnico.', 'warning');
         setPaso(3);
         return;
       }

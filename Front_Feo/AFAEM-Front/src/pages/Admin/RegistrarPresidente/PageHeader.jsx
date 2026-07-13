@@ -35,7 +35,7 @@ export default function PageHeader({ onBack, esEntrenador }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ width: 5, height: 22, background: `linear-gradient(180deg, ${C.amber}, ${C.orange})`, borderRadius: 4 }} />
           <h1 style={{ margin: 0, fontSize: 22, fontWeight: 900, letterSpacing: '0.3px', color: 'black' }}>
-            {esEntrenador ? 'Registrar Nuevo Entrenador' : 'Registrar Nuevo Presidente'}
+            {esEntrenador ? 'Registrar Nuevo Cuerpo Técnico' : 'Registrar Nuevo Presidente'}
           </h1>
         </div>
       </div>
