@@ -1,3 +1,5 @@
+import { generarPDFCuota as generarPDFCuotaReal } from '../../utils/paymentPdf';
+
 export const safeSetField = (form, fieldName, value, fontSize) => {
   if (value === null || value === undefined || value === '') return;
   try {
@@ -13,113 +15,17 @@ export const safeSetField = (form, fieldName, value, fontSize) => {
   }
 };
 
-export const generarPDFCuota = (ordenId, refDirecta = null, { jsPDF, Swal, bankInfo, user, totalMostrado, catalogoSeguros, asignacionSeguros, referenciaPago }) => {
+export const generarPDFCuota = async (ordenId, refDirecta = null, { jsPDF, Swal, bankInfo, user, totalMostrado, catalogoSeguros, asignacionSeguros, referenciaPago }) => {
   try {
-    const doc = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'letter'
+    await generarPDFCuotaReal({
+      ordenId,
+      user,
+      bankInfo,
+      catalogoSeguros,
+      asignacionSeguros,
+      total: totalMostrado,
+      referenciaPago: refDirecta || referenciaPago
     });
-
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    let yPosition = 15;
-    const margin = 15;
-    const contentWidth = pageWidth - 2 * margin;
-
-    // Encabezado
-    doc.setFontSize(16);
-    doc.setTextColor(11, 78, 166);
-    doc.text('FICHA DE PAGO - AFAEM', pageWidth / 2, yPosition, { align: 'center' });
-    yPosition += 10;
-
-    doc.setFontSize(10);
-    doc.setTextColor(100, 100, 100);
-    doc.text(`Número de Orden: ${ordenId}`, pageWidth / 2, yPosition, { align: 'center' });
-    yPosition += 10;
-    const today = new Date().toLocaleDateString('es-MX');
-    doc.text(`Fecha: ${today}`, pageWidth / 2, yPosition, { align: 'center' });
-    yPosition += 12;
-
-    // Datos del Usuario
-    doc.setFontSize(12);
-    doc.setTextColor(11, 78, 166);
-    doc.text('DATOS DEL SOLICITANTE', margin, yPosition);
-    yPosition += 8;
-    doc.setFontSize(10);
-    doc.setTextColor(0, 0, 0);
-    const userName = (user.usuario?.nombre || user.usuario?.Nombre || user.Nombre || user.NombreUsuario || 'N/A').toUpperCase();
-    doc.text(`Nombre: ${userName}`, margin, yPosition);
-    yPosition += 6;
-    doc.text(`Correo: ${user.Correo || user.email || 'N/A'}`, margin, yPosition);
-    yPosition += 10;
-
-    // Datos Bancarios
-    doc.setFontSize(12);
-    doc.setTextColor(11, 78, 166);
-    doc.text('INSTRUCCIONES DE PAGO', margin, yPosition);
-    yPosition += 8;
-    doc.setFontSize(10);
-    doc.setTextColor(0, 0, 0);
-    doc.text(`Banco: ${bankInfo.banco}`, margin, yPosition);
-    yPosition += 6;
-    doc.text(`Titular: ${bankInfo.titular}`, margin, yPosition);
-    yPosition += 6;
-    doc.text(`Cuenta: ${bankInfo.cuenta}`, margin, yPosition);
-    yPosition += 6;
-    doc.text(`CLABE: ${bankInfo.clabe}`, margin, yPosition);
-    yPosition += 6;
-    const refFinal = refDirecta || referenciaPago || 'N/A';
-    doc.text(`Referencia Obligatoria: ${refFinal}`, margin, yPosition);
-    yPosition += 12;
-
-    // Desglose de Cuota
-    doc.setFontSize(12);
-    doc.setTextColor(11, 78, 166);
-    doc.text('DESGLOSE DE CUOTA', margin, yPosition);
-    yPosition += 8;
-    doc.setFontSize(9);
-    doc.setTextColor(0, 0, 0);
-
-    // Afiliaciones (Omitidas del PDF según requerimiento)
-
-    // Seguros
-    let tieneSeguros = false;
-    catalogoSeguros.forEach(seg => {
-      if (asignacionSeguros[seg.id] > 0) {
-        tieneSeguros = true;
-        const subtotal = seg.precio * asignacionSeguros[seg.id];
-        doc.text(`${seg.nombre} (x${asignacionSeguros[seg.id]})`, margin, yPosition);
-        doc.text(`$${subtotal.toFixed(2)}`, pageWidth - margin - 30, yPosition);
-        yPosition += 6;
-      }
-    });
-
-    // Línea divisoria
-    yPosition += 2;
-    doc.setDrawColor(11, 78, 166);
-    doc.line(margin, yPosition, pageWidth - margin, yPosition);
-    yPosition += 6;
-
-    // Total
-    doc.setFontSize(12);
-    doc.setTextColor(11, 78, 166);
-    doc.setFont(undefined, 'bold');
-    doc.text('TOTAL A PAGAR:', margin, yPosition);
-    doc.text(`$${totalMostrado.toFixed(2)}`, pageWidth - margin - 30, yPosition);
-    yPosition += 10;
-
-    // Nota final
-    doc.setFontSize(9);
-    doc.setTextColor(100, 100, 100);
-    doc.setFont(undefined, 'normal');
-    doc.text('Por favor, incluye la referencia obligatoria en tu transferencia bancaria.', margin, yPosition, { maxWidth: contentWidth });
-    yPosition += 6;
-    doc.text('Una vez realizado el pago, sube el comprobante en la plataforma para procesar tu registro. Recuerda que el comprobante de pago debe tener la referencia obligatoria impresa para que sea aceptado.', margin, yPosition, { maxWidth: contentWidth });
-
-    // Descargar PDF
-    const nombreArchivo = `Cuota_AFAEM_${ordenId}_${today.split('/').join('-')}.pdf`;
-    doc.save(nombreArchivo);
   } catch (err) {
     console.error('Error al generar PDF:', err);
     Swal.fire({ title: 'Error', text: 'No se pudo generar el PDF de la cuota', icon: 'error' });

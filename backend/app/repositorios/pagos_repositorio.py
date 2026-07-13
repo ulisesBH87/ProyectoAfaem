@@ -87,7 +87,7 @@ def buscar_orden_pago_repo(db, tipo_solicitud, usuario_id, equipo_id: Optional[i
 
 
 def generar_referencia_unica(db):
-    chars = string.ascii_letters + "123456789"  # A-Z, a-z, 1-9 (no 0)
+    chars = string.ascii_lowercase + "123456789"  # a-z, 1-9 (no 0)
     while True:
         ref = "".join(random.choice(chars) for _ in range(8))
         exists = db.query(OrdenPago).filter(OrdenPago.ReferenciaPago == ref).first()
