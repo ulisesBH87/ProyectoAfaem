@@ -169,7 +169,7 @@ export default function AdminCrearJugador() {
     tipoAfiliacion: 'JUGADOR',
     posicion: '',
     numCamiseta: '',
-    asociacion: 'Asociación de Morelos',
+    asociacion: 'Morelos',
     liga: '',
     equipo: '',
     categoria: '',
@@ -778,9 +778,9 @@ export default function AdminCrearJugador() {
       safeSetField(form, 'Correo electrónico', correoACJ, correoACJFs);
       safeSetField(form, 'Teléfono', (extractedData.codigoPais || '+52') + (extractedData.telefono || ''));
 
-      // La Asociación y campo fill_24 (empírico para Tipo Afiliación / Asociación) deben ser "Asociación de Morelos"
-      safeSetField(form, 'Asociación', 'Asociación de Morelos');
-      safeSetField(form, 'fill_24', 'Asociación de Morelos');
+      // La Asociación y campo fill_24 (empírico para Tipo Afiliación / Asociación) deben ser "Morelos"
+      safeSetField(form, 'Asociación', 'Morelos');
+      safeSetField(form, 'fill_24', 'Morelos');
 
       const ligaVal = extractedData.liga || '';
       const ligaFs = ligaVal.length > 35 ? 6 : ligaVal.length > 25 ? 7 : ligaVal.length > 18 ? 8 : 10;
