@@ -19,6 +19,7 @@ const AdminJugadores = lazy(() => import('./pages/Admin/AdminJugadores'));
 const AdminCrearJugador = lazy(() => import('./pages/Admin/AdminCrearJugador'));
 const AdminCatalogos = lazy(() => import('./pages/Admin/AdminCatalogos'));
 const AdminPresidentes = lazy(() => import('./pages/Admin/AdminPresidentes'));
+const AdminVerJugadoresEquipo = lazy(() => import('./pages/Admin/AdminVerJugadoresEquipo'));
 const RegistrarPresidente = lazy(() => import('./pages/Admin/RegistrarPresidente'));
 const AdminAuditorias = lazy(() => import('./pages/Admin/AdminAuditorias'));
 const ResumenesMaster = lazy(() => import('./pages/Master/ResumenesMaster'));
@@ -206,6 +207,7 @@ function App() {
             <Route path={ROUTES.ADMIN.EQUIPOS} element={<AdminGuard><AdminEquipos /></AdminGuard>} />
             <Route path={ROUTES.ADMIN.EQUIPOS_CREAR} element={<AdminGuard><ConfigurarEquipo /></AdminGuard>} />
             <Route path={ROUTES.ADMIN.EQUIPOS_COMPLETAR} element={<AdminGuard><CompletarJugadoresEquipo /></AdminGuard>} />
+            <Route path={ROUTES.ADMIN.EQUIPOS_JUGADORES} element={<AdminGuard><AdminVerJugadoresEquipo /></AdminGuard>} />
             <Route path={ROUTES.ADMIN.JUGADORES} element={<AdminGuard><AdminJugadores /></AdminGuard>} />
             <Route path={ROUTES.ADMIN.JUGADORES_CREAR} element={<AdminGuard><AdminCrearJugador /></AdminGuard>} />
             <Route path={ROUTES.ADMIN.CATALOGOS} element={<AdminGuard><AdminCatalogos /></AdminGuard>} />
