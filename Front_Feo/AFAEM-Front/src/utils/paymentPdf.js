@@ -156,21 +156,21 @@ const renderOrdenPagoPDF = async ({
   // 7. Recuadro Santander
   yPosition += 10;
   doc.setDrawColor(0, 0, 0);
-  doc.rect(15, yPosition, 180, 32);
+  doc.rect(15, yPosition, 180, 36);
 
   if (imgSantander) {
-    doc.addImage(imgSantander, 'PNG', 20, yPosition + 4, 30, 5.5);
+    doc.addImage(imgSantander, 'PNG', 20, yPosition + 3, 39, 13.6);
   }
 
-  const yText = yPosition + 14;
+  const yText = yPosition + 22;
   doc.setFontSize(8.5);
   doc.text('Nombre: ' + bankInfo.titular, 20, yText);
-  doc.text('N° de Cuenta: ' + bankInfo.cuenta, 20, yText + 6);
-  doc.text('N° de Tarjeta: ' + bankInfo.tarjeta, 105, yText + 6);
-  doc.text('Cuenta Clave: ' + bankInfo.clabe, 20, yText + 12);
+  doc.text('N° de Cuenta: ' + bankInfo.cuenta, 20, yText + 5);
+  doc.text('N° de Tarjeta: ' + bankInfo.tarjeta, 105, yText + 5);
+  doc.text('Cuenta Clave: ' + bankInfo.clabe, 20, yText + 10);
   
   doc.setFont(undefined, 'bold');
-  doc.text('Referencia Obligatoria: ' + referenciaPago, 105, yText + 12);
+  doc.text('Referencia Obligatoria: ' + referenciaPago, 105, yText + 10);
 
   const nombreArchivo = `Orden_Pago_${ordenId}_${today.replace(/\//g, '-')}.pdf`;
   doc.save(nombreArchivo);
