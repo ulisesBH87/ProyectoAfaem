@@ -1,5 +1,5 @@
 import COLORS from '../../styles/colors';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ROUTES } from '../../routes/paths';
@@ -24,6 +24,7 @@ import { verificarCurp } from '../../services/auth';
 import { API_BASE } from '../../config/config';
 import { openSecurePath } from '../../utils/secureFetch';
 import { buildCaptureSourceDialog, getCameraCaptureKind, showDocumentGuide, CAMERA_CAPTURE_KIND } from '../../utils/cameraCapture';
+import { registerSuccessfulScanAttempt } from '../../utils/scanAttemptWarning';
 import {
   BotonPrimario,
   BotonSecundario,
@@ -251,6 +252,7 @@ const StepBadge = ({ number, isActive, isDone }) => (
 );
 
 export default function CompletarJugadoresEquipo() {
+  const successfulScanCountsRef = useRef({});
   const { equipoId } = useParams();
   const navigate = useNavigate();
 
@@ -1256,7 +1258,14 @@ export default function CompletarJugadoresEquipo() {
         didOpen: () => { Swal.showLoading(); }
       });
       try {
-        const data = await validarFotografia(file);
+        const activeName = `${extractedData.nombreJugador || ''} ${extractedData.apellidoPaterno || ''} ${extractedData.apellidoMaterno || ''}`.trim().toUpperCase();
+        const data = await validarFotografia(file, "JUGADOR", {
+          equipo_id: equipoId,
+          liga_id: equipo?.LigaId || equipo?.ligaId,
+          target_nombre: activeName,
+          target_curp: extractedData.curp?.toUpperCase()
+        });
+        await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: documentKey, Swal });
         if (data.valido) {
           // Convertir base64 a URL y a File
           const imageUrl = `data:${data.tipo_imagen};base64,${data.imagen}`;
@@ -1349,10 +1358,17 @@ export default function CompletarJugadoresEquipo() {
       });
 
       try {
+        const activeName = `${extractedData.nombreJugador || ''} ${extractedData.apellidoPaterno || ''} ${extractedData.apellidoMaterno || ''}`.trim().toUpperCase();
+        const params = new URLSearchParams({ tipo_registro: "JUGADOR" });
+        if (equipoId) params.append("equipo_id", equipoId);
+        if (equipo?.LigaId || equipo?.ligaId) params.append("liga_id", equipo?.LigaId || equipo?.ligaId);
+        if (activeName) params.append("target_nombre", activeName);
+        if (extractedData.curp) params.append("target_curp", extractedData.curp.toUpperCase());
+
         const formDataOcr = new FormData();
         formDataOcr.append('file_id', file);
         const token = localStorage.getItem('token') || sessionStorage.getItem('temp_token');
-        const response = await fetch(`${API_BASE}/documentos/ocr`, {
+        const response = await fetch(`${API_BASE}/documentos/ocr?${params.toString()}`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`
@@ -1360,6 +1376,7 @@ export default function CompletarJugadoresEquipo() {
           body: formDataOcr
         });
         if (!response.ok) throw new Error('Error al obtener la información.');
+        await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: documentKey, Swal });
 
         const htmlText = await response.text();
         const parser = new DOMParser();

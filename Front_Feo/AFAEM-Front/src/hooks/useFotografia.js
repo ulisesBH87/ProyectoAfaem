@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import Swal from 'sweetalert2';
 import { validarFotografia } from '../services/foto';
 import { C } from '../pages/Admin/RegistrarPresidente/constants';
+import { registerSuccessfulScanAttempt } from '../utils/scanAttemptWarning';
 
 /**
  * useFotografia
@@ -9,10 +10,11 @@ import { C } from '../pages/Admin/RegistrarPresidente/constants';
  * Elimina la duplicación del bloque "cargar foto forzada" que existía
  * en dos ramas (else + catch) del componente original.
  */
-export function useFotografia({ setDocuments, setPreviews, tipoRegistro = "JUGADOR" }) {
+export function useFotografia({ setDocuments, setPreviews, tipoRegistro = "JUGADOR", opciones = {} }) {
   const [fotoError, setFotoError] = useState(null);
   const [fotoFallida, setFotoFallida] = useState(false);
   const [fotoArchivo, setFotoArchivo] = useState(null);
+  const successfulScanCountsRef = useRef({});
 
   // ── Helper interno: carga la foto sin validar (reutilizado en else+catch) ─
   const _cargarFotoForzada = (archivo) => {
@@ -42,7 +44,7 @@ export function useFotografia({ setDocuments, setPreviews, tipoRegistro = "JUGAD
   };
 
   // ── Procesar con validación automática ───────────────────────────────────
-  const procesarFoto = async (archivo) => {
+  const procesarFoto = async (archivo, opcionesExtra = {}) => {
     Swal.fire({
       title: 'Validando fotografía…',
       html: 'Verificando calidad y rostros. <b>Por favor espere.</b>',
@@ -52,7 +54,8 @@ export function useFotografia({ setDocuments, setPreviews, tipoRegistro = "JUGAD
     });
 
     try {
-      const data = await validarFotografia(archivo, tipoRegistro);
+      const data = await validarFotografia(archivo, tipoRegistro, { ...opciones, ...opcionesExtra });
+      await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: 'fotografia', Swal });
 
       if (data.valido) {
         // Convertir base64 → File

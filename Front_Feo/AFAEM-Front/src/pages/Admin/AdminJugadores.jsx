@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ROUTES } from '../../routes/paths';
 import * as bootstrap from 'bootstrap';
@@ -23,6 +23,7 @@ import Loader from '../../components/Loader';
 import CameraCaptureModal from '../../components/Common/CameraCaptureModal';
 import { useSecureBlob } from '../../hooks/useSecureBlob';
 import { openSecurePath } from '../../utils/secureFetch';
+import { registerSuccessfulScanAttempt } from '../../utils/scanAttemptWarning';
 import COLORS from '../../styles/colors';
 
 /**
@@ -465,6 +466,7 @@ const construirCardDocumentoHtml = (tipo, documento) => {
 };
 
 export default function AdminJugadores() {
+  const successfulScanCountsRef = useRef({});
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -685,7 +687,14 @@ export default function AdminJugadores() {
       });
 
       try {
-        const data = await validarFotografia(archivo);
+        const activeName = jugador.NombreCompleto || `${jugador.Nombre || ''} ${jugador.PrimerApellido || ''} ${jugador.SegundoApellido || ''}`.trim().toUpperCase();
+        const data = await validarFotografia(archivo, "JUGADOR", {
+          target_persona_id: jugador.PersonaId,
+          target_nombre: activeName,
+          target_curp: jugador.CURP || jugador.Curp,
+          equipo_id: jugador.EquipoId || jugador.EquipoID
+        });
+        await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: `documento-${tipoDocumentoId}`, Swal });
         if (data.valido) {
           // Convertir base64 a File
           const byteCharacters = atob(data.imagen);
@@ -1146,6 +1155,7 @@ export default function AdminJugadores() {
         body: formDataOcr
       });
       if (!response.ok) throw new Error('Error al conectar');
+      await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: 'ocr-modal-edicion', Swal });
 
       const htmlText = await response.text();
       const parser = new DOMParser();

@@ -69,14 +69,102 @@ def track_consumption(tipo_consumo: str, proveedor: str, tipo_registro_default: 
                         usuario_id = token_payload.get("usuario_id")
                         tipo_usuario = "INVITADO"
 
+                # ── Resolución y Auditoría de Contexto (Jugador, Equipo, Liga) ──
+                equipo_id = None
+                liga_id = None
+                target_persona_id = None
+                target_nombre = None
+                target_curp = None
+                
+                if request:
+                    try:
+                        eq_val = request.query_params.get("equipo_id")
+                        if eq_val:
+                            equipo_id = int(eq_val)
+                    except ValueError:
+                        pass
+                    
+                    try:
+                        lg_val = request.query_params.get("liga_id")
+                        if lg_val:
+                            liga_id = int(lg_val)
+                    except ValueError:
+                        pass
+
+                    try:
+                        p_val = request.query_params.get("target_persona_id")
+                        if p_val:
+                            target_persona_id = int(p_val)
+                    except ValueError:
+                        pass
+
+                    target_nombre = request.query_params.get("target_nombre")
+                    target_curp = request.query_params.get("target_curp")
+
+                # Resolver automáticamente si el ejecutor es Presidente de Equipo
+                if usuario_id and not equipo_id:
+                    try:
+                        from app.modelos.usuario_modelo import Usuario
+                        from app.modelos.presidente_equipo_modelo import PresidenteEquipo
+                        from app.modelos.equipo_modelo import EquiposJugando
+                        
+                        db_user = db.query(Usuario).filter(Usuario.UsuarioId == usuario_id).first()
+                        if db_user and db_user.RolId == 3:  # Presidente de Equipo
+                            pres = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == db_user.PersonaId).first()
+                            if pres:
+                                eq_jug = db.query(EquiposJugando).filter(EquiposJugando.PresidenteEquipoId == pres.PresidenteEquipoId).first()
+                                if eq_jug:
+                                    equipo_id = eq_jug.EquipoId
+                                    liga_id = eq_jug.LigaId
+                    except Exception as res_exc:
+                        logger.error(f"[CONSUMO RESOLVER ERROR] Falló auto-resolución de presidente: {res_exc}")
+
+                # Resolver jugador o directivo si se tiene el ID
+                if target_persona_id:
+                    try:
+                        from app.modelos.persona_modelo import Personas
+                        pers = db.query(Personas).filter(Personas.PersonaId == target_persona_id).first()
+                        if pers:
+                            target_nombre = f"{pers.Nombre} {pers.PrimerApellido} {pers.SegundoApellido or ''}".strip().upper()
+                            target_curp = pers.CURP
+                                    
+                        if not equipo_id:
+                            from app.modelos.miembro_equipo_modelo import MiembrosEquipo
+                            from app.modelos.equipo_modelo import EquiposJugando
+                            miembro = db.query(MiembrosEquipo).filter(MiembrosEquipo.PersonaId == target_persona_id, MiembrosEquipo.Estatus == True).first()
+                            if miembro:
+                                eq_jug = db.query(EquiposJugando).filter(EquiposJugando.EquiposJugandoId == miembro.EquipoID).first()
+                                if eq_jug:
+                                    equipo_id = eq_jug.EquipoId
+                                    liga_id = eq_jug.LigaId
+                    except Exception as player_exc:
+                        logger.error(f"[CONSUMO RESOLVER ERROR] Falló auto-resolución de persona registrada: {player_exc}")
+                else:
+                    # Si no hay ID de Persona registrado en el sistema, preservamos el nombre/CURP
+                    # solo si hay un slot_id o borrador_id que ancle el consumo a una entidad conocida.
+                    # Sin ese ancla, descartamos para evitar datos sucios de OCR no corregido.
+                    slot_id_req = request.query_params.get("slot_id") if request else None
+                    borrador_id_req = request.query_params.get("borrador_id") if request else None
+                    if not slot_id_req and not borrador_id_req:
+                        target_nombre = None
+                        target_curp = None
+
                 entity_type = None
                 entity_id = None
+                if request:
+                    if request.query_params.get("slot_id"):
+                        entity_type = "SLOT_JUGADOR"
+                        entity_id = request.query_params.get("slot_id")
+                    elif request.query_params.get("borrador_id"):
+                        entity_type = "BORRADOR_PRESIDENTE"
+                        entity_id = request.query_params.get("borrador_id")
+
                 metadata = {}
 
                 # Si la respuesta es un dict, podemos extraer entity_type y entity_id si los hay
                 if response_data and isinstance(response_data, dict):
-                    entity_type = response_data.get("entity_type")
-                    entity_id = response_data.get("entity_id")
+                    entity_type = response_data.get("entity_type") or entity_type
+                    entity_id = response_data.get("entity_id") or entity_id
                     metadata = response_data.get("metadata", {})
 
                 payload = {
@@ -95,7 +183,13 @@ def track_consumption(tipo_consumo: str, proveedor: str, tipo_registro_default: 
                     "ResultadoProveedor": resultado_proveedor,
                     "EsCobrable": es_cobrable,
                     "LlaveIdempotencia": idempotency_key,
-                    "Metadata": metadata
+                    "Metadata": metadata,
+                    # Datos de contexto agregados
+                    "JugadorPersonaId": target_persona_id,
+                    "JugadorNombre": target_nombre,
+                    "JugadorCURP": target_curp,
+                    "EquipoId": equipo_id,
+                    "LigaId": liga_id
                 }
                 
                 ConsumptionService.publicar_outbox(db, payload)

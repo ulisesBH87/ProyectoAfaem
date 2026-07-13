@@ -9,11 +9,17 @@ const AdminGuard = ({ children, requirePermission }) => {
 
   if (isLoading) return null;
 
-  // Si requirePermission está definido, se valida estrictamente por permiso;
-  // de lo contrario, se permite el acceso por rol de administrador.
-  const isAuthorized = requirePermission 
-    ? hasPermission(requirePermission) 
-    : (hasRole('ADMIN') || hasRole('ADMINISTRADOR'));
+  const isAdmin = hasRole('ADMIN') || hasRole('ADMINISTRADOR');
+  const isMaster = hasRole('MASTER') || (hasPermission('auditorias.ver') && !isAdmin);
+
+  let isAuthorized = false;
+  if (requirePermission === 'auditorias.ver') {
+    isAuthorized = isMaster;
+  } else if (requirePermission) {
+    isAuthorized = hasPermission(requirePermission);
+  } else {
+    isAuthorized = isAdmin;
+  }
 
   if (!token || !isAuthorized) {
     console.warn('Acceso no autorizado');

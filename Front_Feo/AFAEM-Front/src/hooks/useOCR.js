@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import Swal from 'sweetalert2';
 import { API_BASE } from '../config/config';
 import { toDDMMYYYY } from '../pages/Admin/RegistrarPresidente/constants';
+import { registerSuccessfulScanAttempt } from '../utils/scanAttemptWarning';
 
 export function extraerMontoDeVoucher(rawText) {
   if (!rawText) return null;
@@ -84,6 +85,7 @@ export function extraerMontoDeVoucher(rawText) {
  */
 export function useOCR() {
   const [ocrResults, setOcrResults] = useState({});
+  const successfulScanCountsRef = useRef({});
 
   // ── Mejora específica para Acta de Nacimiento ────────────────────────────
   const mejorarActa = (rawText, data) => {
@@ -180,8 +182,7 @@ export function useOCR() {
     return d;
   };
 
-  // ── Procesar documento vía OCR ───────────────────────────────────────────
-  const procesarOCR = async (docKey, file, onCancel, tipoRegistro = "JUGADOR") => {
+  const procesarOCR = async (docKey, file, onCancel, tipoRegistro = "JUGADOR", opciones = {}) => {
     Swal.fire({
       title: 'Analizando documento…',
       html: 'Extrayendo información. <b>Por favor espere.</b>',
@@ -194,7 +195,15 @@ export function useOCR() {
       const fd = new FormData();
       fd.append('file_id', file);
       const token = localStorage.getItem('token') || sessionStorage.getItem('temp_token');
-      const res = await fetch(`${API_BASE}/documentos/ocr?tipo_registro=${tipoRegistro}`, {
+      
+      const params = new URLSearchParams({ tipo_registro: tipoRegistro });
+      if (opciones.equipo_id) params.append("equipo_id", opciones.equipo_id);
+      if (opciones.liga_id) params.append("liga_id", opciones.liga_id);
+      if (opciones.target_persona_id) params.append("target_persona_id", opciones.target_persona_id);
+      if (opciones.target_nombre) params.append("target_nombre", opciones.target_nombre);
+      if (opciones.target_curp) params.append("target_curp", opciones.target_curp);
+
+      const res = await fetch(`${API_BASE}/documentos/ocr?${params.toString()}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -202,6 +211,7 @@ export function useOCR() {
         body: fd
       });
       if (!res.ok) throw new Error();
+      await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: docKey, Swal });
       const htmlText = await res.text();
       const doc = new DOMParser().parseFromString(htmlText, 'text/html');
 

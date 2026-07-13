@@ -45,6 +45,7 @@ export const RBACProvider = ({ children }) => {
       });
       
       const isAdmin = finalRoles.map(r => r.toUpperCase()).includes('ADMINISTRADOR') || finalRoles.map(r => r.toUpperCase()).includes('ADMIN');
+      const hasAuditoriaPerm = (data.Permisos || []).includes('auditorias.ver');
       
       if (isAdmin) {
         if (!finalMenus.find(m => m.Nombre === 'Catálogos')) {
@@ -63,10 +64,41 @@ export const RBACProvider = ({ children }) => {
         }
       }
 
+      const isMaster = finalRoles.map(r => r.toUpperCase()).includes('MASTER') || (hasAuditoriaPerm && !isAdmin);
+
+      if (isMaster) {
+        if (!finalMenus.find(m => m.Nombre === 'Consumos')) {
+          const resumenesIdx = finalMenus.findIndex(m => m.Nombre === 'Resúmenes' || m.Ruta === ROUTES.MASTER.RESUMENES);
+          const consumosMenu = {
+            Nombre: 'Consumos',
+            Icono: 'FaCoins',
+            Ruta: ROUTES.MASTER.CONSUMOS
+          };
+          if (resumenesIdx !== -1) {
+            finalMenus.splice(resumenesIdx + 1, 0, consumosMenu);
+          } else {
+            finalMenus.push(consumosMenu);
+          }
+        }
+      }
+
+      // Filtrar y eliminar de forma rígida los menús de Master para cualquier administrador
+      let menusProcesados = finalMenus;
+      if (!isMaster) {
+        menusProcesados = finalMenus.filter(m => 
+          m.Nombre !== 'Resúmenes' && 
+          m.Nombre !== 'Consumos' && 
+          m.Nombre !== 'Auditorías' &&
+          m.Ruta !== ROUTES.MASTER.RESUMENES &&
+          m.Ruta !== ROUTES.MASTER.CONSUMOS &&
+          m.Ruta !== ROUTES.MASTER.AUDITORIAS
+        );
+      }
+
       const newState = {
         roles: finalRoles,
         permissions: data.Permisos || [],
-        menus: finalMenus,
+        menus: menusProcesados,
         estatusId: (data.estatusId !== undefined && data.estatusId !== null) ? parseInt(data.estatusId) : null,
         isLoading: false
       };

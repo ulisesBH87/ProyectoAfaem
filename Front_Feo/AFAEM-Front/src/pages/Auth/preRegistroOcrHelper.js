@@ -1,4 +1,5 @@
 import { parsearTelefonoE164 } from './preRegistroUtils';
+import { registerSuccessfulScanAttempt } from '../../utils/scanAttemptWarning';
 
 export const mejorarExtraccionActa = (rawText, currentData) => {
   if (!rawText) return currentData;
@@ -106,7 +107,7 @@ export const mejorarExtraccionActa = (rawText, currentData) => {
   return data;
 };
 
-export const procesarOCRReal = async (docKey, file, prevDoc, { API_BASE, Swal, setOcrResults, setCodigoPais, setDocuments }) => {
+export const procesarOCRReal = async (docKey, file, prevDoc, { API_BASE, Swal, setOcrResults, setCodigoPais, setDocuments, successfulScanCountsRef }) => {
   Swal.fire({
     title: 'Analizando Documento...',
     html: 'Extrayendo información. <b>Por favor espere.</b>',
@@ -130,6 +131,7 @@ export const procesarOCRReal = async (docKey, file, prevDoc, { API_BASE, Swal, s
     });
 
     if (!response.ok) throw new Error('Ocurrió un error al cargar el documento');
+    await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: docKey, Swal });
 
     // Parsea el HTML del OCR para extraer los datos
     const htmlText = await response.text();

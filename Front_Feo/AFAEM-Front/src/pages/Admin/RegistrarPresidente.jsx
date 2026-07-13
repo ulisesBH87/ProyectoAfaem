@@ -87,13 +87,12 @@ export default function RegistrarPresidente() {
     !!cuenta.contrasena &&
     cuenta.contrasena.length >= 6 &&
     cuenta.contrasena === cuenta.confirmarContrasena &&
-    (esEntrenador ? true : (!!equipo?.trim() && !!liga?.trim())) &&
     esFechaPresidenteValida;
 
   const selectedPresCount = segurosPresidente.reduce((acc, seg) => acc + Number(asignacion[seg.id] || 0), 0);
   const isPaso3Ready = esEntrenador
     ? (!!selectedEquipoId && !!liga && selectedPresCount === 1)
-    : (Number(numPersonas) > 0 && totalAsignados === segurosRequeridos && nombreEquipoValido);
+    : (!!equipo?.trim() && !!liga?.trim() && Number(numPersonas) > 0 && totalAsignados === segurosRequeridos && nombreEquipoValido);
 
   const isPaso4Ready = !!documents.formatoAfiliacion;
 

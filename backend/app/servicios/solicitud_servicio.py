@@ -229,6 +229,28 @@ def enviar_solicitud_completa_servicio(db, solicitud_id, usuario_id, curp=None, 
         presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == usuario.PersonaId).first()
         if presidente:
             presidente.EstatusId = int(PresidenteEquipoEstatus.DOCUMENTOS_EN_REVISION)
+            # Asociar consumos del OCR/Foto realizados durante el pre-registro de este presidente
+            try:
+                from app.servicios.consumo_servicio import ConsumptionService
+                target_name = f"{usuario.PersonaRelacion.Nombre} {usuario.PersonaRelacion.PrimerApellido or ''} {usuario.PersonaRelacion.SegundoApellido or ''}".strip().upper()
+                
+                # Fetch related EquipoTemporal info to resolve team and league
+                from app.modelos.equipo_temporal_modelo import EquipoTemporal
+                equipo_temp = db.query(EquipoTemporal).filter(EquipoTemporal.SolicitudId == solicitud_id).first()
+                
+                ConsumptionService.asociar_consumos_pendientes(
+                    db=db,
+                    target_persona_id=usuario.PersonaId,
+                    target_nombre=target_name,
+                    target_curp=usuario.PersonaRelacion.CURP,
+                    usuario_id=usuario.UsuarioId,
+                    equipo_id=equipo_temp.EquipoId if equipo_temp else None,
+                    liga_id=equipo_temp.LigaId if equipo_temp else None,
+                    borrador_id=presidente.PresidenteEquipoId
+                )
+            except Exception as assoc_exc:
+                print(f"Error al asociar consumos de auto-registro de presidente: {assoc_exc}")
+
             db.commit()
 
     return {"mensaje": "Solicitud enviada correctamente"}

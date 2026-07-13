@@ -432,7 +432,7 @@ async def agregar_jugador_equipo_existente(
 
         # 6b. Consumir y actualizar el slot en la tabla temporal
         from app.repositorios.equipo_repositorio import actualizar_slot_repo
-        actualizar_slot_repo(db, equipo.EquipoId, nueva_persona.PersonaId, seguro_id)
+        slot_jugador = actualizar_slot_repo(db, equipo.EquipoId, nueva_persona.PersonaId, seguro_id)
 
         from app.repositorios.equipo_repositorio import doc_type_to_id_jugador, es_menor_de_edad
 
@@ -475,6 +475,23 @@ async def agregar_jugador_equipo_existente(
                 nombre_equipo=equipo.NombreEquipo,
                 nombre_jugador=nombre_jugador
             )
+
+        # Asociar consumos de OCR/foto realizados para este jugador
+        try:
+            from app.servicios.consumo_servicio import ConsumptionService
+            target_name = f"{nueva_persona.Nombre or ''} {nueva_persona.PrimerApellido or ''} {nueva_persona.SegundoApellido or ''}".strip().upper()
+            ConsumptionService.asociar_consumos_pendientes(
+                db=db,
+                target_persona_id=nueva_persona.PersonaId,
+                target_nombre=target_name,
+                target_curp=nueva_persona.CURP,
+                usuario_id=usuario.UsuarioId,
+                equipo_id=equipo.EquipoId,
+                liga_id=equipo_jugando.LigaId,
+                slot_id=slot_jugador.EquipoTemporalJugadorId if slot_jugador else None
+            )
+        except Exception as assoc_exc:
+            print(f"[CONSUMO] Error al asociar consumos del jugador admin: {assoc_exc}")
 
         db.commit()
 
@@ -2189,6 +2206,23 @@ async def registrar_presidente_admin(
         presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == nueva_persona.PersonaId).first()
         if presidente:
             presidente.EstatusId = 7
+
+        # Asociar consumos del OCR/Foto realizados durante el registro de este presidente por el administrador
+        try:
+            from app.servicios.consumo_servicio import ConsumptionService
+            target_name = f"{nueva_persona.Nombre} {nueva_persona.PrimerApellido or ''} {nueva_persona.SegundoApellido or ''}".strip().upper()
+            ConsumptionService.asociar_consumos_pendientes(
+                db=db,
+                target_persona_id=nueva_persona.PersonaId,
+                target_nombre=target_name,
+                target_curp=nueva_persona.CURP,
+                usuario_id=usuario.UsuarioId,
+                equipo_id=nuevo_equipo_temporal.EquipoId if 'nuevo_equipo_temporal' in locals() and nuevo_equipo_temporal else None,
+                liga_id=resolved_liga_id if 'resolved_liga_id' in locals() else None,
+                borrador_id=borradorId
+            )
+        except Exception as assoc_exc:
+            print(f"Error al asociar consumos del presidente registrado: {assoc_exc}")
 
         db.commit()
         
