@@ -42,7 +42,7 @@ export default function Step2Cuenta({
       }}>
         <span style={{ fontSize: 20 }}>🔐</span>
         <p style={{ margin: 0, fontSize: 13, color: COLORS.overlayWhite70, lineHeight: 1.5 }}>
-          Como <strong style={{ color: C.amberLight }}>Administrador</strong> defines la contraseña del nuevo presidente.
+          Como <strong style={{ color: C.amberLight }}>Administrador</strong> defines la contraseña del nuevo presidente/cuerpo técnico.
           La cuenta se activará <strong style={{ color: C.amberLight }}>al instante</strong> sin procesos de validación.
         </p>
       </div>

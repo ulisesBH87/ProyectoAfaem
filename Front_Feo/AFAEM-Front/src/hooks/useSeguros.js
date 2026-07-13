@@ -7,7 +7,7 @@ import { C } from '../pages/Admin/RegistrarPresidente/constants';
  * Carga el catálogo de seguros y ligas desde el API, mantiene el estado
  * de asignación y calcula totales derivados.
  */
-export function useSeguros() {
+export function useSeguros(esEntrenador = false) {
   const [seguros, setSeguros] = useState([]);
   const [asignacion, setAsignacion] = useState({});
   const [cargandoSeguros, setCargandoSeguros] = useState(false);
@@ -51,11 +51,22 @@ export function useSeguros() {
           precio: Number(s.costo || s.Costo || s.precio || s.Precio || 0),
         }));
         setSeguros(mapped);
-        // Inicializar asignación: TIPO J = 1, resto = 0
+        
+        // Inicializar asignación
         const init = {};
-        mapped.forEach(s => {
-          init[s.id] = s.nombre.toUpperCase().trim() === 'TIPO J' ? 1 : 0;
-        });
+        if (esEntrenador) {
+          mapped.forEach(s => {
+            init[s.id] = 0;
+          });
+          const jugadorSeguros = mapped.filter(s => !['TIPO G', 'TIPO J'].includes(s.nombre.toUpperCase().trim()));
+          if (jugadorSeguros.length > 0) {
+            init[jugadorSeguros[0].id] = 1;
+          }
+        } else {
+          mapped.forEach(s => {
+            init[s.id] = s.nombre.toUpperCase().trim() === 'TIPO J' ? 1 : 0;
+          });
+        }
         setAsignacion(init);
       } catch {
         setSeguros([]);
