@@ -148,8 +148,7 @@ const renderOrdenPagoPDF = async ({
   doc.line(15 + 125, yPosition, 15 + 125, yPosition + 12);
   doc.line(15 + 150, yPosition, 15 + 150, yPosition + 12);
 
-  const mainConcept = concepts[0]?.concepto || 'ABONO A CUENTA DE LA ASOCIACION';
-  doc.text(mainConcept, 17, yPosition + 7.5);
+  doc.text('ABONO A CUENTA DE LA ASOCIACION', 17, yPosition + 7.5);
   doc.text('Si [ ]', 15 + 125 + 12.5, yPosition + 7.5, { align: 'center' });
   yPosition += 12;
 
