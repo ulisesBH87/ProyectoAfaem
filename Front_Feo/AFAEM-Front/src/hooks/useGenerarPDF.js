@@ -110,8 +110,17 @@ export function useGenerarPDF() {
       safeField(form, 'Teléfono', codPais + telLocal);
 
       // Afiliación
-      safeField(form, 'fill_20', tipoAfiliacion);
-      safeField(form, 'Tipo', tipoAfiliacion);
+      const obtenerLetraSeguro = (nombreSeguro) => {
+        if (!nombreSeguro) return '';
+        const limpio = nombreSeguro.toString().trim().toUpperCase();
+        if (limpio.startsWith('TIPO ')) {
+          return limpio.replace('TIPO ', '').trim();
+        }
+        return limpio;
+      };
+      const seguroLetra = obtenerLetraSeguro(tipoAfiliacion);
+      safeField(form, 'fill_20', seguroLetra);
+      safeField(form, 'Tipo', seguroLetra);
       safeField(form, 'Asociación', asociacion);
 
       // Liga (tamaño adaptativo)

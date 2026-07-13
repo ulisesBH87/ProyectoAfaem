@@ -275,7 +275,7 @@ export default function PresidenteEquipoMisJugadores() {
       <div className="dashboard-card" style={{ padding: '24px' }}>
         <div className="table-header-actions" style={{ marginBottom: '20px' }}>
           <h3 className="table-header-title">
-            {selectedTeamInfo ? `Plantilla de ${selectedTeamInfo.NombreEquipo}` : 'Lista de jugadores'}
+            {selectedTeamInfo ? `Jugadores de ${selectedTeamInfo.NombreEquipo}` : 'Lista de jugadores'}
           </h3>
 
           <div className="table-actions-group">

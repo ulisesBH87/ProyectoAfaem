@@ -18,6 +18,7 @@ export const ROUTES = {
     EQUIPOS: "/ad/eq",
     EQUIPOS_CREAR: "/ad/eq/c",
     EQUIPOS_COMPLETAR: "/ad/eq/cj/:equipoId",
+    EQUIPOS_JUGADORES: "/ad/eq/:equipoId/jugadores",
     JUGADORES: "/ad/j",
     JUGADORES_CREAR: "/ad/j/c",
     CATALOGOS: "/ad/cat",
@@ -143,6 +144,9 @@ export function mapOldToNewPath(oldPath) {
   } else if (cleanPath.startsWith('/admin/equipos/completar-jugadores/')) {
     const id = cleanPath.substring('/admin/equipos/completar-jugadores/'.length);
     cleanPath = ROUTES.ADMIN.EQUIPOS_COMPLETAR.replace(':equipoId', id);
+  } else if (cleanPath.startsWith('/admin/equipos/') && cleanPath.endsWith('/jugadores')) {
+    const id = cleanPath.substring('/admin/equipos/'.length, cleanPath.length - '/jugadores'.length);
+    cleanPath = ROUTES.ADMIN.EQUIPOS_JUGADORES.replace(':equipoId', id);
   } else {
     // Exact matching
     cleanPath = OLD_TO_NEW_ROUTES[cleanPath] || cleanPath;
