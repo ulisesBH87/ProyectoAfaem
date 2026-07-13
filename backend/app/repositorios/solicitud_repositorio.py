@@ -500,6 +500,9 @@ def enviar_solicitud_completa_repo(db: Session, solicitud_id: int):
     if solicitud:
         solicitud.EstatusValidacion = 1 # ESPERA
         solicitud.FechaSolicitud = datetime.now()
-        db.commit()
+        db.flush()
         return solicitud
     return None
+
+
+
