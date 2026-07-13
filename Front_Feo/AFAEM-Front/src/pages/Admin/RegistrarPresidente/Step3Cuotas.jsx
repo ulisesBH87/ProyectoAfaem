@@ -737,7 +737,11 @@ export default function Step3Cuotas({
                 borderBottomRightRadius: '24px'
               }}>
                 <div>
-                  {esPresidente ? (
+                  {esEntrenador ? (
+                    <div style={{ fontSize: '13px', color: COLORS.overlayWhite60 }}>
+                      Este seguro se asignará a tu cuenta de Cuerpo Técnico.
+                    </div>
+                  ) : esPresidente ? (
                     <div style={{ fontSize: '13px', color: COLORS.overlayWhite60 }}>
                       Este seguro se asignará a tu cuenta de Presidente de Equipo.
                     </div>
@@ -798,7 +802,15 @@ export default function Step3Cuotas({
                   <button
                     type="button"
                     onClick={() => {
-                      if (esPresidente) {
+                      if (esEntrenador) {
+                        setAsignacion(prev => {
+                          const next = { ...prev };
+                          segurosJugadores.forEach(item => {
+                            next[item.id] = item.id === seguroDetalle.id ? 1 : 0;
+                          });
+                          return next;
+                        });
+                      } else if (esPresidente) {
                         setAsignacion(prev => {
                           const next = { ...prev };
                           segurosPresidente.forEach(item => {
