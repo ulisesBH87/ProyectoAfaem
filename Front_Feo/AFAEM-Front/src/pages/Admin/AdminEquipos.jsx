@@ -9,10 +9,22 @@ import { FaSearch, FaSyncAlt, FaSortAmountDown, FaSortAmountUp, FaPlus, FaEdit, 
 import { Modal, BotonPrimario, BotonSecundario, EntradaFormulario, EntradaSeleccion } from '../../components/partials';
 import Loader from '../../components/Loader';
 import COLORS from '../../styles/colors';
+import { API_BASE } from '../../config/config';
 
 export default function AdminEquipos() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+
+  // Helper para normalizar la ruta del logo del equipo
+  const obtenerRutaLogo = (rutaLogo) => {
+    if (!rutaLogo) return '';
+    if (rutaLogo.startsWith('http')) return rutaLogo;
+    let cleanPath = rutaLogo.replace(/\\/g, '/');
+    if (!cleanPath.startsWith('uploads/') && !cleanPath.startsWith('/uploads/')) {
+      cleanPath = `uploads/${cleanPath.startsWith('/') ? cleanPath.substring(1) : cleanPath}`;
+    }
+    return `${API_BASE}${cleanPath.startsWith('/') ? '' : '/'}${cleanPath}`;
+  };
   const [esNavegacionCruzada, setEsNavegacionCruzada] = useState(false);
 
   const [equipos, setEquipos] = useState([]);
@@ -359,6 +371,7 @@ export default function AdminEquipos() {
 
   const columns = [
     { key: "EquipoId", label: "ID" },
+    { key: "Logo", label: "Logo" },
     { key: "NombreEquipo", label: "Equipo" },
     { key: "Liga", label: "Liga / Cat." },
     { key: "Presidente", label: "Presidente Resp." },
@@ -370,6 +383,38 @@ export default function AdminEquipos() {
   const dataTransformada = paginatedEquipos.map(eq => ({
     _original: eq,
     EquipoId: <span style={{ fontWeight: '700', color: COLORS.slate500 }}>#{eq.EquipoId}</span>,
+    Logo: eq.RutaLogo ? (
+      <div style={{
+        width: '40px',
+        height: '40px',
+        borderRadius: '8px',
+        overflow: 'hidden',
+        border: `1.5px solid ${COLORS.slate200}`,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: '#f8fafc'
+      }}>
+        <img
+          src={obtenerRutaLogo(eq.RutaLogo)}
+          alt={eq.NombreEquipo}
+          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+        />
+      </div>
+    ) : (
+      <div style={{
+        width: '40px',
+        height: '40px',
+        borderRadius: '8px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: '#fff7ed',
+        border: '1px solid #ffedd5'
+      }}>
+        <FaShieldAlt style={{ fontSize: '20px', color: '#f97316' }} />
+      </div>
+    ),
     NombreEquipo: <span style={{ fontWeight: '800', color: COLORS.slate800 }}>{eq.NombreEquipo}</span>,
     Liga: (
       <div>
@@ -673,19 +718,27 @@ export default function AdminEquipos() {
             boxShadow: `0 4px 6px -1px ${COLORS.warningBgTranslucent05}`
           }}>
             <div style={{
-              fontSize: '22px',
-              background: COLORS.warning,
-              color: 'white',
               width: '42px',
               height: '42px',
               borderRadius: '12px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: `0 4px 12px ${COLORS.warningBgTranslucent30}`,
+              boxShadow: equipoEdicion?.RutaLogo ? 'none' : `0 4px 12px ${COLORS.warningBgTranslucent30}`,
+              background: equipoEdicion?.RutaLogo ? 'white' : COLORS.warning,
+              border: equipoEdicion?.RutaLogo ? `1px solid ${COLORS.slate200}` : 'none',
+              overflow: 'hidden',
               flexShrink: 0
             }}>
-              <FaShieldAlt />
+              {equipoEdicion?.RutaLogo ? (
+                <img
+                  src={obtenerRutaLogo(equipoEdicion.RutaLogo)}
+                  alt="Logo del equipo"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              ) : (
+                <FaShieldAlt style={{ fontSize: '22px', color: 'white' }} />
+              )}
             </div>
             <div>
               <h4 style={{ margin: 0, fontSize: '15px', color: COLORS.warningBrown, fontWeight: '800' }}>Edición de Ficha de equipo</h4>

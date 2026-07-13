@@ -119,6 +119,7 @@ class DirectorioEquipoResponse(BaseModel):
     FechaCreacion: datetime
     Estatus: bool
     SlotsComprados: Optional[int] = 0
+    RutaLogo: Optional[str] = None
 
     class Config:
         from_attributes = True
