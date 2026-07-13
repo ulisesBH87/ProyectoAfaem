@@ -948,7 +948,8 @@ def obtener_directorio_equipos_repo(db):
         func.coalesce(slots_subquery.c.SlotsComprados, 0).label("SlotsComprados"),
         EntrenadorPresidente.PresidenteEquipoId.label("EntrenadorEquipoId"),
         EntrenadorPersona.Nombre.label("EntrenadorNombre"),
-        EntrenadorPersona.PrimerApellido.label("EntrenadorPrimerApellido")
+        EntrenadorPersona.PrimerApellido.label("EntrenadorPrimerApellido"),
+        Equipos.RutaLogo
     ).join(
         Equipos, EquiposJugando.EquipoId == Equipos.EquipoId
     ).join(
@@ -988,6 +989,7 @@ def obtener_directorio_equipos_repo(db):
         entrenador_equipo_id = row[10]
         entrenador_nombre = row[11]
         entrenador_apellido = row[12]
+        ruta_logo = row[13]
 
         entrenador_nombre_completo = "Sin entrenador asignado"
         if entrenador_nombre and entrenador_apellido:
@@ -1014,7 +1016,8 @@ def obtener_directorio_equipos_repo(db):
             "NumeroJugadoresRegistrados": ej.CantidadJugadores,
             "FechaCreacion": ej.EquipoRelacion.FechaCreacion,
             "Estatus": ej.EquipoRelacion.Estatus,
-            "SlotsComprados": int(slots_comprados or 0)
+            "SlotsComprados": int(slots_comprados or 0),
+            "RutaLogo": ruta_logo
         })
 
     return equipos_response

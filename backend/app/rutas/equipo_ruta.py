@@ -1193,6 +1193,81 @@ def get_user_real_teams(db: Session = Depends(get_db), usuario = Depends(obtener
         #print(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Error interno SQL")
 
+@router.post("/equipos-jugando/{equipo_jugando_id}/logo")
+async def actualizar_logo_equipo(
+    equipo_jugando_id: int,
+    team_logo: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    usuario = Depends(obtener_usuario_actual)
+):
+    try:
+        rol_id = getattr(usuario, 'RolId', None)
+        
+        if rol_id != 1:
+            presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == usuario.PersonaId).first()
+            if not presidente:
+                raise HTTPException(status_code=403, detail="Acceso denegado: No tienes un perfil de directivo asociado")
+            
+            # Verificar si este presidente/entrenador es responsable de este EquiposJugando
+            ej = db.query(EquiposJugando).filter(
+                EquiposJugando.EquiposJugandoId == equipo_jugando_id,
+                (EquiposJugando.PresidenteEquipoId == presidente.PresidenteEquipoId) | 
+                (EquiposJugando.EntrenadorEquipoId == presidente.PresidenteEquipoId)
+            ).first()
+            if not ej:
+                raise HTTPException(status_code=403, detail="Acceso denegado: No eres el encargado de este equipo")
+        else:
+            ej = db.query(EquiposJugando).filter(EquiposJugando.EquiposJugandoId == equipo_jugando_id).first()
+            if not ej:
+                raise HTTPException(status_code=404, detail="Equipo no encontrado")
+
+        if not ej.EquipoId:
+            raise HTTPException(status_code=404, detail="Equipo no tiene un ID de equipo válido")
+            
+        equipo = db.query(Equipos).filter(Equipos.EquipoId == ej.EquipoId).first()
+        if not equipo:
+            raise HTTPException(status_code=404, detail="Registro de equipo no encontrado en la base de datos")
+
+        # Validaciones de archivo
+        contenido = await team_logo.read()
+        if len(contenido) > 5 * 1024 * 1024:
+            raise HTTPException(status_code=400, detail="El archivo supera el peso máximo permitido (5 MB)")
+        
+        # Validar tipo de archivo
+        extensiones_validas = [".png", ".jpg", ".jpeg", ".gif", ".webp"]
+        ext = os.path.splitext(team_logo.filename)[1].lower() if team_logo.filename else ""
+        if ext not in extensiones_validas:
+            raise HTTPException(status_code=400, detail="El archivo no es una imagen válida (PNG, JPG, JPEG, GIF, WEBP)")
+            
+        await team_logo.seek(0)
+        
+        # Eliminar logo anterior si existe
+        if equipo.RutaLogo:
+            try:
+                from app.servicios.documentos_servicio import resolver_ruta_absoluta
+                ruta_anterior_abs = resolver_ruta_absoluta(equipo.RutaLogo)
+                if ruta_anterior_abs and os.path.exists(ruta_anterior_abs):
+                    os.remove(ruta_anterior_abs)
+            except Exception as delete_error:
+                print(f"Error al eliminar logo anterior: {delete_error}")
+        
+        # Guardar logo
+        from app.utilidades.file_handler import guardar_logo
+        form_data = {"team_logo": team_logo}
+        await guardar_logo(form_data, equipo, db)
+        
+        db.commit()
+        return {
+            "success": True, 
+            "mensaje": "Logo actualizado exitosamente",
+            "ruta_logo": equipo.RutaLogo
+        }
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error al actualizar el logo: {str(e)}")
+
 @router.get("/mis-jugadores-reales", response_model=List[MiembroResponse])
 def get_mis_jugadores_reales(db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
     try:
