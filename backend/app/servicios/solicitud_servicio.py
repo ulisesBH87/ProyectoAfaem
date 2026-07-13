@@ -235,7 +235,6 @@ def enviar_solicitud_completa_servicio(db, solicitud_id, usuario_id, curp=None, 
                 target_name = f"{usuario.PersonaRelacion.Nombre} {usuario.PersonaRelacion.PrimerApellido or ''} {usuario.PersonaRelacion.SegundoApellido or ''}".strip().upper()
                 
                 # Fetch related EquipoTemporal info to resolve team and league
-                from app.modelos.equipo_temporal_modelo import EquipoTemporal
                 equipo_temp = db.query(EquipoTemporal).filter(EquipoTemporal.SolicitudId == solicitud_id).first()
                 
                 ConsumptionService.asociar_consumos_pendientes(
@@ -251,8 +250,7 @@ def enviar_solicitud_completa_servicio(db, solicitud_id, usuario_id, curp=None, 
             except Exception as assoc_exc:
                 print(f"Error al asociar consumos de auto-registro de presidente: {assoc_exc}")
 
-            db.commit()
-
+    db.commit()
     return {"mensaje": "Solicitud enviada correctamente"}
 
 # --- SECCIÓN ADMINISTRADORA: VALIDACIÓN DE SOLICITUDES ---
