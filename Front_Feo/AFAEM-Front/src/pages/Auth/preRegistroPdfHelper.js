@@ -235,8 +235,17 @@ export const handleDownloadFormato = async ({ Swal, PDFDocument, documents, ocrR
     safeSetField(form, 'Teléfono', telLocalPdf ? (codigoPais + telLocalPdf) : '');
 
     // Tipo de afiliación
-    safeSetField(form, 'fill_20', tipoAfiliacion);
-    safeSetField(form, 'Tipo', tipoAfiliacion);
+    const obtenerLetraSeguro = (nombreSeguro) => {
+      if (!nombreSeguro) return '';
+      const limpio = nombreSeguro.toString().trim().toUpperCase();
+      if (limpio.startsWith('TIPO ')) {
+        return limpio.replace('TIPO ', '').trim();
+      }
+      return limpio;
+    };
+    const seguroLetra = obtenerLetraSeguro(tipoAfiliacion);
+    safeSetField(form, 'fill_20', seguroLetra);
+    safeSetField(form, 'Tipo', seguroLetra);
 
     // Asociación, Liga, Equipo
     if (asociacion) safeSetField(form, 'Asociación', asociacion.toUpperCase());
