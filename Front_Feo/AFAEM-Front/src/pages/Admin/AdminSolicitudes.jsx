@@ -615,134 +615,139 @@ export default function AdminSolicitudes() {
         </div>
       )}
 
-      <AdminTabs />
+      <div className="fade-in-up" style={{ padding: '20px 0' }}>
+        <AdminTabs />
+        {/* HEADER SECTION */}
+        <header className="admin-dashboard-header">
+          <div>
+            <h2 className="admin-dashboard-title">
+              Validación de Solicitudes
+            </h2>
+            <p style={{ color: 'var(--text-muted)', fontWeight: '500', fontSize: '15px', margin: '6px 0 0' }}>
+              Revisa y aprueba las solicitudes de registro de presidente de equipo
+            </p>
+          </div>
+        </header>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '20px', marginBottom: '30px' }}>
+          {/* TARJETA PENDIENTES — Primero */}
+          <div
+            onClick={() => setFiltroEstatus('1')}
+            style={{
+              background: 'white', padding: '20px', borderRadius: '12px',
+              border: filtroEstatus === '1' ? `2px solid ${COLORS.warning}` : `1px solid ${COLORS.slate200}`,
+              textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s ease',
+              boxShadow: filtroEstatus === '1' ? `0 4px 12px ${COLORS.warningBgTranslucent}` : 'none',
+              transform: filtroEstatus === '1' ? 'translateY(-2px)' : 'none'
+            }}
+          >
+            <div style={{ fontSize: '24px', marginBottom: '5px', color: COLORS.warning }}><FaHourglassHalf /></div>
+            <div style={{ fontSize: '12px', color: COLORS.slate500, fontWeight: '700' }}>PENDIENTES</div>
+            <div style={{ fontSize: '20px', fontWeight: '800', color: COLORS.warning }}>{stats.pendientes}</div>
+          </div>
 
-      <div className="admin-dashboard-header">
-        <div>
-          <h2 className="admin-dashboard-title" style={{ margin: 0 }}>Validación de Solicitudes</h2>
-          <p style={{ margin: '4px 0 0', fontSize: '14px', color: COLORS.slate500 }}>Revisa y aprueba las solicitudes de registro de presidente de equipo</p>
-        </div>
-      </div>
+          {/* TARJETA TOTAL */}
+          <div
+            onClick={() => setFiltroEstatus('todos')}
+            style={{
+              background: 'white', padding: '20px', borderRadius: '12px',
+              border: filtroEstatus === 'todos' ? `2px solid ${COLORS.primary}` : `1px solid ${COLORS.slate200}`,
+              textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s ease',
+              boxShadow: filtroEstatus === 'todos' ? `0 4px 12px ${COLORS.primaryBgTranslucent}` : 'none',
+              transform: filtroEstatus === 'todos' ? 'translateY(-2px)' : 'none'
+            }}
+          >
+            <div style={{ fontSize: '24px', marginBottom: '5px', color: COLORS.primary }}><FaClipboardList /></div>
+            <div style={{ fontSize: '12px', color: COLORS.slate500, fontWeight: '700' }}>TOTAL</div>
+            <div style={{ fontSize: '20px', fontWeight: '800', color: COLORS.slate800 }}>{stats.total}</div>
+          </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '20px', marginBottom: '30px' }}>
-        {/* TARJETA PENDIENTES — Primero */}
-        <div
-          onClick={() => setFiltroEstatus('1')}
-          style={{
-            background: 'white', padding: '20px', borderRadius: '12px',
-            border: filtroEstatus === '1' ? `2px solid ${COLORS.warning}` : `1px solid ${COLORS.slate200}`,
-            textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s ease',
-            boxShadow: filtroEstatus === '1' ? `0 4px 12px ${COLORS.warningBgTranslucent}` : 'none',
-            transform: filtroEstatus === '1' ? 'translateY(-2px)' : 'none'
-          }}
-        >
-          <div style={{ fontSize: '24px', marginBottom: '5px', color: COLORS.warning }}><FaHourglassHalf /></div>
-          <div style={{ fontSize: '12px', color: COLORS.slate500, fontWeight: '700' }}>PENDIENTES</div>
-          <div style={{ fontSize: '20px', fontWeight: '800', color: COLORS.warning }}>{stats.pendientes}</div>
-        </div>
+          {/* TARJETA APROBADAS */}
+          <div
+            onClick={() => setFiltroEstatus('2')}
+            style={{
+              background: 'white', padding: '20px', borderRadius: '12px',
+              border: filtroEstatus === '2' ? `2px solid ${COLORS.success}` : `1px solid ${COLORS.slate200}`,
+              textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s ease',
+              boxShadow: filtroEstatus === '2' ? `0 4px 12px ${COLORS.successBgTranslucent}` : 'none',
+              transform: filtroEstatus === '2' ? 'translateY(-2px)' : 'none'
+            }}
+          >
+            <div style={{ fontSize: '24px', marginBottom: '5px', color: COLORS.success }}><FaCheckCircle /></div>
+            <div style={{ fontSize: '12px', color: COLORS.slate500, fontWeight: '700' }}>APROBADAS</div>
+            <div style={{ fontSize: '20px', fontWeight: '800', color: COLORS.success }}>{stats.aprobadas}</div>
+          </div>
 
-        {/* TARJETA TOTAL */}
-        <div
-          onClick={() => setFiltroEstatus('todos')}
-          style={{
-            background: 'white', padding: '20px', borderRadius: '12px',
-            border: filtroEstatus === 'todos' ? `2px solid ${COLORS.primary}` : `1px solid ${COLORS.slate200}`,
-            textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s ease',
-            boxShadow: filtroEstatus === 'todos' ? `0 4px 12px ${COLORS.primaryBgTranslucent}` : 'none',
-            transform: filtroEstatus === 'todos' ? 'translateY(-2px)' : 'none'
-          }}
-        >
-          <div style={{ fontSize: '24px', marginBottom: '5px', color: COLORS.primary }}><FaClipboardList /></div>
-          <div style={{ fontSize: '12px', color: COLORS.slate500, fontWeight: '700' }}>TOTAL</div>
-          <div style={{ fontSize: '20px', fontWeight: '800', color: COLORS.slate800 }}>{stats.total}</div>
-        </div>
-
-        {/* TARJETA APROBADAS */}
-        <div
-          onClick={() => setFiltroEstatus('2')}
-          style={{
-            background: 'white', padding: '20px', borderRadius: '12px',
-            border: filtroEstatus === '2' ? `2px solid ${COLORS.success}` : `1px solid ${COLORS.slate200}`,
-            textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s ease',
-            boxShadow: filtroEstatus === '2' ? `0 4px 12px ${COLORS.successBgTranslucent}` : 'none',
-            transform: filtroEstatus === '2' ? 'translateY(-2px)' : 'none'
-          }}
-        >
-          <div style={{ fontSize: '24px', marginBottom: '5px', color: COLORS.success }}><FaCheckCircle /></div>
-          <div style={{ fontSize: '12px', color: COLORS.slate500, fontWeight: '700' }}>APROBADAS</div>
-          <div style={{ fontSize: '20px', fontWeight: '800', color: COLORS.success }}>{stats.aprobadas}</div>
-        </div>
-
-        {/* TARJETA RECHAZADAS */}
-        <div
-          onClick={() => setFiltroEstatus('3')}
-          style={{
-            background: 'white', padding: '20px', borderRadius: '12px',
-            border: filtroEstatus === '3' ? `2px solid ${COLORS.danger}` : `1px solid ${COLORS.slate200}`,
-            textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s ease',
-            boxShadow: filtroEstatus === '3' ? `0 4px 12px ${COLORS.dangerBgTranslucent}` : 'none',
-            transform: filtroEstatus === '3' ? 'translateY(-2px)' : 'none'
-          }}
-        >
-          <div style={{ fontSize: '24px', marginBottom: '5px', color: COLORS.danger }}><FaTimesCircle /></div>
-          <div style={{ fontSize: '12px', color: COLORS.slate500, fontWeight: '700' }}>RECHAZADAS</div>
-          <div style={{ fontSize: '20px', fontWeight: '800', color: COLORS.danger }}>{stats.rechazadas}</div>
-        </div>
-      </div>
-
-      <div className="card" style={{ padding: '32px' }}>
-        <div style={{ marginBottom: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px', overflow: 'hidden' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>Lista de solicitudes</h3>
-
-          <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flexWrap: 'wrap', overflowX: 'auto', overflowY: 'hidden', maxWidth: '100%', scrollbarWidth: 'thin', WebkitOverflowScrolling: 'touch' }}>
-            <SearchBar
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Buscar solicitud..."
-              width="280px"
-            />
-
-            <button onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')} style={{ background: 'white', border: '1.5px solid var(--border-light)', padding: '10px 18px', borderRadius: '12px', fontSize: '13px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px', color: COLORS.slate600 }}>
-              {sortOrder === 'asc' ? <FaSortAmountUp /> : <FaSortAmountDown />} {sortOrder === 'asc' ? 'ANT' : 'REC'}
-            </button>
-
-            <button onClick={() => loadSolicitudes(true, true)} className="btn-premium" style={{ padding: '10px 18px', borderRadius: '12px', fontSize: '13px', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <FaSyncAlt style={{ animation: tableLoading ? 'spin 1s linear infinite' : 'none' }} />
-            </button>
-
-            <div style={{ display: 'flex', gap: '4px', background: 'var(--bg-main)', padding: '5px', borderRadius: '14px', border: '1.5px solid var(--border-light)' }}>
-              {['todos', '1', '4', '2', '3'].map((val) => (
-                <button key={val} onClick={() => setFiltroEstatus(val)} style={{ padding: '8px 16px', borderRadius: '10px', border: 'none', background: filtroEstatus === val ? 'white' : 'transparent', color: filtroEstatus === val ? 'var(--primary)' : 'var(--text-muted)', boxShadow: filtroEstatus === val ? 'var(--shadow-sm)' : 'none', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase' }}>
-                  {val === 'todos' ? 'Todas' : (val === '1' ? 'Pendientes' : (val === '4' ? 'Docs' : (val === '2' ? 'Aprobadas' : 'Rechazadas')))}
-                </button>
-              ))}
-            </div>
+          {/* TARJETA RECHAZADAS */}
+          <div
+            onClick={() => setFiltroEstatus('3')}
+            style={{
+              background: 'white', padding: '20px', borderRadius: '12px',
+              border: filtroEstatus === '3' ? `2px solid ${COLORS.danger}` : `1px solid ${COLORS.slate200}`,
+              textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s ease',
+              boxShadow: filtroEstatus === '3' ? `0 4px 12px ${COLORS.dangerBgTranslucent}` : 'none',
+              transform: filtroEstatus === '3' ? 'translateY(-2px)' : 'none'
+            }}
+          >
+            <div style={{ fontSize: '24px', marginBottom: '5px', color: COLORS.danger }}><FaTimesCircle /></div>
+            <div style={{ fontSize: '12px', color: COLORS.slate500, fontWeight: '700' }}>RECHAZADAS</div>
+            <div style={{ fontSize: '20px', fontWeight: '800', color: COLORS.danger }}>{stats.rechazadas}</div>
           </div>
         </div>
 
-        <div style={{ overflowX: 'auto', width: '100%' }}>
-          <DashboardTable
-            columns={columns}
-            data={paginatedSolicitudes}
-            isLoading={loading || tableLoading}
-            totalItems={filteredSolicitudes.length}
-            itemsPerPage={itemsPerPage}
-            currentPage={currentPage}
-            onPageChange={setCurrentPage}
-            emptyMessage="No hay solicitudes que coincidan con la búsqueda."
-          />
-        </div>
-      </div>
+        <div className="card" style={{ padding: '32px' }}>
+          <div style={{ marginBottom: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px', overflow: 'hidden' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>Lista de solicitudes</h3>
 
-      <DetalleSolicitudModal
-        estaAbierto={modalAbierto}
-        alCerrar={() => setModalAbierto(false)}
-        datos={datosRevision}
-        alAprobar={handleAprobarSolicitud}
-        alRechazar={handleRechazarSolicitud}
-        alGuardarProgreso={handleGuardarProgreso}
-        cargando={cargandoRevision}
-      />
+            <div style={{ display: 'flex', gap: '14px', alignItems: 'center', flexWrap: 'wrap', overflowX: 'auto', overflowY: 'hidden', maxWidth: '100%', scrollbarWidth: 'thin', WebkitOverflowScrolling: 'touch' }}>
+              <SearchBar
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Buscar solicitud..."
+                width="280px"
+              />
+
+              <button onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')} style={{ background: 'white', border: '1.5px solid var(--border-light)', padding: '10px 18px', borderRadius: '12px', fontSize: '13px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px', color: COLORS.slate600 }}>
+                {sortOrder === 'asc' ? <FaSortAmountUp /> : <FaSortAmountDown />} {sortOrder === 'asc' ? 'ANT' : 'REC'}
+              </button>
+
+              <button onClick={() => loadSolicitudes(true, true)} className="btn-premium" style={{ padding: '10px 18px', borderRadius: '12px', fontSize: '13px', fontWeight: '700', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <FaSyncAlt style={{ animation: tableLoading ? 'spin 1s linear infinite' : 'none' }} />
+              </button>
+
+              <div style={{ display: 'flex', gap: '4px', background: 'var(--bg-main)', padding: '5px', borderRadius: '14px', border: '1.5px solid var(--border-light)' }}>
+                {['todos', '1', '4', '2', '3'].map((val) => (
+                  <button key={val} onClick={() => setFiltroEstatus(val)} style={{ padding: '8px 16px', borderRadius: '10px', border: 'none', background: filtroEstatus === val ? 'white' : 'transparent', color: filtroEstatus === val ? 'var(--primary)' : 'var(--text-muted)', boxShadow: filtroEstatus === val ? 'var(--shadow-sm)' : 'none', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase' }}>
+                    {val === 'todos' ? 'Todas' : (val === '1' ? 'Pendientes' : (val === '4' ? 'Docs' : (val === '2' ? 'Aprobadas' : 'Rechazadas')))}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ overflowX: 'auto', width: '100%' }}>
+            <DashboardTable
+              columns={columns}
+              data={paginatedSolicitudes}
+              isLoading={loading || tableLoading}
+              totalItems={filteredSolicitudes.length}
+              itemsPerPage={itemsPerPage}
+              currentPage={currentPage}
+              onPageChange={setCurrentPage}
+              emptyMessage="No hay solicitudes que coincidan con la búsqueda."
+            />
+          </div>
+        </div>
+
+        <DetalleSolicitudModal
+          estaAbierto={modalAbierto}
+          alCerrar={() => setModalAbierto(false)}
+          datos={datosRevision}
+          alAprobar={handleAprobarSolicitud}
+          alRechazar={handleRechazarSolicitud}
+          alGuardarProgreso={handleGuardarProgreso}
+          cargando={cargandoRevision}
+        />
+      </div>
     </div>
   );
 }

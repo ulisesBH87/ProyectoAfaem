@@ -31,7 +31,7 @@ export default function Step4Afiliacion({
   const docAfiliacion = REQUISITOS.find(d => d.documento === 'formatoAfiliacion');
 
   return (
-    <div>
+    <div className="fade-in-up" style={{ padding: '20px 0' }}>
       <PasoHeader
         titulo="Documento de Afiliación"
         descripcion="Descarga, firma y sube tu Formato de Afiliación Oficial."

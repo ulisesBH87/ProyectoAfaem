@@ -1485,7 +1485,7 @@ export default function AdminJugadores() {
   }
 
   return (
-    <div className="dashboard-content">
+    <div className="fade-in-up" style={{ padding: '20px 0' }}>
       <style>{`
         @keyframes spin {
           0% { transform: rotate(0deg); }

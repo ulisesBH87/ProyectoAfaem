@@ -29,7 +29,7 @@ export default function Step2Cuenta({
   };
 
   return (
-    <div>
+    <div className="fade-in-up" style={{ padding: '20px 0' }}>
       <PasoHeader
         titulo="Datos de la Cuenta"
       />
