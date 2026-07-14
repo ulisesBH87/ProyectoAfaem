@@ -252,7 +252,7 @@ export default function Step3Cuotas({
     : totalAsignados > 0;
 
   return (
-    <div>
+    <div className="fade-in-up" style={{ padding: '20px 0' }}>
       <PasoHeader
         titulo="Cuotas y Seguros"
         descripcion={esEntrenador ? "Asigna el seguro para el cuerpo técnico y selecciona su equipo." : "Configura la plantilla inicial del equipo y asigna sus seguros."}

@@ -6,6 +6,17 @@ import { ROUTES } from '../../routes/paths';
 const AdminTabs = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const activeTabRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (activeTabRef.current) {
+      activeTabRef.current.scrollIntoView({
+        behavior: 'auto',
+        block: 'nearest',
+        inline: 'center'
+      });
+    }
+  }, [location.pathname]);
 
   const tabs = [
     { label: 'Tablero Principal', path: ROUTES.ADMIN.DASHBOARD, icon: <FaHome /> },
@@ -36,6 +47,7 @@ const AdminTabs = () => {
         return (
           <button
             key={idx}
+            ref={isActive ? activeTabRef : null}
             onClick={() => navigate(tab.path)}
             style={{
               padding: '10px 20px',

@@ -1272,7 +1272,7 @@ export default function AdminPresidentes() {
   }
 
   return (
-    <div className="dashboard-content" style={{ padding: 30 }}>
+    <div className="fade-in-up" style={{ padding: '20px 0' }}>
       <style>{`
         .insurance-row-admin {
           display: flex;

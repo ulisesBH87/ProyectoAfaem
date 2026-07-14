@@ -281,7 +281,7 @@ export default function AdminCatalogos() {
 
 
   return (
-    <div style={{ padding: '30px' }}>
+    <div className="fade-in-up" style={{ padding: '20px 0' }}>
       <div style={{ marginBottom: '25px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
         <div>
           <h2 style={{ margin: 0, fontSize: '24px', fontWeight: '800', color: COLORS.slate800 }}>Gestor de Catálogos</h2>

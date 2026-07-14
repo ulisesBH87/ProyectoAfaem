@@ -30,7 +30,7 @@ export default function Step1Documentos({
   const handleClosePreview = () => setPreviewDoc(prev => ({ ...prev, open: false }));
 
   return (
-    <div>
+    <div className="fade-in-up" style={{ padding: '20px 0' }}>
       <PasoHeader
         titulo="Documentos Personales"
         descripcion="Sube el Acta, Identificación oficial y Fotografía."

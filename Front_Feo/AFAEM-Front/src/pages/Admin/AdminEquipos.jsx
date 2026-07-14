@@ -642,7 +642,7 @@ export default function AdminEquipos() {
   }
 
   return (
-    <div className="dashboard-content">
+    <div className="fade-in-up" style={{ padding: '20px 0' }}>
       {error && (
         <div className="alert alert-danger" style={{ marginBottom: '20px' }}>
           <span className="alert-icon">⚠️</span>

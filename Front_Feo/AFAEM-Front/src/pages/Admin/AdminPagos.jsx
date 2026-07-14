@@ -356,12 +356,19 @@ const AdminPagos = () => {
   }
 
   return (
-    <div className="fade-in">
+    <div className="fade-in-up" style={{ padding: '20px 0' }}>
       <AdminTabs />
-      <div style={{ marginBottom: '32px' }}>
-        <h2 style={{ fontSize: '24px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '4px', margin: 0 }}>Validación de Pagos</h2>
-        <p style={{ color: 'var(--text-muted)', fontWeight: '500', marginTop: '6px' }}>Gestiona y verifica los comprobantes de pago recibidos.</p>
-      </div>
+      {/* HEADER SECTION */}
+      <header className="admin-dashboard-header">
+        <div>
+          <h2 className="admin-dashboard-title">
+            Validación de Pagos
+          </h2>
+          <p style={{ color: 'var(--text-muted)', fontWeight: '500', fontSize: '15px', margin: '6px 0 0' }}>
+            Gestiona y verifica los comprobantes de pago recibidos.
+          </p>
+        </div>
+      </header>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '20px', marginBottom: '32px' }}>
         {[
