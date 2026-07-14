@@ -1808,7 +1808,6 @@ export default function AdminJugadores() {
             {/* AVISO CAMPOS PROTEGIDOS */}
             <div style={{ background: COLORS.secondaryBg, border: `1px solid ${COLORS.secondaryBgDark}`, padding: '20px', borderRadius: '14px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '20px' }}>ℹ️</span>
                 <strong style={{ fontSize: '14px', color: COLORS.secondaryHover }}>Campos Protegidos</strong>
               </div>
               <p style={{ margin: 0, fontSize: '13px', color: COLORS.blueDark, lineHeight: '1.6' }}>
@@ -1821,7 +1820,6 @@ export default function AdminJugadores() {
               <h4 style={{ margin: '0 0 16px 0', fontSize: '14px', fontWeight: '800', color: COLORS.slate800 }}>Carga de Documento Oficial</h4>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '12px', border: `1.5px dashed ${COLORS.slate300}`, borderRadius: '12px', padding: '14px', cursor: ocrCargando ? 'not-allowed' : 'pointer', background: COLORS.slate50, transition: 'all 0.2s', opacity: ocrCargando ? 0.6 : 1 }}>
-                  <span style={{ fontSize: '24px' }}>📋</span>
                   <div>
                     <div style={{ fontWeight: '700', fontSize: '12px', color: COLORS.slate700 }}>Acta</div>
                     <div style={{ fontSize: '10px', color: COLORS.slate500 }}>PDF/img</div>
@@ -1829,7 +1827,6 @@ export default function AdminJugadores() {
                   <input type="file" accept=".pdf,.jpg,.jpeg,.png" style={{ display: 'none' }} disabled={ocrCargando} onChange={(e) => { if (e.target.files[0]) handleOcrModalUpload(e.target.files[0]); e.target.value = ''; }} />
                 </label>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '12px', border: `1.5px dashed ${COLORS.slate300}`, borderRadius: '12px', padding: '14px', cursor: ocrCargando ? 'not-allowed' : 'pointer', background: COLORS.slate50, transition: 'all 0.2s', opacity: ocrCargando ? 0.6 : 1 }}>
-                  <span style={{ fontSize: '24px' }}>🪪</span>
                   <div>
                     <div style={{ fontWeight: '700', fontSize: '12px', color: COLORS.slate700 }}>INE</div>
                     <div style={{ fontSize: '10px', color: COLORS.slate500 }}>PDF/img</div>

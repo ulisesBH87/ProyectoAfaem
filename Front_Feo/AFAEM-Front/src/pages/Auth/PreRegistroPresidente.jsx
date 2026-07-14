@@ -3773,7 +3773,7 @@ function PreRegistroPresidente() {
                         boxShadow: formatAfiliacionLocked ? 'none' : '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
                       }}
                     >
-                      📥 Descargar Formato Prellenado
+                      Descargar Formato Prellenado
                     </button>
                   </div>
 
@@ -4789,7 +4789,7 @@ function PreRegistroPresidente() {
                           gap: '6px'
                         }}
                       >
-                        📥 Descargar formato de afiliación con la nueva fotografía
+                        Descargar formato de afiliación con la nueva fotografía
                       </button>
                     )}
                     {isFormatoRechazado && !isFotoRechazada && (
@@ -4812,7 +4812,7 @@ function PreRegistroPresidente() {
                           gap: '6px'
                         }}
                       >
-                        📥 Descargar formato de afiliación
+                        Descargar formato de afiliación
                       </button>
                     )}
                   </div>

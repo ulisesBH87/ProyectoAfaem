@@ -57,7 +57,7 @@ export default function AdminEquipos() {
       });
 
       const response = await uploadTeamLogo(selectedTeamId, file);
-      
+
       Swal.fire({
         title: '¡Éxito!',
         text: 'El logo se ha actualizado correctamente.',
@@ -609,15 +609,15 @@ export default function AdminEquipos() {
   const handleRowClick = (row) => {
     const eq = row._original;
     if (!eq) return;
-    
+
     Swal.fire({
       title: `Gestión de Jugadores: ${eq.NombreEquipo}`,
       text: 'Selecciona la acción que deseas realizar con los jugadores de este equipo:',
       icon: 'question',
       showCancelButton: true,
       showDenyButton: true,
-      confirmButtonText: '📋 Ir a lista general',
-      denyButtonText: '✏️ Ir a editar jugadores',
+      confirmButtonText: 'Ir a lista general',
+      denyButtonText: 'Ir a editar jugadores',
       cancelButtonText: 'Cancelar',
       confirmButtonColor: COLORS.primary,
       denyButtonColor: COLORS.success,
@@ -1408,7 +1408,7 @@ export default function AdminEquipos() {
           <p style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: COLORS.slate800 }}>
             Se descargarán los documentos de los siguientes jugadores:
           </p>
-          
+
           {cargandoJugadoresDescarga ? (
             <div style={{ padding: '20px 0', textAlign: 'center', color: COLORS.slate500 }}>
               Cargando jugadores...

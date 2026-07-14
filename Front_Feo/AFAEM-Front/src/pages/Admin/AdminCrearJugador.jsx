@@ -1172,7 +1172,7 @@ export default function AdminCrearJugador() {
                 cursor: 'pointer'
               }}
             >
-              🌎 Extranjero
+              Extranjero
             </button>
           </div>
         </section>

@@ -4615,7 +4615,7 @@ export default function RegistroJugadores() {
                             cursor: 'pointer'
                           }}
                         >
-                          🌎 Extranjero
+                          Extranjero
                         </button>
                       </div>
 
@@ -4790,7 +4790,7 @@ export default function RegistroJugadores() {
                               slotsData?.seguros?.find(s => String(s.seguro_id) === String(currentSeguroId))?.nombre || 'No asignado'
                             }
                           </div>
-                          <div><strong>Procedencia:</strong> {currentDatos.esForaneo ? '🌎 Extranjero' : '🇲🇽 Mexicano'}</div>
+                          <div><strong>Procedencia:</strong> {currentDatos.esForaneo ? 'Extranjero' : '🇲🇽 Mexicano'}</div>
                         </div>
                       </div>
 
@@ -4856,7 +4856,7 @@ export default function RegistroJugadores() {
                             boxShadow: pasos1a5Completos ? `0 4px 6px -1px ${COLORS.primaryBgTranslucent20}` : 'none'
                           }}
                         >
-                          📥 Descargar Formato Prellenado
+                          Descargar Formato Prellenado
                         </button>
                       </div>
 

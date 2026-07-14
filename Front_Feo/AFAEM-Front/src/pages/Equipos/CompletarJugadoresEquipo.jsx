@@ -3290,7 +3290,7 @@ export default function CompletarJugadoresEquipo() {
                         cursor: 'pointer'
                       }}
                     >
-                      🌎 Extranjero
+                      Extranjero
                     </button>
                   </div>
                 </section>
@@ -3460,7 +3460,7 @@ export default function CompletarJugadoresEquipo() {
               onClick={() => handleDownloadFormato()}
               style={{ padding: '10px 22px', borderRadius: '10px', border: 'none', background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryActive})`, color: 'white', fontWeight: '800', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
             >
-              📥 Descargar Formato
+              Descargar Formato
             </button>
           </div>
           <div style={{

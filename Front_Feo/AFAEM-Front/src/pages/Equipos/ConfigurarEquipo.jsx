@@ -3864,7 +3864,7 @@ export default function ConfigurarEquipo() {
                             justifyContent: 'center'
                           }}
                         >
-                          🌎 Extranjero
+                          Extranjero
                         </button>
                       </div>
                     </div>
@@ -4047,7 +4047,7 @@ export default function ConfigurarEquipo() {
               onClick={() => handleDownloadFormato()}
               style={{ padding: '10px 22px', borderRadius: '10px', border: 'none', background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryActive})`, color: 'white', fontWeight: '800', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
             >
-              📥 Descargar Formato
+              Descargar Formato
             </button>
           </div>
           <div style={{
