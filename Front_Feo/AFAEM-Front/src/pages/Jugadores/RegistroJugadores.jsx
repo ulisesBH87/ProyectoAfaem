@@ -2066,7 +2066,7 @@ export default function RegistroJugadores() {
           target_curp: activeCurp,
           slot_id: activeSlotId
         });
-        await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: documentKey, Swal });
+        await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: documentKey, Swal, playerId: activeSlotId || uploadPlayerIndex });
         if (data.valido) {
           const imageUrl = `data:${data.tipo_imagen};base64,${data.imagen}`;
           const byteCharacters = atob(data.imagen);
@@ -2179,7 +2179,7 @@ export default function RegistroJugadores() {
           body: formDataOcr
         });
         if (!response.ok) throw new Error('Error al analizar el documento');
-        await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: documentKey, Swal });
+        await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: documentKey, Swal, playerId: activeSlotId || uploadPlayerIndex });
 
         const htmlText = await response.text();
         const parser = new DOMParser();

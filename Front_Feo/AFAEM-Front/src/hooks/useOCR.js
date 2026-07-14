@@ -211,7 +211,7 @@ export function useOCR() {
         body: fd
       });
       if (!res.ok) throw new Error();
-      await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: docKey, Swal });
+      await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: docKey, Swal, playerId: opciones.target_persona_id || opciones.slot_id || opciones.playerId || null });
       const htmlText = await res.text();
       const doc = new DOMParser().parseFromString(htmlText, 'text/html');
 

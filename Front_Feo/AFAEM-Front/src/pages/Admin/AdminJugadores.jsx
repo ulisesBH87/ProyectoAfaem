@@ -694,7 +694,7 @@ export default function AdminJugadores() {
           target_curp: jugador.CURP || jugador.Curp,
           equipo_id: jugador.EquipoId || jugador.EquipoID
         });
-        await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: `documento-${tipoDocumentoId}`, Swal });
+        await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: `documento-${tipoDocumentoId}`, Swal, playerId: jugador.PersonaId });
         if (data.valido) {
           // Convertir base64 a File
           const byteCharacters = atob(data.imagen);
@@ -1155,7 +1155,7 @@ export default function AdminJugadores() {
         body: formDataOcr
       });
       if (!response.ok) throw new Error('Error al conectar');
-      await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: 'ocr-modal-edicion', Swal });
+      await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: 'ocr-modal-edicion', Swal, playerId: jugadorEdicion?.PersonaId });
 
       const htmlText = await response.text();
       const parser = new DOMParser();

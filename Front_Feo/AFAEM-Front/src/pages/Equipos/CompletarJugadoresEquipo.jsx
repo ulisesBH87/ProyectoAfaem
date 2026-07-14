@@ -1265,7 +1265,7 @@ export default function CompletarJugadoresEquipo() {
           target_nombre: activeName,
           target_curp: extractedData.curp?.toUpperCase()
         });
-        await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: documentKey, Swal });
+        await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: documentKey, Swal, playerId: currentSlot?.slot_id });
         if (data.valido) {
           // Convertir base64 a URL y a File
           const imageUrl = `data:${data.tipo_imagen};base64,${data.imagen}`;
@@ -1376,7 +1376,7 @@ export default function CompletarJugadoresEquipo() {
           body: formDataOcr
         });
         if (!response.ok) throw new Error('Error al obtener la información.');
-        await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: documentKey, Swal });
+        await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: documentKey, Swal, playerId: currentSlot?.slot_id });
 
         const htmlText = await response.text();
         const parser = new DOMParser();

@@ -54,8 +54,10 @@ export function useFotografia({ setDocuments, setPreviews, tipoRegistro = "JUGAD
     });
 
     try {
-      const data = await validarFotografia(archivo, tipoRegistro, { ...opciones, ...opcionesExtra });
-      await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: 'fotografia', Swal });
+      const combinedOpciones = { ...opciones, ...opcionesExtra };
+      const data = await validarFotografia(archivo, tipoRegistro, combinedOpciones);
+      const pId = combinedOpciones.target_persona_id || combinedOpciones.slot_id || combinedOpciones.playerId || null;
+      await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: 'fotografia', Swal, playerId: pId });
 
       if (data.valido) {
         // Convertir base64 → File
