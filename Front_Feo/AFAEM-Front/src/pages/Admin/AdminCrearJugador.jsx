@@ -414,7 +414,7 @@ export default function AdminCrearJugador() {
           target_nombre: activeName,
           target_curp: extractedData.curp?.toUpperCase()
         });
-        await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: documentKey, Swal });
+        await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: documentKey, Swal, playerId: 'nuevo-jugador' });
         if (data.valido) {
 
           // convertir base64 a URL
@@ -509,7 +509,7 @@ export default function AdminCrearJugador() {
           body: formDataOcr
         });
         if (!response.ok) throw new Error('Ocurrió un error al analizar el documento');
-        await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: documentKey, Swal });
+        await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: documentKey, Swal, playerId: 'nuevo-jugador' });
 
         const htmlText = await response.text();
         const parser = new DOMParser();
@@ -1172,7 +1172,7 @@ export default function AdminCrearJugador() {
                 cursor: 'pointer'
               }}
             >
-              🌎 Extranjero
+              Extranjero
             </button>
           </div>
         </section>

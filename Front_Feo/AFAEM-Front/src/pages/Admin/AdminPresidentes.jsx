@@ -446,7 +446,7 @@ export default function AdminPresidentes() {
         body: fd
       });
       if (!res.ok) throw new Error('Error al conectar con el servidor');
-      await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: docKey, Swal });
+      await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: docKey, Swal, playerId: 'presidente' });
       const htmlText = await res.text();
       const doc = new DOMParser().parseFromString(htmlText, 'text/html');
       const cleanVal = (val) => {
@@ -613,7 +613,7 @@ export default function AdminPresidentes() {
     Swal.fire({ title: 'Validando Fotografía...', html: 'Verificando formato, rostros y calidad. <b>Por favor espere.</b>', allowOutsideClick: false, allowEscapeKey: false, didOpen: () => Swal.showLoading() });
     try {
       const data = await validarFotografia(archivo, "PRESIDENTE");
-      await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: 'fotografia', Swal });
+      await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: 'fotografia', Swal, playerId: 'presidente' });
       if (data.valido) {
         setDocuments(prev => ({ ...prev, fotografia: archivo }));
         Swal.fire({ title: '¡Fotografía Aceptada!', icon: 'success', timer: 1500, showConfirmButton: false });
