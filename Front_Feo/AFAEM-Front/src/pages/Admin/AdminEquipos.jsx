@@ -606,6 +606,36 @@ export default function AdminEquipos() {
     )
   }));
 
+  const handleRowClick = (row) => {
+    const eq = row._original;
+    if (!eq) return;
+    
+    Swal.fire({
+      title: `Gestión de Jugadores: ${eq.NombreEquipo}`,
+      text: 'Selecciona la acción que deseas realizar con los jugadores de este equipo:',
+      icon: 'question',
+      showCancelButton: true,
+      showDenyButton: true,
+      confirmButtonText: '📋 Ir a lista general',
+      denyButtonText: '✏️ Ir a editar jugadores',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: COLORS.primary,
+      denyButtonColor: COLORS.success,
+      cancelButtonColor: COLORS.slate500,
+      customClass: {
+        confirmButton: 'mx-2 my-1',
+        denyButton: 'mx-2 my-1',
+        cancelButton: 'mx-2 my-1'
+      }
+    }).then((result) => {
+      if (result.isConfirmed) {
+        navigate(ROUTES.ADMIN.EQUIPOS_JUGADORES.replace(':equipoId', eq.EquipoId));
+      } else if (result.isDenied) {
+        navigate(`${ROUTES.ADMIN.JUGADORES}?equipo=${encodeURIComponent(eq.NombreEquipo)}`);
+      }
+    });
+  };
+
 
   if (loading && equipos.length === 0) {
     return <Loader text="Cargando directorio de equipos..." />;
@@ -738,6 +768,7 @@ export default function AdminEquipos() {
           itemsPerPage={itemsPerPage}
           currentPage={currentPage}
           onPageChange={setCurrentPage}
+          onRowClick={handleRowClick}
           emptyMessage="No se encontraron equipos con los criterios de búsqueda."
         />
       </div>

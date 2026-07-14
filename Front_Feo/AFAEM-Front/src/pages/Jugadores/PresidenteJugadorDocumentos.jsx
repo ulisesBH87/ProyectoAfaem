@@ -327,6 +327,41 @@ export default function PresidenteJugadorDocumentos() {
                 </div>
               )}
 
+              {item.documento && (
+                <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+                  <button
+                    type="button"
+                    style={{
+                      flex: 1,
+                      padding: '10px 14px',
+                      background: 'white',
+                      border: `1.5px solid ${COLORS.primary}`,
+                      color: COLORS.primary,
+                      borderRadius: '10px',
+                      fontSize: '12px',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      textAlign: 'center',
+                      margin: 0
+                    }}
+                    onClick={() => {
+                      const docUrl = item.documento.url || item.documento.RutaArchivo;
+                      if (docUrl) {
+                        openSecurePath(docUrl);
+                      } else {
+                        Swal.fire('Error', 'No se encontró la ruta del documento.', 'error');
+                      }
+                    }}
+                  >
+                    <FaEye /> Ver documento
+                  </button>
+                </div>
+              )}
+
               {(!item.documento || Number(item.documento.EstadoValidacionId) === 3) && (
                 <div style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
                   {item.tipoId === 25 ? (

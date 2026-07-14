@@ -2125,8 +2125,17 @@ export default function ConfigurarEquipo() {
       // Tipo de Afiliación (Tipo y fill_20) → nombre del seguro seleccionado
       const seguroSel = catalogs?.seguros?.find(s => String(s.id) === String(selectedSeguroId));
       if (seguroSel?.nombre) {
-        try { form.getTextField('Tipo')?.setText(seguroSel.nombre.toUpperCase()); } catch (_) { }
-        try { form.getTextField('fill_24')?.setText(seguroSel.nombre.toUpperCase()); } catch (_) { }
+        const obtenerLetraSeguro = (nombreSeguro) => {
+          if (!nombreSeguro) return '';
+          const limpio = nombreSeguro.toString().trim().toUpperCase();
+          if (limpio.startsWith('TIPO ')) {
+            return limpio.replace('TIPO ', '').trim();
+          }
+          return limpio;
+        };
+        const seguroLetra = obtenerLetraSeguro(seguroSel.nombre);
+        try { form.getTextField('Tipo')?.setText(seguroLetra); } catch (_) { }
+        try { form.getTextField('fill_24')?.setText(seguroLetra); } catch (_) { }
       }
 
       const ligaVal = (equipo?.Liga || '').split('(')[0].trim();

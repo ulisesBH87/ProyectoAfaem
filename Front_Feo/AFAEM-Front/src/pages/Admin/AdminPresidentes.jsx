@@ -688,7 +688,17 @@ export default function AdminPresidentes() {
         }
       }
       if (infoPersonal.telefono) form.getTextField('Teléfono')?.setText(infoPersonal.telefono);
-      if (infoPersonal.tipoAfiliacion) form.getTextField('fill_20')?.setText(infoPersonal.tipoAfiliacion);
+      if (infoPersonal.tipoAfiliacion) {
+        const obtenerLetraSeguro = (nombreSeguro) => {
+          if (!nombreSeguro) return '';
+          const limpio = nombreSeguro.toString().trim().toUpperCase();
+          if (limpio.startsWith('TIPO ')) {
+            return limpio.replace('TIPO ', '').trim();
+          }
+          return limpio;
+        };
+        form.getTextField('fill_20')?.setText(obtenerLetraSeguro(infoPersonal.tipoAfiliacion));
+      }
       if (infoPersonal.asociacion) form.getTextField('Asociación')?.setText(infoPersonal.asociacion.toUpperCase());
       if (infoPersonal.liga) form.getTextField('Liga')?.setText(infoPersonal.liga.split('(')[0].trim().toUpperCase());
       if (infoPersonal.equipo) form.getTextField('Equipo')?.setText(infoPersonal.equipo.toUpperCase());
