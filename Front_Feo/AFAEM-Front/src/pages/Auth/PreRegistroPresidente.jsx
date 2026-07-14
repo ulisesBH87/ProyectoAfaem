@@ -3153,15 +3153,13 @@ function PreRegistroPresidente() {
                 </div>
                 <div className="premium-input-group">
                   <label className="premium-label">Cargo de afiliación *</label>
-                  <select
+                  <input
+                    type="text"
                     value={cargoSeleccionado}
-                    onChange={(e) => setCargoSeleccionado(e.target.value)}
+                    disabled
                     className={`premium-input ${cargoSeleccionado ? 'filled' : ''}`}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <option value="Presidente Equipo">Presidente Equipo</option>
-                    <option value="Entrenador">Entrenador</option>
-                  </select>
+                    style={{ backgroundColor: COLORS.slate500, cursor: 'not-allowed' }}
+                  />
                 </div>
                 <div className="premium-input-group">
                   <label className="premium-label">Nombre de equipo *</label>
