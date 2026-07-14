@@ -71,25 +71,32 @@ export function useGenerarPDF() {
       const { nombre, curp, fecha_nac } = ocrResults;
       const nacionalidad = cuenta.nacionalidad || ocrResults.nacionalidad;
 
+      const getFs = (val) => val ? (val.length > 35 ? 6 : val.length > 25 ? 7 : val.length > 18 ? 8 : 10) : undefined;
+
       const nombreVal = cuenta.nombre || '';
       const primerApellidoVal = cuenta.primerApellido || '';
       const segundoApellidoVal = cuenta.segundoApellido || '';
 
       if (nombreVal || primerApellidoVal || segundoApellidoVal) {
-        safeField(form, 'Apellido Paterno', primerApellidoVal);
-        safeField(form, 'Apellido Materno', segundoApellidoVal);
-        safeField(form, 'Nombres', nombreVal);
+        safeField(form, 'Apellido Paterno', primerApellidoVal, getFs(primerApellidoVal));
+        safeField(form, 'Apellido Materno', segundoApellidoVal, getFs(segundoApellidoVal));
+        safeField(form, 'Nombres', nombreVal, getFs(nombreVal));
       } else if (nombre && nombre !== 'No detectado') {
         const parts = nombre.split(' ');
         if (parts.length >= 3) {
-          safeField(form, 'Apellido Paterno', parts[0]);
-          safeField(form, 'Apellido Materno', parts[1]);
-          safeField(form, 'Nombres', parts.slice(2).join(' '));
+          const apPaterno = parts[0];
+          const apMaterno = parts[1];
+          const nombres = parts.slice(2).join(' ');
+          safeField(form, 'Apellido Paterno', apPaterno, getFs(apPaterno));
+          safeField(form, 'Apellido Materno', apMaterno, getFs(apMaterno));
+          safeField(form, 'Nombres', nombres, getFs(nombres));
         } else if (parts.length === 2) {
-          safeField(form, 'Apellido Paterno', parts[0]);
-          safeField(form, 'Nombres', parts[1]);
+          const apPaterno = parts[0];
+          const nombres = parts[1];
+          safeField(form, 'Apellido Paterno', apPaterno, getFs(apPaterno));
+          safeField(form, 'Nombres', nombres, getFs(nombres));
         } else {
-          safeField(form, 'Nombres', nombre);
+          safeField(form, 'Nombres', nombre, getFs(nombre));
         }
       }
 
@@ -101,7 +108,7 @@ export function useGenerarPDF() {
 
       // Correo (tamaño adaptativo)
       const correoVal = cuenta.correo || '';
-      const correoFontSize = correoVal.length > 35 ? 6 : correoVal.length > 25 ? 7 : correoVal.length > 18 ? 8 : 10;
+      const correoFontSize = getFs(correoVal);
       safeField(form, 'Correo electrónico', correoVal, correoFontSize);
 
       // Teléfono
@@ -126,9 +133,11 @@ export function useGenerarPDF() {
       // Liga (tamaño adaptativo)
       const ligaObj = ligasCatalogo.find(l => String(l.id) === String(liga));
       const nombreLiga = (ligaObj ? ligaObj.nombre : liga)?.split('(')[0].trim().toUpperCase() || '';
-      const fontSizeLiga = nombreLiga.length > 25 ? 6 : nombreLiga.length > 15 ? 8 : 10;
+      const fontSizeLiga = getFs(nombreLiga);
       safeField(form, 'Liga', nombreLiga, fontSizeLiga);
-      safeField(form, 'Equipo', equipo?.toUpperCase());
+
+      const equipoVal = equipo?.toUpperCase() || '';
+      safeField(form, 'Equipo', equipoVal, getFs(equipoVal));
 
       if (nacionalidad) safeField(form, 'Lugar de Nacimiento', nacionalidad);
 

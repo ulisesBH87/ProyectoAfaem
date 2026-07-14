@@ -654,26 +654,37 @@ export default function AdminPresidentes() {
         } catch (_e) { /* silenciar */ }
       }
 
+      const getFs = (val) => val.length > 35 ? 6 : val.length > 25 ? 7 : val.length > 18 ? 8 : 10;
+
+      const setNombreField = (fieldName, val) => {
+        if (!val) return;
+        const field = form.getTextField(fieldName);
+        if (field) {
+          field.setText(val);
+          field.setFontSize(getFs(val));
+        }
+      };
+
       const { nombre, curp, fecha_nac, nacionalidad, nombreSolo, primerApellido, segundoApellido } = ocrResults;
       if (nombreSolo || primerApellido || segundoApellido) {
-        if (primerApellido) form.getTextField('Apellido Paterno')?.setText(primerApellido.toUpperCase());
-        if (segundoApellido) form.getTextField('Apellido Materno')?.setText(segundoApellido.toUpperCase());
-        if (nombreSolo) form.getTextField('Nombres')?.setText(nombreSolo.toUpperCase());
+        if (primerApellido) setNombreField('Apellido Paterno', primerApellido.toUpperCase());
+        if (segundoApellido) setNombreField('Apellido Materno', segundoApellido.toUpperCase());
+        if (nombreSolo) setNombreField('Nombres', nombreSolo.toUpperCase());
       } else if (nombre && nombre !== 'No detectado') {
         const parts = nombre.split(' ');
         if (parts.length === 4) {
-          form.getTextField('Nombres')?.setText(parts.slice(0, 2).join(' ').toUpperCase());
-          form.getTextField('Apellido Paterno')?.setText(parts[2].toUpperCase());
-          form.getTextField('Apellido Materno')?.setText(parts[3].toUpperCase());
+          setNombreField('Nombres', parts.slice(0, 2).join(' ').toUpperCase());
+          setNombreField('Apellido Paterno', parts[2].toUpperCase());
+          setNombreField('Apellido Materno', parts[3].toUpperCase());
         } else if (parts.length === 3) {
-          form.getTextField('Nombres')?.setText(parts[0].toUpperCase());
-          form.getTextField('Apellido Paterno')?.setText(parts[1].toUpperCase());
-          form.getTextField('Apellido Materno')?.setText(parts[2].toUpperCase());
+          setNombreField('Nombres', parts[0].toUpperCase());
+          setNombreField('Apellido Paterno', parts[1].toUpperCase());
+          setNombreField('Apellido Materno', parts[2].toUpperCase());
         } else if (parts.length === 2) {
-          form.getTextField('Nombres')?.setText(parts[0].toUpperCase());
-          form.getTextField('Apellido Paterno')?.setText(parts[1].toUpperCase());
+          setNombreField('Nombres', parts[0].toUpperCase());
+          setNombreField('Apellido Paterno', parts[1].toUpperCase());
         } else {
-          form.getTextField('Nombres')?.setText(nombre.toUpperCase());
+          setNombreField('Nombres', nombre.toUpperCase());
         }
       }
       if (curp && curp !== 'No detectado') form.getTextField('CURP o Clave Única de Registro de Población')?.setText(curp);
@@ -700,8 +711,22 @@ export default function AdminPresidentes() {
         form.getTextField('fill_20')?.setText(obtenerLetraSeguro(infoPersonal.tipoAfiliacion));
       }
       if (infoPersonal.asociacion) form.getTextField('Asociación')?.setText(infoPersonal.asociacion.toUpperCase());
-      if (infoPersonal.liga) form.getTextField('Liga')?.setText(infoPersonal.liga.split('(')[0].trim().toUpperCase());
-      if (infoPersonal.equipo) form.getTextField('Equipo')?.setText(infoPersonal.equipo.toUpperCase());
+      if (infoPersonal.liga) {
+        const ligaField = form.getTextField('Liga');
+        if (ligaField) {
+          const val = infoPersonal.liga.split('(')[0].trim().toUpperCase();
+          ligaField.setText(val);
+          ligaField.setFontSize(getFs(val));
+        }
+      }
+      if (infoPersonal.equipo) {
+        const equipoField = form.getTextField('Equipo');
+        if (equipoField) {
+          const val = infoPersonal.equipo.toUpperCase();
+          equipoField.setText(val);
+          equipoField.setFontSize(getFs(val));
+        }
+      }
       if (nacionalidad) form.getTextField('Lugar de Nacimiento')?.setText(nacionalidad);
       if (curp && curp.length >= 11) {
         const sx = curp.charAt(10).toUpperCase();
