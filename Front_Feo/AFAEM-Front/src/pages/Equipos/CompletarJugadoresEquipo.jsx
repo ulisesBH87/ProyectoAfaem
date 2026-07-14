@@ -23,6 +23,7 @@ import teamsService from '../../services/teams';
 import { verificarCurp } from '../../services/auth';
 import { API_BASE } from '../../config/config';
 import { openSecurePath } from '../../utils/secureFetch';
+import { DEFAULT_BANK_INFO, generarPDFCuota } from '../../utils/paymentPdf';
 import { buildCaptureSourceDialog, getCameraCaptureKind, showDocumentGuide, CAMERA_CAPTURE_KIND } from '../../utils/cameraCapture';
 import { registerSuccessfulScanAttempt } from '../../utils/scanAttemptWarning';
 import {
@@ -766,7 +767,7 @@ export default function CompletarJugadoresEquipo() {
   // Estados para creación de ampliación administrativa
   const [numJugadoresAmpliacion, setNumJugadoresAmpliacion] = useState(0);
   const [asignacionSegurosAmpliacion, setAsignacionSegurosAmpliacion] = useState({});
-  const [aprobarAutomaticamente, setAprobarAutomaticamente] = useState(true);
+  const [aprobarAutomaticamente, setAprobarAutomaticamente] = useState(false);
   const [procesandoAmpliacionAdmin, setProcesandoAmpliacionAdmin] = useState(false);
   const [afiliacionesCatalogo, setAfiliacionesCatalogo] = useState([]);
 
@@ -1576,6 +1577,49 @@ export default function CompletarJugadoresEquipo() {
     }
   };
 
+  const handleDescargarOrdenPagoAmpliacion = async (ordenId) => {
+    try {
+      Swal.fire({
+        title: 'Cargando orden...',
+        text: 'Obteniendo detalles de la orden de pago.',
+        allowOutsideClick: false,
+        didOpen: () => { Swal.showLoading(); }
+      });
+
+      const detailData = await adminService.getPagoIndividual(ordenId);
+      const asignacionSeguros = {};
+      let cantidadJugadores = 0;
+      if (detailData?.OrdenPagoDetalleRelacion) {
+        detailData.OrdenPagoDetalleRelacion.forEach(d => {
+          if (d.SeguroId) {
+            asignacionSeguros[d.SeguroId] = d.Cantidad;
+            cantidadJugadores += d.Cantidad;
+          }
+        });
+      }
+
+      Swal.close();
+
+      await generarPDFCuota({
+        ordenId,
+        user: { NombreEquipo: equipo?.NombreEquipo || equipo?.equipo || equipo?.nombre || '' },
+        bankInfo: DEFAULT_BANK_INFO,
+        catalogoAfiliaciones: [],
+        catalogoSeguros: catalogs.seguros || [],
+        asignacionSeguros,
+        total: detailData.TotalPagar || 0,
+        cantidadJugadores,
+        incluirPresidente: false,
+        referenciaPago: detailData.ReferenciaPago
+      });
+
+      Swal.fire('Listo', 'Se ha descargado la orden de pago correctamente.', 'success');
+    } catch (err) {
+      console.error(err);
+      Swal.fire('Error', 'No se pudo descargar la orden de pago: ' + err.message, 'error');
+    }
+  };
+
   const handleGenerarAmpliacionAdmin = async () => {
     try {
       setProcesandoAmpliacionAdmin(true);
@@ -1627,10 +1671,11 @@ export default function CompletarJugadoresEquipo() {
         const slotsResponse = await teamsService.checkTeamSlots(equipoId);
         setSlotsData(slotsResponse);
       } else {
-        Swal.fire('Orden Creada', `La orden #${ordenId} se generó exitosamente, pero queda pendiente de comprobante.`, 'success');
         // Recargar orden
         const ampliacionData = await adminService.checkOrdenAmpliacionAdmin(equipoId);
         setOrdenAmpliacion(ampliacionData);
+        // Descargar orden de pago
+        await handleDescargarOrdenPagoAmpliacion(ordenId);
       }
     } catch (err) {
       console.error(err);
@@ -2405,6 +2450,21 @@ export default function CompletarJugadoresEquipo() {
                       etiqueta="Volver al Directorio"
                       alHacerClick={() => navigate(ROUTES.ADMIN.EQUIPOS)}
                     />
+                    <button
+                      onClick={() => handleDescargarOrdenPagoAmpliacion(ordenAmpliacion.orden_id)}
+                      style={{
+                        padding: '12px 24px',
+                        background: 'white',
+                        border: `2px solid ${COLORS.primary}`,
+                        color: COLORS.primary,
+                        borderRadius: '12px',
+                        fontWeight: '800',
+                        cursor: 'pointer',
+                        fontSize: '15px'
+                      }}
+                    >
+                      Descargar orden de pago
+                    </button>
                     <button
                       className="btn-premium"
                       onClick={() => handleAprobarOrdenAmpliacion(ordenAmpliacion.orden_id, 'Autorizar pago sin comprobante')}
