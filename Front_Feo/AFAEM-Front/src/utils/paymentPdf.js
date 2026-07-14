@@ -79,7 +79,7 @@ const renderOrdenPagoPDF = async ({
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);
   doc.text(`Orden de Pago No. ${ordenId}`, 15, 65);
-  doc.text(`Nombre del solicitante: ${schoolOrClub}`, 15, 71);
+  doc.text(`Nombre del solicitante/nombre del equipo: ${schoolOrClub}`, 15, 71);
 
   let yPosition = 77;
 
