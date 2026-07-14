@@ -1265,7 +1265,7 @@ export default function CompletarJugadoresEquipo() {
           target_nombre: activeName,
           target_curp: extractedData.curp?.toUpperCase()
         });
-        await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: documentKey, Swal });
+        await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: documentKey, Swal, playerId: currentSlot?.slot_id });
         if (data.valido) {
           // Convertir base64 a URL y a File
           const imageUrl = `data:${data.tipo_imagen};base64,${data.imagen}`;
@@ -1376,7 +1376,7 @@ export default function CompletarJugadoresEquipo() {
           body: formDataOcr
         });
         if (!response.ok) throw new Error('Error al obtener la información.');
-        await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: documentKey, Swal });
+        await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: documentKey, Swal, playerId: currentSlot?.slot_id });
 
         const htmlText = await response.text();
         const parser = new DOMParser();
@@ -3290,7 +3290,7 @@ export default function CompletarJugadoresEquipo() {
                         cursor: 'pointer'
                       }}
                     >
-                      🌎 Extranjero
+                      Extranjero
                     </button>
                   </div>
                 </section>
@@ -3460,7 +3460,7 @@ export default function CompletarJugadoresEquipo() {
               onClick={() => handleDownloadFormato()}
               style={{ padding: '10px 22px', borderRadius: '10px', border: 'none', background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryActive})`, color: 'white', fontWeight: '800', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
             >
-              📥 Descargar Formato
+              Descargar Formato
             </button>
           </div>
           <div style={{

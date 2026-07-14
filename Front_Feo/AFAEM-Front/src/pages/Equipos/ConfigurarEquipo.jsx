@@ -1694,7 +1694,7 @@ export default function ConfigurarEquipo() {
       });
       try {
         const data = await validarFotografia(file, "PRESIDENTE");
-        await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: documentKey, Swal });
+        await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: documentKey, Swal, playerId: 'presidente' });
         if (data.valido) {
           // Convertir base64 a URL y a File
           const imageUrl = `data:${data.tipo_imagen};base64,${data.imagen}`;
@@ -1798,7 +1798,7 @@ export default function ConfigurarEquipo() {
           body: formDataOcr
         });
         if (!response.ok) throw new Error('Error al analizar el documento');
-        await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: documentKey, Swal });
+        await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: documentKey, Swal, playerId: 'presidente' });
 
         const htmlText = await response.text();
         const parser = new DOMParser();
@@ -3864,7 +3864,7 @@ export default function ConfigurarEquipo() {
                             justifyContent: 'center'
                           }}
                         >
-                          🌎 Extranjero
+                          Extranjero
                         </button>
                       </div>
                     </div>
@@ -4047,7 +4047,7 @@ export default function ConfigurarEquipo() {
               onClick={() => handleDownloadFormato()}
               style={{ padding: '10px 22px', borderRadius: '10px', border: 'none', background: `linear-gradient(135deg, ${COLORS.primary}, ${COLORS.primaryActive})`, color: 'white', fontWeight: '800', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
             >
-              📥 Descargar Formato
+              Descargar Formato
             </button>
           </div>
           <div style={{

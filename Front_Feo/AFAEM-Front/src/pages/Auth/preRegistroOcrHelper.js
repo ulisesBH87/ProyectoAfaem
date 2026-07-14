@@ -131,7 +131,7 @@ export const procesarOCRReal = async (docKey, file, prevDoc, { API_BASE, Swal, s
     });
 
     if (!response.ok) throw new Error('Ocurrió un error al cargar el documento');
-    await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: docKey, Swal });
+    await registerSuccessfulScanAttempt({ attemptsRef: successfulScanCountsRef, scanKey: docKey, Swal, playerId: 'presidente' });
 
     // Parsea el HTML del OCR para extraer los datos
     const htmlText = await response.text();
