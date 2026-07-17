@@ -25,8 +25,10 @@ import {
   getConsumoAuditoria,
   getConsumoTarifas,
   updateConsumoTarifa,
-  downloadConsumoReporteExcel
+  downloadConsumoReporteExcel,
+  getCatalogosRegistro
 } from '../../services/admin';
+import { getUserTeamsReal } from '../../services/teams';
 
 const MESES = [
   { value: 1, label: "Enero" },
@@ -179,26 +181,31 @@ export default function ConsumosMaster() {
   const [reporteFechaInicio, setReporteFechaInicio] = useState('');
   const [reporteFechaFin, setReporteFechaFin] = useState('');
   const [generandoReporte, setGenerandoReporte] = useState(false);
+  const [reporteTipoReporte, setReporteTipoReporte] = useState('todos');
+  const [reporteLigaId, setReporteLigaId] = useState('');
+  const [reporteEquipoId, setReporteEquipoId] = useState('');
+  const [ligasFiltro, setLigasFiltro] = useState([]);
+  const [equiposFiltro, setEquiposFiltro] = useState([]);
   const serviceCards = Object.values(
     buildServiceSummary(consumoResumen).reduce((acc, service) => {
       const rawType = String(service?.tipo || '').trim().toUpperCase();
       const normalizedType =
         rawType === 'PHOTO SCAN' ||
-        rawType === 'ESCANEO FOTOGRAFÍA' ||
-        rawType === 'ESCANEO FOTOGRAFIA' ||
-        rawType === 'FOTOGRAFÍA' ||
-        rawType === 'FOTOGRAFIA'
+          rawType === 'ESCANEO FOTOGRAFÍA' ||
+          rawType === 'ESCANEO FOTOGRAFIA' ||
+          rawType === 'FOTOGRAFÍA' ||
+          rawType === 'FOTOGRAFIA'
           ? 'PHOTO_SCAN'
-        : rawType === 'VERIFICA MEX' ||
-          rawType === 'VERIFICACIÓN CURP' ||
-          rawType === 'VERIFICACION CURP' ||
-          rawType === 'VERIFICACIÓN CURP/CIUDADANO' ||
-          rawType === 'VERIFICACION CURP/CIUDADANO'
-          ? 'VERIFICAMEX'
-        : rawType === 'ESCANEO OCR'
-          ? 'OCR'
-        :
-        rawType;
+          : rawType === 'VERIFICA MEX' ||
+            rawType === 'VERIFICACIÓN CURP' ||
+            rawType === 'VERIFICACION CURP' ||
+            rawType === 'VERIFICACIÓN CURP/CIUDADANO' ||
+            rawType === 'VERIFICACION CURP/CIUDADANO'
+            ? 'VERIFICAMEX'
+            : rawType === 'ESCANEO OCR'
+              ? 'OCR'
+              :
+              rawType;
 
       if (!normalizedType) {
         return acc;
@@ -298,6 +305,32 @@ export default function ConsumosMaster() {
     cargarTarifas();
   }, [refreshTrigger]);
 
+  // 4. Carga de Ligas y Equipos para filtros de descarga de reporte
+  useEffect(() => {
+    async function cargarFiltrosReporte() {
+      // 1. Cargar ligas del catálogo
+      try {
+        const cat = await getCatalogosRegistro();
+        if (cat && cat.ligas) {
+          setLigasFiltro(cat.ligas);
+        }
+      } catch (err) {
+        console.error("Error al cargar ligas del catálogo:", err);
+      }
+
+      // 2. Cargar equipos reales
+      try {
+        const eqDir = await getUserTeamsReal();
+        if (eqDir) {
+          setEquiposFiltro(eqDir);
+        }
+      } catch (err) {
+        console.error("Error al cargar equipos reales:", err);
+      }
+    }
+    cargarFiltrosReporte();
+  }, []);
+
   const handleOpenEdit = (tar) => {
     setEditingTarifa(tar);
     setCostoEdit(tar.CostoUnitario ?? tar.costo_unitario ?? 0);
@@ -336,6 +369,9 @@ export default function ConsumosMaster() {
   const handleOpenReporte = () => {
     setReporteFechaInicio('');
     setReporteFechaFin('');
+    setReporteTipoReporte('todos');
+    setReporteLigaId('');
+    setReporteEquipoId('');
     setShowReporteModal(true);
   };
 
@@ -344,14 +380,29 @@ export default function ConsumosMaster() {
 
     setGenerandoReporte(true);
     try {
-      const params = { fecha_inicio: reporteFechaInicio, fecha_fin: reporteFechaFin };
+      const params = {
+        fecha_inicio: reporteFechaInicio,
+        fecha_fin: reporteFechaFin,
+        tipo_reporte: reporteTipoReporte
+      };
+      if (reporteLigaId) params.liga_id = reporteLigaId;
+      if (reporteEquipoId) params.equipo_id = reporteEquipoId;
+
       const blob = await downloadConsumoReporteExcel(params);
+
+      // Construir nombre de archivo descriptivo
+      let filenameParts = ['reporte-consumos'];
+      if (reporteTipoReporte !== 'todos') filenameParts.push(reporteTipoReporte);
+      if (reporteLigaId) filenameParts.push(`liga-${reporteLigaId}`);
+      if (reporteEquipoId) filenameParts.push(`equipo-${reporteEquipoId}`);
+      filenameParts.push(`${reporteFechaInicio}-a-${reporteFechaFin}`);
+      const filename = `${filenameParts.join('-')}.xlsx`;
 
       // Descargar el archivo Excel (.xlsx) usando Blob del navegador
       const url = window.URL.createObjectURL(new Blob([blob]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `reporte-consumos-${reporteFechaInicio}-a-${reporteFechaFin}.xlsx`);
+      link.setAttribute('download', filename);
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -1382,7 +1433,7 @@ export default function ConsumosMaster() {
               Reporte de Consumos
             </h3>
             <p style={{ margin: '0 0 20px 0', fontSize: '13px', color: COLORS.slate500, lineHeight: '1.5' }}>
-              Selecciona la fecha de inicio y la fecha de fin para generar el PDF con consumo total, costos por servicio, ligas, equipos y jugadores/presidente.
+              Selecciona el periodo, la categoría del reporte y opcionalmente filtra por una liga o equipo específico para generar tu archivo Excel (.xlsx).
             </p>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px', marginBottom: '16px' }}>
@@ -1429,6 +1480,102 @@ export default function ConsumosMaster() {
                     outline: 'none'
                   }}
                 />
+              </div>
+            </div>
+
+            {/* Categoría del Reporte */}
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: COLORS.slate600, textTransform: 'uppercase', marginBottom: '6px' }}>
+                Categoría del Reporte
+              </label>
+              <select
+                value={reporteTipoReporte}
+                onChange={(e) => setReporteTipoReporte(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  borderRadius: '10px',
+                  border: `1.5px solid ${COLORS.slate200}`,
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: COLORS.slate900,
+                  boxSizing: 'border-box',
+                  outline: 'none',
+                  background: COLORS.white
+                }}
+              >
+                <option value="todos">Completo (Todas las hojas)</option>
+                <option value="liga">Solo Ligas</option>
+                <option value="equipo">Solo Equipos</option>
+                <option value="jugador">Solo Jugadores</option>
+                <option value="directivo">Solo Directivos</option>
+              </select>
+            </div>
+
+            {/* Filtros específicos por entidad */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '20px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: COLORS.slate600, textTransform: 'uppercase', marginBottom: '6px' }}>
+                  Liga Específica
+                </label>
+                <select
+                  value={reporteLigaId}
+                  onChange={(e) => {
+                    setReporteLigaId(e.target.value);
+                    if (e.target.value) setReporteEquipoId('');
+                  }}
+                  disabled={!!reporteEquipoId}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    borderRadius: '10px',
+                    border: `1.5px solid ${COLORS.slate200}`,
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    color: COLORS.slate900,
+                    boxSizing: 'border-box',
+                    outline: 'none',
+                    background: !!reporteEquipoId ? COLORS.slate100 : COLORS.white,
+                    cursor: !!reporteEquipoId ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  <option value="">Todas las ligas</option>
+                  {ligasFiltro.map((l) => (
+                    <option key={l.id} value={l.id}>{l.nombreOriginal || l.nombre}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: '800', color: COLORS.slate600, textTransform: 'uppercase', marginBottom: '6px' }}>
+                  Equipo Específico
+                </label>
+                <select
+                  value={reporteEquipoId}
+                  onChange={(e) => {
+                    setReporteEquipoId(e.target.value);
+                    if (e.target.value) setReporteLigaId('');
+                  }}
+                  disabled={!!reporteLigaId}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    borderRadius: '10px',
+                    border: `1.5px solid ${COLORS.slate200}`,
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    color: COLORS.slate900,
+                    boxSizing: 'border-box',
+                    outline: 'none',
+                    background: !!reporteLigaId ? COLORS.slate100 : COLORS.white,
+                    cursor: !!reporteLigaId ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  <option value="">Todos los equipos</option>
+                  {equiposFiltro.map((e) => (
+                    <option key={e.EquipoId} value={e.EquipoId}>{e.NombreEquipo}</option>
+                  ))}
+                </select>
               </div>
             </div>
 

@@ -1157,10 +1157,10 @@ def get_user_real_teams(db: Session = Depends(get_db), usuario = Depends(obtener
          .join(Usuario, PresidenteEquipo.PersonaId == Usuario.PersonaId)\
          .outerjoin(slots_subquery, (EquiposJugando.EquipoId == slots_subquery.c.EquipoId) & (EquiposJugando.LigaId == slots_subquery.c.LigaId))
 
-        # 3. Add filter if not ADMINISTRADOR (RolId == 1)
+        # 3. Add filter if not ADMINISTRADOR (RolId == 1) or MASTER (RolId == 117)
         rol_id = getattr(usuario, 'RolId', None)
         
-        if rol_id != 1:
+        if rol_id not in (1, 117):
             presidente = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == usuario.PersonaId).first()
             if not presidente:
                 return []
@@ -1627,8 +1627,8 @@ def update_presidente(presidente_id: int, data: dict, db: Session = Depends(get_
 def get_directorio_equipos(db: Session = Depends(get_db), usuario = Depends(obtener_usuario_actual)):
     # Protección, idealmente verificar si es admin (RolId == 1)
     rol_id = getattr(usuario, 'RolId', None)
-    if rol_id != 1:
-        raise HTTPException(status_code=403, detail="Acceso denegado: Se requiere rol de Administrador")
+    if rol_id not in (1, 117):
+        raise HTTPException(status_code=403, detail="Acceso denegado: Se requiere rol de Administrador o Master")
     
     try:
         from app.repositorios.equipo_repositorio import obtener_directorio_equipos_repo
