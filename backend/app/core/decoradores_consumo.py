@@ -44,8 +44,6 @@ def track_consumption(tipo_consumo: str, proveedor: str, tipo_registro_default: 
                         is_president = (
                             "pre-registro-presidente" in referer_path or
                             "/ad/rp" in referer_path or
-                            "/pe/ce" in referer_path or
-                            "/pe/ie/" in referer_path or
                             (("/ad/p" in referer_path or "/ad/p/" in referer_path) and "/ad/pg" not in referer_path and "/ad/pago" not in referer_path)
                         )
                         if is_president:
