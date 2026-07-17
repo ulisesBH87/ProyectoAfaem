@@ -115,3 +115,48 @@ def actualizar_tarifa(tarifa_id: int, payload: dict, db: Session = Depends(get_d
         "Descripcion": tarifa.Descripcion,
         "Estatus": tarifa.Estatus
     }}
+
+@router.get("/reporte-excel", dependencies=[Depends(requerir_permiso("auditorias.ver"))])
+def descargar_reporte_excel(
+    fecha_inicio: str = Query(None),
+    fecha_fin: str = Query(None),
+    db: Session = Depends(get_db)
+):
+    """
+    Genera y descarga el reporte consolidado y detallado de consumos en formato Excel (.xlsx).
+    """
+    from app.servicios.reporte_excel_servicio import ReporteExcelServicio
+    from fastapi.responses import StreamingResponse
+    import io
+    
+    # 1. Obtener la información usando la lógica de negocio existente
+    resumen = ConsumptionService.obtener_resumen_dashboard(
+        db=db,
+        fecha_inicio=fecha_inicio,
+        fecha_fin=fecha_fin
+    )
+    
+    auditoria = ConsumptionService.obtener_auditoria_consumos(
+        db=db,
+        fecha_inicio=fecha_inicio,
+        fecha_fin=fecha_fin
+    )
+    
+    # 2. Generar el Excel en bytes
+    excel_bytes = ReporteExcelServicio.generar_reporte_consumos(
+        resumen=resumen,
+        auditoria=auditoria,
+        fecha_inicio=fecha_inicio or "Inicio",
+        fecha_fin=fecha_fin or "Fin"
+    )
+    
+    # 3. Retornar el archivo como StreamingResponse
+    filename = f"reporte-consumos-{fecha_inicio or 'todos'}-a-{fecha_fin or 'todos'}.xlsx"
+    headers = {
+        'Content-Disposition': f'attachment; filename="{filename}"'
+    }
+    return StreamingResponse(
+        io.BytesIO(excel_bytes),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers=headers
+    )

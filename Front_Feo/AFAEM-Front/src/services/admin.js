@@ -523,6 +523,14 @@ export const updateConsumoTarifa = async (tarifaId, payload) => {
   return response.data;
 };
 
+export const downloadConsumoReporteExcel = async (params = {}) => {
+  const response = await api.get('/consumo/reporte-excel', {
+    params,
+    responseType: 'blob'
+  });
+  return response.data;
+};
+
 export default {
   getSolicitudDetalle,
   getPagosGenerales,
@@ -568,5 +576,6 @@ export default {
   getConsumoLedger,
   getConsumoAuditoria,
   getConsumoTarifas,
-  updateConsumoTarifa
+  updateConsumoTarifa,
+  downloadConsumoReporteExcel
 };

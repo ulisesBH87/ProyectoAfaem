@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import jsPDF from 'jspdf';
 import { createPortal } from 'react-dom';
 import {
   FaCoins,
@@ -25,7 +24,8 @@ import {
   getConsumoLedger,
   getConsumoAuditoria,
   getConsumoTarifas,
-  updateConsumoTarifa
+  updateConsumoTarifa,
+  downloadConsumoReporteExcel
 } from '../../services/admin';
 
 const MESES = [
@@ -110,10 +110,6 @@ const renderModalPortal = (content) => {
   return createPortal(content, document.body);
 };
 
-const formatPdfCell = (text, options = {}) => ({
-  text: String(text ?? ''),
-  ...options
-});
 
 const sortReportRows = (rows) => {
   return [...rows].sort((a, b) => {
@@ -343,327 +339,28 @@ export default function ConsumosMaster() {
     setShowReporteModal(true);
   };
 
-  const generarSeccionPdf = (doc, title, lines, y, color = '#0f172a') => {
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const marginX = 16;
-    const maxWidth = 178;
-
-    if (y > pageHeight - 30) {
-      doc.addPage();
-      y = 18;
-    }
-
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(12);
-    doc.setTextColor(color);
-    doc.text(title, marginX, y);
-    y += 8;
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9.5);
-    doc.setTextColor('#334155');
-
-    if (!lines.length) {
-      doc.text('Sin registros para este periodo.', marginX, y);
-      return y + 8;
-    }
-
-    lines.forEach((line) => {
-      const wrapped = doc.splitTextToSize(line, maxWidth);
-      if (y + wrapped.length * 5 > pageHeight - 16) {
-        doc.addPage();
-        y = 18;
-      }
-      doc.text(wrapped, marginX, y);
-      y += wrapped.length * 5 + 1;
-    });
-
-    return y + 3;
-  };
-
-  const generarTablaPdf = (doc, title, columns, rows, y, color = '#0f172a') => {
-    const marginX = 16;
-    const tableWidth = 178;
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const rowPaddingY = 3;
-    const minRowHeight = 8;
-
-    if (y > pageHeight - 30) {
-      doc.addPage();
-      y = 18;
-    }
-
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(12);
-    doc.setTextColor(color);
-    doc.text(title, marginX, y);
-    y += 8;
-
-    if (!rows.length) {
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9.5);
-      doc.setTextColor('#334155');
-      doc.text('Sin registros para este periodo.', marginX, y);
-      return y + 8;
-    }
-
-    const drawHeader = (currentY) => {
-      doc.setFillColor(241, 245, 249);
-      doc.rect(marginX, currentY, tableWidth, 9, 'F');
-      doc.setDrawColor(203, 213, 225);
-      doc.rect(marginX, currentY, tableWidth, 9);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(8.1);
-      doc.setTextColor('#334155');
-
-      let x = marginX;
-      columns.forEach((column) => {
-        const textX = column.align === 'right' ? x + column.width - 1.5 : x + 1.5;
-        doc.text(column.header, textX, currentY + 5.6, {
-          align: column.align === 'right' ? 'right' : 'left',
-          baseline: 'middle'
-        });
-        x += column.width;
-      });
-
-      return currentY + 9;
-    };
-
-    y = drawHeader(y);
-
-    rows.forEach((row, rowIndex) => {
-      const preparedCells = columns.map((column) => {
-        const rawValue = row[column.key];
-        if (rawValue && typeof rawValue === 'object' && !Array.isArray(rawValue)) {
-          return {
-            text: String(rawValue.text ?? ''),
-            color: rawValue.color,
-            fontStyle: rawValue.fontStyle,
-            fontSize: rawValue.fontSize
-          };
-        }
-        return { text: String(rawValue ?? '') };
-      });
-
-      const wrappedCells = preparedCells.map((cell, index) =>
-        doc.splitTextToSize(cell.text, Math.max(columns[index].width - 3, 8))
-      );
-      const maxLines = Math.max(...wrappedCells.map((lines) => lines.length), 1);
-      const rowHeight = Math.max(minRowHeight, maxLines * 4 + rowPaddingY * 2);
-
-      if (y + rowHeight > pageHeight - 14) {
-        doc.addPage();
-        y = 18;
-        y = drawHeader(y);
-      }
-
-      doc.setFillColor(rowIndex % 2 === 0 ? 255 : 248, rowIndex % 2 === 0 ? 255 : 250, rowIndex % 2 === 0 ? 255 : 252);
-      doc.rect(marginX, y, tableWidth, rowHeight, 'F');
-      doc.setDrawColor(226, 232, 240);
-      doc.rect(marginX, y, tableWidth, rowHeight);
-
-      let x = marginX;
-      columns.forEach((column, columnIndex) => {
-        const cell = preparedCells[columnIndex];
-        const textX = column.align === 'right' ? x + column.width - 1.5 : x + 1.5;
-        doc.setFont('helvetica', cell.fontStyle || column.fontStyle || (column.emphasis ? 'bold' : 'normal'));
-        doc.setFontSize(cell.fontSize || column.fontSize || 8);
-        doc.setTextColor(cell.color || column.color || '#0f172a');
-        doc.text(wrappedCells[columnIndex], textX, y + rowPaddingY + 3.2, {
-          align: column.align === 'right' ? 'right' : 'left',
-          baseline: 'top'
-        });
-        x += column.width;
-      });
-
-      y += rowHeight;
-    });
-
-    return y + 5;
-  };
-
   const handleGenerarReporte = async () => {
     if (!reporteFechaInicio || !reporteFechaFin || reporteFechaInicio > reporteFechaFin) return;
 
     setGenerandoReporte(true);
     try {
       const params = { fecha_inicio: reporteFechaInicio, fecha_fin: reporteFechaFin };
-      const [resumen, auditoria] = await Promise.all([
-        getConsumoResumen(params),
-        getConsumoAuditoria(params)
-      ]);
+      const blob = await downloadConsumoReporteExcel(params);
 
-      const serviceSummary = buildServiceSummary(resumen);
-      const ligas = sortReportRows((auditoria?.desglose_ligas || []).map((liga) => ({
-        nombre: liga.liga_nombre,
-        ocr_count: liga.ocr_count,
-        foto_count: liga.foto_count,
-        verificamex_count: liga.verificamex_count,
-        costo_total_usd: liga.costo_total_usd,
-        costo_total_mxn: liga.costo_total_mxn
-      })));
-      const equipos = sortReportRows((auditoria?.desglose_equipos || []).map((equipo) => ({
-        nombre: equipo.equipo_nombre,
-        subtitulo: equipo.liga_nombre,
-        ocr_count: equipo.ocr_count,
-        foto_count: equipo.foto_count,
-        verificamex_count: equipo.verificamex_count,
-        costo_total_usd: equipo.costo_total_usd,
-        costo_total_mxn: equipo.costo_total_mxn
-      })));
-      const personas = sortReportRows([
-        ...(auditoria?.desglose_jugadores || []).map((item) => ({
-          nombre: item.jugador_nombre,
-          subtitulo: `${item.equipo_nombre} | ${item.liga_nombre}`,
-          tipo: 'Jugador',
-          ocr_count: item.ocr_count,
-          foto_count: item.foto_count,
-          verificamex_count: item.verificamex_count,
-          costo_total_usd: item.costo_total_usd,
-          costo_total_mxn: item.costo_total_mxn
-        })),
-        ...(auditoria?.desglose_directivos || []).map((item) => ({
-          nombre: item.directivo_nombre,
-          subtitulo: `${item.directivo_rol} | ${item.equipo_nombre} | ${item.liga_nombre}`,
-          tipo: 'Presidente/Entrenador',
-          ocr_count: item.ocr_count,
-          foto_count: item.foto_count,
-          verificamex_count: item.verificamex_count,
-          costo_total_usd: item.costo_total_usd,
-          costo_total_mxn: item.costo_total_mxn
-        }))
-      ]);
+      // Descargar el archivo Excel (.xlsx) usando Blob del navegador
+      const url = window.URL.createObjectURL(new Blob([blob]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `reporte-consumos-${reporteFechaInicio}-a-${reporteFechaFin}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
 
-      const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-      let y = 18;
-
-      doc.setFillColor(15, 23, 42);
-      doc.roundedRect(12, 12, 186, 30, 4, 4, 'F');
-      doc.setTextColor('#ffffff');
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(18);
-      doc.text('Reporte de consumos', 16, 24);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10);
-      doc.text(`Periodo: ${formatDateLabel(reporteFechaInicio)} al ${formatDateLabel(reporteFechaFin)}`, 16, 31);
-      y = 52;
-
-      doc.setTextColor('#0f172a');
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(12);
-      doc.text('Resumen general', 16, y);
-      y += 8;
-
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10);
-      [
-        `Consumo total: ${resumen?.total_operaciones ?? 0} operaciones`,
-        `Consumo en USD: ${formatCurrency(resumen?.costo_total_usd, 'USD')}`,
-        `Consumo en MXN: ${formatCurrency(resumen?.costo_total_mxn, 'MXN')}`
-      ].forEach((line) => {
-        doc.text(line, 16, y);
-        y += 6;
-      });
-
-      y = generarSeccionPdf(
-        doc,
-        'Costo por servicio',
-        serviceSummary.map((service) =>
-          `${service.tipo}: ${service.cantidad} operaciones | ${formatCurrency(service.costo, service.divisa)} | Proveedor ${service.proveedor}`
-        ),
-        y + 3,
-        '#0b4ea6'
-      );
-
-      y = generarTablaPdf(
-        doc,
-        'Costo por ligas',
-        [
-          { key: 'nombre', header: 'Liga', width: 62, emphasis: true, fontSize: 8.4 },
-          { key: 'ocr', header: 'OCR', width: 14, align: 'right' },
-          { key: 'foto', header: 'Foto', width: 14, align: 'right' },
-          { key: 'vm', header: 'VM', width: 14, align: 'right' },
-          { key: 'usd', header: 'Costo USD', width: 34, align: 'right' },
-          { key: 'mxn', header: 'Costo MXN', width: 40, align: 'right' }
-        ],
-        ligas.map((liga) => ({
-          nombre: liga.nombre,
-          ocr: liga.ocr_count,
-          foto: liga.foto_count,
-          vm: liga.verificamex_count,
-          usd: formatCurrency(liga.costo_total_usd, 'USD'),
-          mxn: formatCurrency(liga.costo_total_mxn, 'MXN')
-        })),
-        y,
-        '#059669'
-      );
-
-      y = generarTablaPdf(
-        doc,
-        'Costo por equipos',
-        [
-          { key: 'equipo', header: 'Equipo', width: 52, emphasis: true, fontSize: 8.2 },
-          { key: 'liga', header: 'Liga', width: 38, fontSize: 8 },
-          { key: 'ocr', header: 'OCR', width: 12, align: 'right' },
-          { key: 'foto', header: 'Foto', width: 12, align: 'right' },
-          { key: 'vm', header: 'VM', width: 12, align: 'right' },
-          { key: 'usd', header: 'Costo USD', width: 24, align: 'right' },
-          { key: 'mxn', header: 'Costo MXN', width: 28, align: 'right' }
-        ],
-        equipos.map((equipo) => ({
-          equipo: equipo.nombre,
-          liga: equipo.subtitulo,
-          ocr: equipo.ocr_count,
-          foto: equipo.foto_count,
-          vm: equipo.verificamex_count,
-          usd: formatCurrency(equipo.costo_total_usd, 'USD'),
-          mxn: formatCurrency(equipo.costo_total_mxn, 'MXN')
-        })),
-        y,
-        '#d97706'
-      );
-
-      y = generarTablaPdf(
-        doc,
-        'Jugadores y presidente/entrenador',
-        [
-          { key: 'tipo', header: 'Tipo', width: 26, fontSize: 7.8 },
-          { key: 'nombre', header: 'Nombre', width: 38, emphasis: true, fontSize: 8 },
-          { key: 'detalle', header: 'Equipo / Liga / Rol', width: 48, fontSize: 7.7 },
-          { key: 'ocr', header: 'OCR', width: 12, align: 'right' },
-          { key: 'foto', header: 'Foto', width: 12, align: 'right' },
-          { key: 'vm', header: 'VM', width: 12, align: 'right' },
-          { key: 'usd', header: 'USD', width: 14, align: 'right', fontSize: 7.4 },
-          { key: 'mxn', header: 'MXN', width: 16, align: 'right', fontSize: 7.4 }
-        ],
-        personas.map((persona) => ({
-          tipo: persona.tipo,
-          nombre: persona.nombre,
-          detalle: persona.subtitulo,
-          ocr: formatPdfCell(persona.ocr_count, {
-            color: Number(persona.ocr_count || 0) >= PDF_SCAN_ALERTS.OCR ? '#dc2626' : undefined,
-            fontStyle: Number(persona.ocr_count || 0) >= PDF_SCAN_ALERTS.OCR ? 'bold' : undefined
-          }),
-          foto: formatPdfCell(persona.foto_count, {
-            color: Number(persona.foto_count || 0) >= PDF_SCAN_ALERTS.PHOTO_SCAN ? '#dc2626' : undefined,
-            fontStyle: Number(persona.foto_count || 0) >= PDF_SCAN_ALERTS.PHOTO_SCAN ? 'bold' : undefined
-          }),
-          vm: formatPdfCell(persona.verificamex_count, {
-            color: Number(persona.verificamex_count || 0) >= PDF_SCAN_ALERTS.VERIFICAMEX ? '#dc2626' : undefined,
-            fontStyle: Number(persona.verificamex_count || 0) >= PDF_SCAN_ALERTS.VERIFICAMEX ? 'bold' : undefined
-          }),
-          usd: formatCurrency(persona.costo_total_usd, 'USD'),
-          mxn: formatCurrency(persona.costo_total_mxn, 'MXN')
-        })),
-        y,
-        '#8b5cf6'
-      );
-
-      doc.save(`reporte-consumos-${reporteFechaInicio}-a-${reporteFechaFin}.pdf`);
       setShowReporteModal(false);
     } catch (error) {
-      console.error('Error al generar reporte PDF:', error);
-      alert('No se pudo generar el reporte PDF. Intente nuevamente.');
+      console.error('Error al generar reporte Excel:', error);
+      alert('No se pudo generar el reporte Excel. Intente nuevamente.');
     } finally {
       setGenerandoReporte(false);
     }
