@@ -269,6 +269,194 @@ def procesar_ocr_seguro(
                 detail=f"Error interno OCR (Status {respuesta.status_code}): {respuesta.text[:200]}"
             )
             
+        # Registrar consumo de Verificamex si se realizó internamente en Flask
+        try:
+            html_content = respuesta.text
+            real_verificamex_called = False
+            verificado = False
+            resultado_proveedor = "RECHAZADO"
+            es_cobrable = True
+            estado_tecnico = "EXITOSO"
+            
+            if "CURP Validada Oficialmente en RENAPO" in html_content and "(Cache local)" not in html_content:
+                real_verificamex_called = True
+                verificado = True
+                resultado_proveedor = "APROBADO"
+            elif "CURP Rechazada o No Encontrada" in html_content:
+                real_verificamex_called = True
+                verificado = False
+                resultado_proveedor = "RECHAZADO"
+            elif "Error de conexion con la API" in html_content:
+                real_verificamex_called = True
+                verificado = False
+                resultado_proveedor = "ERROR_CONEXION"
+                es_cobrable = False
+                estado_tecnico = "ERROR_PROVEEDOR"
+
+            if real_verificamex_called:
+                import uuid
+                from app.servicios.consumo_servicio import ConsumptionService
+                
+                request_id = getattr(request.state, "request_id", None) or str(uuid.uuid4())
+                
+                usuario_id = None
+                tipo_usuario = "INVITADO"
+                if token_payload and isinstance(token_payload, dict):
+                    token_type = token_payload.get("type")
+                    if token_type == "access":
+                        usuario = token_payload.get("usuario")
+                        if usuario:
+                            usuario_id = getattr(usuario, "UsuarioId", None)
+                            tipo_usuario = "REGISTRADO"
+                    elif token_type == "temp_invitation_session":
+                        usuario_id = token_payload.get("usuario_id")
+                        tipo_usuario = "INVITADO"
+                
+                guest_id = request.headers.get("X-Guest-Id")
+                session_id = request.headers.get("X-Session-Id")
+                tenant_id = None
+                try:
+                    tenant_val = request.headers.get("X-Tenant-Id")
+                    if tenant_val:
+                        tenant_id = int(tenant_val)
+                except ValueError:
+                    pass
+                
+                tipo_reg = tipo_registro or "JUGADOR"
+                query_tipo_registro = request.query_params.get("tipo_registro")
+                if query_tipo_registro:
+                    tipo_reg = query_tipo_registro
+                else:
+                    referer = request.headers.get("referer", "").lower()
+                    referer_path = referer.split('?')[0].split('#')[0]
+                    is_president = (
+                        "pre-registro-presidente" in referer_path or
+                        "/ad/rp" in referer_path or
+                        (("/ad/p" in referer_path or "/ad/p/" in referer_path) and "/ad/pg" not in referer_path and "/ad/pago" not in referer_path)
+                    )
+                    if is_president:
+                        tipo_reg = "PRESIDENTE"
+                
+                if tipo_reg:
+                    tipo_reg = tipo_reg.strip().upper()
+
+                entity_type = None
+                entity_id = None
+                if request.query_params.get("slot_id"):
+                    entity_type = "SLOT_JUGADOR"
+                    entity_id = request.query_params.get("slot_id")
+                elif request.query_params.get("borrador_id"):
+                    entity_type = "BORRADOR_PRESIDENTE"
+                    entity_id = request.query_params.get("borrador_id")
+
+                equipo_id = None
+                liga_id = None
+                target_persona_id = None
+                
+                try:
+                    eq_val = request.query_params.get("equipo_id")
+                    if eq_val: equipo_id = int(eq_val)
+                except ValueError: pass
+                
+                try:
+                    lg_val = request.query_params.get("liga_id")
+                    if lg_val: liga_id = int(lg_val)
+                except ValueError: pass
+
+                try:
+                    p_val = request.query_params.get("target_persona_id")
+                    if p_val: target_persona_id = int(p_val)
+                except ValueError: pass
+
+                target_nombre = request.query_params.get("target_nombre")
+                target_curp = request.query_params.get("target_curp")
+
+                if usuario_id and not equipo_id:
+                    try:
+                        from app.modelos.usuario_modelo import Usuario
+                        from app.modelos.presidente_equipo_modelo import PresidenteEquipo
+                        from app.modelos.equipo_modelo import EquiposJugando
+                        
+                        db_user = db.query(Usuario).filter(Usuario.UsuarioId == usuario_id).first()
+                        if db_user and db_user.RolId == 3:
+                            pres = db.query(PresidenteEquipo).filter(PresidenteEquipo.PersonaId == db_user.PersonaId).first()
+                            if pres:
+                                eq_jug = db.query(EquiposJugando).filter(EquiposJugando.PresidenteEquipoId == pres.PresidenteEquipoId).first()
+                                if eq_jug:
+                                    equipo_id = eq_jug.EquipoId
+                                    liga_id = eq_jug.LigaId
+                    except Exception as res_exc:
+                        print(f"[VERIFICAMEX RESOLVER ERROR] Falló auto-resolución de presidente: {res_exc}")
+
+                if target_persona_id:
+                    try:
+                        from app.modelos.persona_modelo import Personas
+                        pers = db.query(Personas).filter(Personas.PersonaId == target_persona_id).first()
+                        if pers:
+                            target_nombre = f"{pers.Nombre} {pers.PrimerApellido} {pers.SegundoApellido or ''}".strip().upper()
+                            target_curp = pers.CURP
+                                    
+                        if not equipo_id:
+                            from app.modelos.miembro_equipo_modelo import MiembrosEquipo
+                            from app.modelos.equipo_modelo import EquiposJugando
+                            miembro = db.query(MiembrosEquipo).filter(MiembrosEquipo.PersonaId == target_persona_id, MiembrosEquipo.Estatus == True).first()
+                            if miembro:
+                                eq_jug = db.query(EquiposJugando).filter(EquiposJugando.EquiposJugandoId == miembro.EquipoID).first()
+                                if eq_jug:
+                                    equipo_id = eq_jug.EquipoId
+                                    liga_id = eq_jug.LigaId
+                    except Exception as player_exc:
+                        print(f"[VERIFICAMEX RESOLVER ERROR] Falló auto-resolución de persona registrada: {player_exc}")
+                else:
+                    slot_id_req = request.query_params.get("slot_id")
+                    borrador_id_req = request.query_params.get("borrador_id")
+                    if not slot_id_req and not borrador_id_req:
+                        target_nombre = None
+                        target_curp = None
+
+                if not target_curp or not target_nombre:
+                    try:
+                        import re
+                        curp_match = re.search(r'CURP \(Identidad\):</span>\s*<span class="valor"[^>]*>([A-Z0-9]{18})</span>', html_content)
+                        if curp_match:
+                            target_curp = curp_match.group(1)
+                        
+                        nombre_match = re.search(r'Nombre Completo:</span>\s*<span class="valor"[^>]*>([^<]+)</span>', html_content)
+                        if nombre_match:
+                            target_nombre = nombre_match.group(1).strip().upper()
+                    except Exception:
+                        pass
+
+                payload = {
+                    "RequestId": f"vm_{str(uuid.uuid4())[:8]}_{request_id}",
+                    "UsuarioId": usuario_id,
+                    "GuestId": guest_id,
+                    "SessionId": session_id,
+                    "TenantId": tenant_id,
+                    "TipoUsuario": tipo_usuario,
+                    "TipoConsumo": "VERIFICAMEX",
+                    "Proveedor": "DEFAULT",
+                    "TipoRegistro": tipo_reg,
+                    "EntityType": entity_type,
+                    "EntityId": entity_id,
+                    "EstadoTecnico": estado_tecnico,
+                    "ResultadoProveedor": resultado_proveedor,
+                    "EsCobrable": es_cobrable,
+                    "LlaveIdempotencia": f"verificamex_{request_id}",
+                    "Metadata": {},
+                    "JugadorPersonaId": target_persona_id,
+                    "JugadorNombre": target_nombre,
+                    "JugadorCURP": target_curp,
+                    "EquipoId": equipo_id,
+                    "LigaId": liga_id
+                }
+                
+                print(f"[OCR PROXY] Registrando consumo VERIFICAMEX. Cobrable={es_cobrable}, CURP={target_curp}")
+                ConsumptionService.publicar_outbox(db, payload)
+                db.commit()
+        except Exception as ocr_exc:
+            print(f"[OCR PROXY] Error al registrar consumo Verificamex: {str(ocr_exc)}")
+
         # Devolver el HTML tal cual para que el frontend lo parsee
         return HTMLResponse(content=respuesta.text, status_code=200)
         
